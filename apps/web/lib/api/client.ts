@@ -9,7 +9,11 @@ export async function apiClient<T>(
   endpoint: string,
   options: RequestOptions = {}
 ): Promise<T> {
-  const { token, headers, ...requestOptions } = options;
+  let { token, headers, ...requestOptions } = options;
+
+  if (!token && typeof window !== "undefined") {
+    token = localStorage.getItem("dlif_token") || undefined;
+  }
 
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
     ...requestOptions,

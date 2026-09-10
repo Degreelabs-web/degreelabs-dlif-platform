@@ -4,6 +4,9 @@ import {
   UserRound,
   UsersRound,
   Building2,
+  Briefcase,
+  FolderGit2,
+  GitPullRequest,
   Target,
   CalendarDays,
   FileText,
@@ -16,6 +19,8 @@ import {
   Route,
   FolderOpen,
   Trophy,
+  BookOpen,
+  UserCheck,
 } from "lucide-react";
 
 export type NavigationItem = {
@@ -26,7 +31,7 @@ export type NavigationItem = {
 
 export const studentNavigation: NavigationItem[] = [
   {
-    label: "Home",
+    label: "Dashboard",
     href: "/student",
     icon: LayoutDashboard,
   },
@@ -41,6 +46,21 @@ export const studentNavigation: NavigationItem[] = [
     icon: UsersRound,
   },
   {
+    label: "Assigned Mentor",
+    href: "/student/mentor",
+    icon: UserRound,
+  },
+  {
+    label: "Assigned Company",
+    href: "/student/company",
+    icon: Building2,
+  },
+  {
+    label: "Assigned Project",
+    href: "/student/project",
+    icon: FolderGit2,
+  },
+  {
     label: "Challenge",
     href: "/student/challenge",
     icon: Target,
@@ -49,11 +69,6 @@ export const studentNavigation: NavigationItem[] = [
     label: "Sessions",
     href: "/student/sessions",
     icon: CalendarDays,
-  },
-  {
-    label: "Resources",
-    href: "/student/resources",
-    icon: FolderOpen,
   },
   {
     label: "Submissions",
@@ -67,11 +82,44 @@ export const studentNavigation: NavigationItem[] = [
   },
 ];
 
+export const mentorNavigation: NavigationItem[] = [
+  {
+    label: "Overview",
+    href: "/mentor",
+    icon: LayoutDashboard,
+  },
+  {
+    label: "Assigned Teams",
+    href: "/mentor/teams",
+    icon: UsersRound,
+  },
+  {
+    label: "Assigned Students",
+    href: "/mentor/students",
+    icon: Users,
+  },
+  {
+    label: "Assigned Projects",
+    href: "/mentor/projects",
+    icon: FolderGit2,
+  },
+  {
+    label: "Submission Reviews",
+    href: "/mentor/reviews",
+    icon: FileText,
+  },
+];
+
 export const adminNavigation: NavigationItem[] = [
   {
-    label: "Dashboard",
+    label: "Overview",
     href: "/admin",
     icon: LayoutDashboard,
+  },
+  {
+    label: "Institutions",
+    href: "/admin/institutions",
+    icon: Building2,
   },
   {
     label: "Students",
@@ -86,12 +134,27 @@ export const adminNavigation: NavigationItem[] = [
   {
     label: "Cohorts",
     href: "/admin/cohorts",
-    icon: Building2,
+    icon: BookOpen,
   },
   {
     label: "Teams",
     href: "/admin/teams",
     icon: UsersRound,
+  },
+  {
+    label: "Companies",
+    href: "/admin/companies",
+    icon: Briefcase,
+  },
+  {
+    label: "Projects",
+    href: "/admin/projects",
+    icon: FolderGit2,
+  },
+  {
+    label: "Assignments Center",
+    href: "/admin/assignments",
+    icon: GitPullRequest,
   },
   {
     label: "Challenges",
@@ -104,43 +167,13 @@ export const adminNavigation: NavigationItem[] = [
     icon: CalendarDays,
   },
   {
-    label: "Resources",
-    href: "/admin/resources",
-    icon: FolderOpen,
-  },
-  {
     label: "Submissions",
     href: "/admin/submissions",
     icon: FileText,
   },
   {
-    label: "Feedback",
-    href: "/admin/feedback",
-    icon: MessageSquare,
-  },
-  {
-    label: "Attendance",
-    href: "/admin/attendance",
-    icon: ClipboardCheck,
-  },
-  {
-    label: "Notifications",
-    href: "/admin/notifications",
-    icon: Bell,
-  },
-  {
     label: "Reports",
     href: "/admin/reports",
     icon: BarChart3,
-  },
-  {
-    label: "Audit Logs",
-    href: "/admin/audit-logs",
-    icon: ShieldCheck,
-  },
-  {
-    label: "Settings",
-    href: "/admin/settings",
-    icon: Settings,
   },
 ];

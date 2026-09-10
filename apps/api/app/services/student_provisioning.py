@@ -45,7 +45,7 @@ class StudentProvisioningService:
                 f"Institution with id '{institution_id}' not found."
             )
 
-        # 2. Prevent duplicate application users.
+        # 2. Check existing application users.
         existing_user = (
             self.db.query(User)
             .filter(User.email == email)
@@ -53,9 +53,41 @@ class StudentProvisioningService:
         )
 
         if existing_user is not None:
-            raise StudentProvisioningError(
-                f"Application user with email '{email}' already exists."
+            existing_profile = (
+                self.db.query(StudentProfile)
+                .filter(StudentProfile.user_id == existing_user.id)
+                .first()
             )
+            if existing_profile is not None:
+                # Update password in Supabase Auth so student can login with new temporary password
+                if password:
+                    try:
+                        self.supabase.update_user(
+                            str(existing_user.id),
+                            password=password,
+                            full_name=full_name,
+                        )
+                    except Exception:
+                        pass
+
+                existing_user.full_name = full_name
+                existing_user.role = "student"
+                existing_user.status = "active"
+                existing_profile.institution_id = institution_id
+                existing_profile.student_id = student_id
+                if phone:
+                    existing_profile.phone = phone
+                if course:
+                    existing_profile.course = course
+                if branch:
+                    existing_profile.branch = branch
+                if graduation_year:
+                    existing_profile.graduation_year = graduation_year
+
+                self.db.commit()
+                self.db.refresh(existing_user)
+                self.db.refresh(existing_profile)
+                return existing_user, existing_profile
 
         supabase_user: dict | None = None
 

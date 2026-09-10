@@ -1,5 +1,6 @@
 from uuid import UUID
 
+# pyrefly: ignore [missing-import]
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 
@@ -37,3 +38,41 @@ class UserProvisionResponse(BaseModel):
     status: str
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class UserLoginRequest(BaseModel):
+    email: EmailStr
+    password: str
+
+
+class UserLoginResponse(BaseModel):
+    access_token: str | None = None
+    token_type: str = "bearer"
+    user: UserProvisionResponse | None = None
+    requires_2fa: bool = False
+    two_factor_token: str | None = None
+    masked_email: str | None = None
+    methods: list[str] = Field(default_factory=lambda: ["otp", "totp"])
+    totp_configured: bool = False
+    dev_code: str | None = None
+    message: str | None = None
+
+
+class TwoFactorVerifyRequest(BaseModel):
+    two_factor_token: str
+    code: str = Field(..., min_length=6, max_length=8)
+
+
+class TwoFactorResendRequest(BaseModel):
+    two_factor_token: str
+
+
+class TwoFactorSetupResponse(BaseModel):
+    secret: str
+    otpauth_uri: str
+
+
+class TwoFactorConfirmRequest(BaseModel):
+    secret: str
+    code: str = Field(..., min_length=6, max_length=6)
+

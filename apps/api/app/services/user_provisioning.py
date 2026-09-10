@@ -42,9 +42,21 @@ class UserProvisioningService:
         )
 
         if existing:
-            raise UserProvisioningError(
-                f"Application user with email '{email}' already exists."
-            )
+            if password:
+                try:
+                    self.supabase.update_user(
+                        str(existing.id),
+                        password=password,
+                        full_name=full_name,
+                    )
+                except Exception:
+                    pass
+            existing.role = role
+            existing.full_name = full_name
+            existing.status = "active"
+            self.db.commit()
+            self.db.refresh(existing)
+            return existing
 
         supabase_user: dict | None = None
 

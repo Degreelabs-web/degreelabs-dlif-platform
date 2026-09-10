@@ -1,6 +1,8 @@
 from uuid import UUID
 
+# pyrefly: ignore [missing-import]
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+# pyrefly: ignore [missing-import]
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
@@ -71,7 +73,7 @@ def provision_student(
             password=data.password,
         )
 
-        # Reuse the existing StudentService response mapping.
+        
         student_service = StudentService(db)
 
         return student_service._to_response(user, profile)

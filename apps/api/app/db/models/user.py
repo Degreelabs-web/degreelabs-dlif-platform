@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID, uuid4
 
-from sqlalchemy import DateTime, String, func
+from sqlalchemy import Boolean, DateTime, String, func
 from sqlalchemy.dialects.postgresql import UUID as PostgreSQLUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -38,6 +38,27 @@ class User(Base):
         String(50),
         nullable=False,
         default="active",
+    )
+
+    two_factor_enabled: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+        nullable=False,
+    )
+
+    two_factor_secret: Mapped[str | None] = mapped_column(
+        String(255),
+        nullable=True,
+    )
+
+    two_factor_otp_code: Mapped[str | None] = mapped_column(
+        String(6),
+        nullable=True,
+    )
+
+    two_factor_otp_expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
     )
 
     created_at: Mapped[datetime] = mapped_column(
