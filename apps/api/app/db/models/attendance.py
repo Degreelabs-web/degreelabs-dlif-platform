@@ -1,8 +1,11 @@
 from datetime import datetime
 from uuid import UUID, uuid4
 
+# pyrefly: ignore [missing-import]
 from sqlalchemy import DateTime, ForeignKey, Integer, String, func
+# pyrefly: ignore [missing-import]
 from sqlalchemy.dialects.postgresql import UUID as PostgreSQLUUID
+# pyrefly: ignore [missing-import]
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
