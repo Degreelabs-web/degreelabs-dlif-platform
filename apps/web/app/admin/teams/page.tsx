@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import {
   UsersRound,
   PlusCircle,
-  BookOpen,
   UserPlus,
   Trash2,
   Loader2,
@@ -16,9 +15,12 @@ import {
 import {
   fetchTeams,
   createTeam,
+  updateTeam,
+  deleteTeam,
   addTeamMember,
   removeTeamMember,
 } from "@/lib/api/teams";
+import { EntityActionsMenu } from "@/components/admin/EntityActionsMenu";
 import { fetchCohorts } from "@/lib/api/cohorts";
 import { fetchStudents } from "@/lib/api/students";
 import { Cohort, Student, Team } from "@/types/fellowship";
@@ -34,9 +36,12 @@ export default function AdminTeamsPage() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [submittingTeam, setSubmittingTeam] = useState(false);
   const [teamFormError, setTeamFormError] = useState<string | null>(null);
+  const [editingTeam, setEditingTeam] = useState<Team | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [newTeamData, setNewTeamData] = useState({
     name: "",
     cohort_id: "",
+    status: "active",
   });
 
   // Manage Members Modal
@@ -74,7 +79,7 @@ export default function AdminTeamsPage() {
     loadData();
   }, [selectedCohort]);
 
-  async function handleCreateTeam(e: React.FormEvent) {
+  async function handleSubmitTeam(e: React.FormEvent) {
     e.preventDefault();
     setTeamFormError(null);
     setSubmittingTeam(true);
@@ -83,17 +88,65 @@ export default function AdminTeamsPage() {
       if (!newTeamData.cohort_id) {
         throw new Error("Please select a cohort.");
       }
-      await createTeam(newTeamData);
+      if (editingTeam) {
+        await updateTeam(editingTeam.id, {
+          name: newTeamData.name,
+          status: newTeamData.status,
+        });
+      } else {
+        await createTeam(newTeamData);
+      }
       setIsCreateModalOpen(false);
+      setEditingTeam(null);
       setNewTeamData({
         name: "",
         cohort_id: cohorts[0]?.id || "",
+        status: "active",
       });
-      loadData();
-    } catch (err: any) {
-      setTeamFormError(err.message || "Failed to create team.");
+      await loadData();
+    } catch (err: unknown) {
+      setTeamFormError(
+        err instanceof Error
+          ? err.message
+          : `Failed to ${editingTeam ? "update" : "create"} team.`
+      );
     } finally {
       setSubmittingTeam(false);
+    }
+  }
+
+  function openCreateModal() {
+    setEditingTeam(null);
+    setTeamFormError(null);
+    setNewTeamData({
+      name: "",
+      cohort_id: cohorts[0]?.id || "",
+      status: "active",
+    });
+    setIsCreateModalOpen(true);
+  }
+
+  function openEditModal(team: Team) {
+    setEditingTeam(team);
+    setTeamFormError(null);
+    setNewTeamData({
+      name: team.name,
+      cohort_id: team.cohort_id,
+      status: team.status,
+    });
+    setIsCreateModalOpen(true);
+  }
+
+  async function handleDeleteTeam(team: Team) {
+    if (!confirm(`Delete "${team.name}"? This action cannot be undone.`)) return;
+    try {
+      setDeletingId(team.id);
+      await deleteTeam(team.id);
+      await loadData();
+    } catch (err) {
+      alert("Failed to delete team: " + (err as Error).message);
+    } finally {
+      setDeletingId(null);
     }
   }
 
@@ -155,7 +208,7 @@ export default function AdminTeamsPage() {
         </div>
 
         <button
-          onClick={() => setIsCreateModalOpen(true)}
+          onClick={openCreateModal}
           className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
         >
           <PlusCircle className="h-4 w-4" />
@@ -164,14 +217,14 @@ export default function AdminTeamsPage() {
       </div>
 
       {/* Cohort Selector */}
-      <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="flex flex-col gap-2 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:gap-3">
         <label className="text-sm font-semibold text-slate-700">
           Filter by Cohort:
         </label>
         <select
           value={selectedCohort}
           onChange={(e) => setSelectedCohort(e.target.value)}
-          className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none"
+          className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none sm:w-auto"
         >
           <option value="">All Cohorts</option>
           {cohorts.map((c) => (
@@ -200,7 +253,7 @@ export default function AdminTeamsPage() {
             Create project squads and assign students from the active cohort.
           </p>
           <button
-            onClick={() => setIsCreateModalOpen(true)}
+            onClick={openCreateModal}
             className="mt-4 inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
           >
             <PlusCircle className="h-4 w-4" />
@@ -223,9 +276,17 @@ export default function AdminTeamsPage() {
                     <span className="inline-flex items-center rounded-md bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-700 capitalize">
                       {team.status}
                     </span>
-                    <span className="text-xs text-slate-400">
-                      {cohort ? cohort.name : "Cohort"}
-                    </span>
+                    <div className="flex items-center gap-1">
+                      <span className="text-xs text-slate-400">
+                        {cohort ? cohort.name : "Cohort"}
+                      </span>
+                      <EntityActionsMenu
+                        label={team.name}
+                        onEdit={() => openEditModal(team)}
+                        onDelete={() => handleDeleteTeam(team)}
+                        deleteLabel={deletingId === team.id ? "Deleting..." : "Delete"}
+                      />
+                    </div>
                   </div>
 
                   <h3 className="mt-3 text-lg font-bold text-slate-900">
@@ -279,15 +340,19 @@ export default function AdminTeamsPage() {
         </div>
       )}
 
-      {/* Create Team Modal */}
+      {/* Create/Edit Team Modal */}
       {isCreateModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
-          <div className="relative w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl">
+          <div className="relative max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl">
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
               <div>
-                <h2 className="text-lg font-bold text-slate-900">Create Team</h2>
+                <h2 className="text-lg font-bold text-slate-900">
+                  {editingTeam ? "Edit Team" : "Create Team"}
+                </h2>
                 <p className="text-xs text-slate-500">
-                  Form a project team within a cohort.
+                  {editingTeam
+                    ? "Update the team name and status."
+                    : "Form a project team within a cohort."}
                 </p>
               </div>
               <button
@@ -305,13 +370,14 @@ export default function AdminTeamsPage() {
               </div>
             )}
 
-            <form onSubmit={handleCreateTeam} className="mt-4 space-y-4">
+            <form onSubmit={handleSubmitTeam} className="mt-4 space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-700">
                   Cohort *
                 </label>
                 <select
                   required
+                  disabled={Boolean(editingTeam)}
                   value={newTeamData.cohort_id}
                   onChange={(e) =>
                     setNewTeamData({ ...newTeamData, cohort_id: e.target.value })
@@ -345,6 +411,23 @@ export default function AdminTeamsPage() {
                 />
               </div>
 
+              {editingTeam && (
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700">
+                    Status
+                  </label>
+                  <select
+                    value={newTeamData.status}
+                    onChange={(e) => setNewTeamData({ ...newTeamData, status: e.target.value })}
+                    className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900"
+                  >
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                    <option value="completed">Completed</option>
+                  </select>
+                </div>
+              )}
+
               <div className="mt-6 flex justify-end gap-3 pt-2">
                 <button
                   type="button"
@@ -359,7 +442,7 @@ export default function AdminTeamsPage() {
                   className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-slate-800 disabled:opacity-50"
                 >
                   {submittingTeam && <Loader2 className="h-4 w-4 animate-spin" />}
-                  Create Team
+                  {editingTeam ? "Save Changes" : "Create Team"}
                 </button>
               </div>
             </form>
@@ -370,7 +453,7 @@ export default function AdminTeamsPage() {
       {/* Manage Members Modal */}
       {activeTeamForMembers && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
-          <div className="relative w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl">
+          <div className="relative max-h-[calc(100dvh-2rem)] w-full max-w-lg overflow-y-auto rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl">
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
               <div>
                 <h2 className="text-lg font-bold text-slate-900">

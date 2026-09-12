@@ -54,7 +54,6 @@ class UserLoginResponse(BaseModel):
     masked_email: str | None = None
     methods: list[str] = Field(default_factory=lambda: ["otp", "totp"])
     totp_configured: bool = False
-    dev_code: str | None = None
     message: str | None = None
 
 

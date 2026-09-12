@@ -1,27 +1,19 @@
+import logging
+from datetime import datetime, timedelta, timezone
+from uuid import UUID
+
+# pyrefly: ignore [missing-import]
 import httpx
+# pyrefly: ignore [missing-import]
 from fastapi import APIRouter, Depends, HTTPException, status
+# pyrefly: ignore [missing-import]
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.rbac import require_admin
 from app.core.security import get_current_user_token
 from app.db.models.user import User
-from app.schemas.user import (
-    UserLoginRequest,
-    UserLoginResponse,
-    UserProvisionRequest,
-    UserProvisionResponse,
-)
-from app.services.auth import get_current_user
-from app.services.user_provisioning import (
-    UserProvisioningError,
-    UserProvisioningService,
-)
-from datetime import datetime, timedelta, timezone
-from uuid import UUID
-
 from app.db.session import get_db
-from app.services.two_factor import TwoFactorService
 from app.schemas.user import (
     TwoFactorConfirmRequest,
     TwoFactorResendRequest,
@@ -32,8 +24,89 @@ from app.schemas.user import (
     UserProvisionRequest,
     UserProvisionResponse,
 )
+from app.services.auth import get_current_user
+from app.services.email_delivery import (
+    EmailConfigurationError,
+    EmailDeliveryError,
+    EmailDeliveryService,
+)
+from app.services.two_factor import (
+    TwoFactorConfigurationError,
+    TwoFactorService,
+)
+from app.services.user_provisioning import (
+    UserProvisioningError,
+    UserProvisioningService,
+)
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+logger = logging.getLogger(__name__)
+
+
+def _two_factor_configuration_unavailable(
+    exc: TwoFactorConfigurationError,
+) -> HTTPException:
+    logger.error("Two-factor challenge encryption is not configured: %s", exc)
+    return HTTPException(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        detail=(
+            "Two-factor authentication is not configured securely. "
+            "Please contact the administrator."
+        ),
+    )
+
+
+def _create_two_factor_challenge(user: User, access_token: str) -> str:
+    try:
+        return TwoFactorService.create_challenge_token(user, access_token)
+    except TwoFactorConfigurationError as exc:
+        raise _two_factor_configuration_unavailable(exc) from exc
+
+
+def _verify_two_factor_challenge(token: str) -> dict:
+    try:
+        return TwoFactorService.verify_challenge_token(token)
+    except TwoFactorConfigurationError as exc:
+        raise _two_factor_configuration_unavailable(exc) from exc
+
+
+def _challenge_user_id(payload: dict) -> UUID:
+    try:
+        return UUID(payload["sub"])
+    except (KeyError, TypeError, ValueError) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Two-factor challenge has an invalid user identifier.",
+        ) from exc
+
+
+def _deliver_two_factor_code(
+    user: User,
+    code: str,
+    db: Session,
+) -> None:
+    try:
+        EmailDeliveryService().send_two_factor_code(user.email, code)
+    except EmailConfigurationError as exc:
+        db.rollback()
+        logger.error("Two-factor email delivery is not configured: %s", exc)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=(
+                "Verification email delivery is not configured. "
+                "Please contact the administrator."
+            ),
+        ) from exc
+    except EmailDeliveryError as exc:
+        db.rollback()
+        logger.exception("Unable to deliver two-factor email to user %s", user.id)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=(
+                "We could not send your verification email. "
+                "Please try again shortly."
+            ),
+        ) from exc
 
 
 @router.post(
@@ -88,21 +161,18 @@ def login(
             detail="User account is inactive.",
         )
 
-    # Enforce 2FA for admin@degreelabs.com, all students, or if two_factor_enabled is True
-    is_admin = user.email.strip().lower() == "admin@degreelabs.com"
+    # Enforce 2FA for , all students, or if two_factor_enabled is True
+    is_admin = user.email.strip().lower() == "samatha.reddy@degreelabs.com"
     is_student = user.role == "student"
     requires_2fa = is_admin or is_student or user.two_factor_enabled
 
     if requires_2fa:
+        two_factor_token = _create_two_factor_challenge(user, access_token)
         otp = TwoFactorService.generate_otp()
         user.two_factor_otp_code = otp
         user.two_factor_otp_expires_at = datetime.now(timezone.utc) + timedelta(minutes=5)
+        _deliver_two_factor_code(user, otp, db)
         db.commit()
-
-        # Print to terminal/server log for security audit & easy verification
-        print(f"\n[2FA SECURITY] Verification code for {user.email}: {otp} (Expires in 5 minutes)\n")
-
-        two_factor_token = TwoFactorService.create_challenge_token(user, access_token)
 
         return UserLoginResponse(
             requires_2fa=True,
@@ -110,8 +180,7 @@ def login(
             masked_email=TwoFactorService.mask_email(user.email),
             methods=["otp", "totp"] if user.two_factor_secret else ["otp"],
             totp_configured=bool(user.two_factor_secret),
-            dev_code=otp if settings.environment == "development" else None,
-            message="Please enter the 6-digit verification code to complete sign in.",
+            message="A 6-digit verification code was sent to your email address.",
         )
 
     return UserLoginResponse(
@@ -130,17 +199,17 @@ def verify_two_factor(
     data: TwoFactorVerifyRequest,
     db: Session = Depends(get_db),
 ):
-    payload = TwoFactorService.verify_challenge_token(data.two_factor_token)
-    user_id = payload.get("sub")
+    payload = _verify_two_factor_challenge(data.two_factor_token)
+    user_id = _challenge_user_id(payload)
     access_token = payload.get("access_token")
 
-    if not user_id or not access_token:
+    if not access_token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Malformed two-factor challenge token.",
         )
 
-    user = db.query(User).filter(User.id == UUID(user_id)).first()
+    user = db.query(User).filter(User.id == user_id).first()
     if not user or user.status != "active":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -153,7 +222,13 @@ def verify_two_factor(
     # 1. Check OTP code
     if user.two_factor_otp_code and user.two_factor_otp_expires_at:
         now = datetime.now(timezone.utc)
-        if user.two_factor_otp_expires_at > now and user.two_factor_otp_code == code:
+        if (
+            user.two_factor_otp_expires_at > now
+            and TwoFactorService.verify_otp_code(
+                user.two_factor_otp_code,
+                code,
+            )
+        ):
             is_valid = True
 
     # 2. Check TOTP Authenticator code if not matched by OTP
@@ -185,27 +260,30 @@ def resend_two_factor_code(
     data: TwoFactorResendRequest,
     db: Session = Depends(get_db),
 ):
-    payload = TwoFactorService.verify_challenge_token(data.two_factor_token)
-    user_id = payload.get("sub")
+    payload = _verify_two_factor_challenge(data.two_factor_token)
+    user_id = _challenge_user_id(payload)
 
-    user = db.query(User).filter(User.id == UUID(user_id)).first()
+    user = db.query(User).filter(User.id == user_id).first()
     if not user or user.status != "active":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="User not found or account is inactive.",
         )
 
+    refreshed_token = _create_two_factor_challenge(
+        user,
+        payload["access_token"],
+    )
     otp = TwoFactorService.generate_otp()
     user.two_factor_otp_code = otp
     user.two_factor_otp_expires_at = datetime.now(timezone.utc) + timedelta(minutes=5)
+    _deliver_two_factor_code(user, otp, db)
     db.commit()
-
-    print(f"\n[2FA SECURITY RESEND] Verification code for {user.email}: {otp} (Expires in 5 minutes)\n")
 
     return {
         "success": True,
-        "message": "A fresh verification code has been generated.",
-        "dev_code": otp if settings.environment == "development" else None,
+        "message": "A fresh verification code was sent to your email address.",
+        "two_factor_token": refreshed_token,
     }
 
 

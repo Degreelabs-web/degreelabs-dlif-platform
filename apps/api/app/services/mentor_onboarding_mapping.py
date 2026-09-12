@@ -1,0 +1,29 @@
+MENTOR_ONBOARDING_FIELDS: dict[str, tuple[str, ...]] = {
+    "email": ("email", "email_address"),
+    "full_name": ("full_name", "name"),
+    "current_role": ("current_role", "designation", "title"),
+    "organisation": ("organisation", "organization", "company", "company_name"),
+    "city": ("city",),
+    "country": ("country",),
+    "phone": ("phone", "phone_number", "mobile_number"),
+    "linkedin_url": (
+        "linkedin_url",
+        "linkedin_or_professional_profile_link",
+        "professional_profile_link",
+    ),
+    "professional_headline": ("professional_headline", "headline"),
+    "bio": ("bio", "short_professional_bio"),
+    "professional_headshot_url": ("professional_headshot_url", "professional_headshot", "headshot_url"),
+    "expertise": ("expertise", "skills", "area_of_expertise", "areas_of_expertise"),
+    "industries": ("industries", "industry"),
+    "years_of_experience": (
+        "years_of_experience",
+        "years_of_professional_experience",
+    ),
+    "mentoring_statement": (
+        "mentoring_statement",
+        "mentor_statement",
+        "complete_this_sentence_as_a_mentor_i_help_fellows",
+    ),
+    "status": ("status",),
+}

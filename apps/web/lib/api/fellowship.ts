@@ -2,6 +2,7 @@ import { apiClient } from "@/lib/api/client";
 import {
   Company,
   Mentor,
+  MentorStatus,
   MentorPortalContext,
   Project,
   StudentCohortAssignment,
@@ -13,12 +14,20 @@ import {
 // ==================== Mentors ====================
 
 export async function fetchMentors(params?: {
-  status?: string;
+  status?: MentorStatus;
   search?: string;
+  organisation?: string;
+  industry?: string;
+  expertise?: string;
+  country?: string;
 }): Promise<Mentor[]> {
   const query = new URLSearchParams();
   if (params?.status) query.append("status", params.status);
   if (params?.search) query.append("search", params.search);
+  if (params?.organisation) query.append("organisation", params.organisation);
+  if (params?.industry) query.append("industry", params.industry);
+  if (params?.expertise) query.append("expertise", params.expertise);
+  if (params?.country) query.append("country", params.country);
   const qs = query.toString() ? `?${query.toString()}` : "";
   return apiClient<Mentor[]>(`/mentors${qs}`);
 }
@@ -31,16 +40,67 @@ export async function createMentor(data: {
   full_name: string;
   email: string;
   password?: string;
+  phone?: string;
   company_name?: string;
   designation?: string;
+  organisation?: string;
+  current_role?: string;
+  location?: string;
+  city?: string;
+  country?: string;
+  professional_headline?: string;
   expertise?: string[];
+  industries?: string[];
   years_of_experience?: number;
   linkedin_url?: string;
   bio?: string;
+  headshot_url?: string;
+  professional_headshot_url?: string;
+  support_preferences?: string[];
+  mentor_statement?: string;
+  mentoring_statement?: string;
 }): Promise<Mentor> {
   return apiClient<Mentor>("/mentors", {
     method: "POST",
     body: JSON.stringify(data),
+  });
+}
+
+export async function updateMentor(
+  id: string,
+  data: {
+    phone?: string;
+    bio?: string;
+    expertise?: string[];
+    years_of_experience?: number;
+    company_name?: string;
+    designation?: string;
+    organisation?: string;
+    current_role?: string;
+    location?: string;
+    city?: string;
+    country?: string;
+    professional_headline?: string;
+    linkedin_url?: string;
+    github_url?: string;
+    headshot_url?: string;
+    professional_headshot_url?: string;
+    industries?: string[];
+    support_preferences?: string[];
+    mentor_statement?: string;
+    mentoring_statement?: string;
+    status?: MentorStatus;
+  }
+): Promise<Mentor> {
+  return apiClient<Mentor>(`/mentors/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteMentor(id: string): Promise<void> {
+  return apiClient<void>(`/mentors/${id}`, {
+    method: "DELETE",
   });
 }
 
@@ -79,6 +139,32 @@ export async function createCompany(data: {
   });
 }
 
+export async function updateCompany(
+  id: string,
+  data: {
+    name?: string;
+    profile?: string;
+    industry?: string;
+    website?: string;
+    contact_email?: string;
+    contact_name?: string;
+    contact_phone?: string;
+    logo_url?: string;
+    status?: string;
+  }
+): Promise<Company> {
+  return apiClient<Company>(`/companies/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteCompany(id: string): Promise<void> {
+  return apiClient<void>(`/companies/${id}`, {
+    method: "DELETE",
+  });
+}
+
 // ==================== Projects ====================
 
 export async function fetchProjects(params?: {
@@ -112,6 +198,33 @@ export async function createProject(data: {
   return apiClient<Project>("/projects", {
     method: "POST",
     body: JSON.stringify(data),
+  });
+}
+
+export async function updateProject(
+  id: string,
+  data: {
+    company_id?: string;
+    title?: string;
+    description?: string;
+    objectives?: string;
+    expected_deliverables?: string;
+    difficulty?: string;
+    max_teams?: number;
+    start_date?: string;
+    end_date?: string;
+    status?: string;
+  }
+): Promise<Project> {
+  return apiClient<Project>(`/projects/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteProject(id: string): Promise<void> {
+  return apiClient<void>(`/projects/${id}`, {
+    method: "DELETE",
   });
 }
 

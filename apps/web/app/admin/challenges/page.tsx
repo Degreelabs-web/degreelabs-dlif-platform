@@ -10,9 +10,14 @@ import {
   X,
   CheckCircle2,
   AlertCircle,
-  Sparkles,
 } from "lucide-react";
-import { fetchChallenges, createChallenge } from "@/lib/api/challenges";
+import { EntityActionsMenu } from "@/components/admin/EntityActionsMenu";
+import {
+  createChallenge,
+  deleteChallenge,
+  fetchChallenges,
+  updateChallenge,
+} from "@/lib/api/challenges";
 import { Challenge } from "@/types/fellowship";
 
 export default function AdminChallengesPage() {
@@ -27,6 +32,8 @@ export default function AdminChallengesPage() {
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
+  const [editingChallenge, setEditingChallenge] = useState<Challenge | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     title: "",
@@ -63,17 +70,22 @@ export default function AdminChallengesPage() {
     loadData();
   }
 
-  async function handleCreateChallenge(e: React.FormEvent) {
+  async function handleSubmitChallenge(e: React.FormEvent) {
     e.preventDefault();
     setFormError(null);
     setFormSuccess(null);
     setSubmitting(true);
 
     try {
-      await createChallenge(formData);
-      setFormSuccess("Challenge successfully created!");
+      if (editingChallenge) {
+        await updateChallenge(editingChallenge.id, formData);
+      } else {
+        await createChallenge(formData);
+      }
+      setFormSuccess(`Challenge successfully ${editingChallenge ? "updated" : "created"}!`);
       setTimeout(() => {
         setIsModalOpen(false);
+        setEditingChallenge(null);
         setFormSuccess(null);
         setFormData({
           title: "",
@@ -86,10 +98,54 @@ export default function AdminChallengesPage() {
         });
         loadData();
       }, 1000);
-    } catch (err: any) {
-      setFormError(err.message || "Failed to create challenge.");
+    } catch (err: unknown) {
+      setFormError(
+        err instanceof Error
+          ? err.message
+          : `Failed to ${editingChallenge ? "update" : "create"} challenge.`
+      );
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  function openCreateModal() {
+    setEditingChallenge(null);
+    setFormError(null);
+    setFormSuccess(null);
+    setFormData({
+      title: "", company_name: "", description: "", problem_statement: "",
+      expected_outcome: "", difficulty: "standard", status: "active",
+    });
+    setIsModalOpen(true);
+  }
+
+  function openEditModal(challenge: Challenge) {
+    setEditingChallenge(challenge);
+    setFormError(null);
+    setFormSuccess(null);
+    setFormData({
+      title: challenge.title,
+      company_name: challenge.company_name,
+      description: challenge.description,
+      problem_statement: challenge.problem_statement,
+      expected_outcome: challenge.expected_outcome || "",
+      difficulty: challenge.difficulty,
+      status: challenge.status,
+    });
+    setIsModalOpen(true);
+  }
+
+  async function handleDeleteChallenge(challenge: Challenge) {
+    if (!confirm(`Delete "${challenge.title}"? This action cannot be undone.`)) return;
+    try {
+      setDeletingId(challenge.id);
+      await deleteChallenge(challenge.id);
+      await loadData();
+    } catch (err) {
+      alert("Failed to delete challenge: " + (err as Error).message);
+    } finally {
+      setDeletingId(null);
     }
   }
 
@@ -110,7 +166,7 @@ export default function AdminChallengesPage() {
         </div>
 
         <button
-          onClick={() => setIsModalOpen(true)}
+          onClick={openCreateModal}
           className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
         >
           <PlusCircle className="h-4 w-4" />
@@ -134,7 +190,7 @@ export default function AdminChallengesPage() {
           />
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <select
             value={selectedDifficulty}
             onChange={(e) => setSelectedDifficulty(e.target.value)}
@@ -183,7 +239,7 @@ export default function AdminChallengesPage() {
             Publish challenge statements with expected deliverables for fellowship teams.
           </p>
           <button
-            onClick={() => setIsModalOpen(true)}
+            onClick={openCreateModal}
             className="mt-4 inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
           >
             <PlusCircle className="h-4 w-4" />
@@ -210,15 +266,23 @@ export default function AdminChallengesPage() {
                   >
                     {c.difficulty}
                   </span>
-                  <span
-                    className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium capitalize ${
-                      c.status === "active"
-                        ? "bg-emerald-50 text-emerald-700"
-                        : "bg-slate-100 text-slate-500"
-                    }`}
-                  >
-                    {c.status}
-                  </span>
+                  <div className="flex items-center gap-1">
+                    <span
+                      className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium capitalize ${
+                        c.status === "active"
+                          ? "bg-emerald-50 text-emerald-700"
+                          : "bg-slate-100 text-slate-500"
+                      }`}
+                    >
+                      {c.status}
+                    </span>
+                    <EntityActionsMenu
+                      label={c.title}
+                      onEdit={() => openEditModal(c)}
+                      onDelete={() => handleDeleteChallenge(c)}
+                      deleteLabel={deletingId === c.id ? "Deleting..." : "Delete"}
+                    />
+                  </div>
                 </div>
 
                 <h3 className="mt-3 text-lg font-bold text-slate-900">
@@ -252,17 +316,19 @@ export default function AdminChallengesPage() {
         </div>
       )}
 
-      {/* Create Challenge Modal */}
+      {/* Create/Edit Challenge Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
           <div className="relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl">
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
               <div>
                 <h2 className="text-lg font-bold text-slate-900">
-                  Create Industry Challenge
+                  {editingChallenge ? "Edit Industry Challenge" : "Create Industry Challenge"}
                 </h2>
                 <p className="text-xs text-slate-500">
-                  Define a project track, problem statement, and expected outcome.
+                  {editingChallenge
+                    ? "Update the challenge details and publishing status."
+                    : "Define a project track, problem statement, and expected outcome."}
                 </p>
               </div>
               <button
@@ -287,7 +353,7 @@ export default function AdminChallengesPage() {
               </div>
             )}
 
-            <form onSubmit={handleCreateChallenge} className="mt-4 space-y-4">
+            <form onSubmit={handleSubmitChallenge} className="mt-4 space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-700">
                   Challenge Title *
@@ -302,6 +368,22 @@ export default function AdminChallengesPage() {
                   }
                   className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900"
                 />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700">
+                  Status
+                </label>
+                <select
+                  value={formData.status}
+                  onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900"
+                >
+                  <option value="draft">Draft</option>
+                  <option value="active">Active</option>
+                  <option value="completed">Completed</option>
+                  <option value="archived">Archived</option>
+                </select>
               </div>
 
               <div className="grid gap-3 sm:grid-cols-2">
@@ -400,7 +482,7 @@ export default function AdminChallengesPage() {
                   className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-slate-800 disabled:opacity-50"
                 >
                   {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
-                  Save Challenge
+                  {editingChallenge ? "Save Changes" : "Save Challenge"}
                 </button>
               </div>
             </form>

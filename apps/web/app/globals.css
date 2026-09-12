@@ -1,26 +1,101 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f5f9ff;
+  --foreground: #10233f;
+  --brand-cyan: #39aef4;
+  --brand-blue: #3978f6;
+  --brand-blue-deep: #255ed8;
+  --brand-navy: #10233f;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-dm-sans);
+  --font-display: var(--font-outfit);
   --font-mono: var(--font-geist-mono);
+  --color-brand-50: #eff8ff;
+  --color-brand-100: #dff1ff;
+  --color-brand-200: #b9e3ff;
+  --color-brand-300: #83ceff;
+  --color-brand-400: var(--brand-cyan);
+  --color-brand-500: var(--brand-blue);
+  --color-brand-600: var(--brand-blue-deep);
+  --color-brand-700: #1f4fba;
+  --color-brand-800: #1d4294;
+  --color-brand-900: var(--brand-navy);
+  --color-slate-50: #f5f9ff;
+  --color-slate-100: #eaf2fc;
+  --color-slate-200: #d8e5f5;
+  --color-slate-300: #b8cce4;
+  --color-slate-400: #7891ae;
+  --color-slate-500: #58708e;
+  --color-slate-600: #405875;
+  --color-slate-700: #29425f;
+  --color-slate-800: #1a3150;
+  --color-slate-900: var(--brand-navy);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  border-color: #d8e5f5;
+}
+
+html {
+  background: var(--background);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-dm-sans), Arial, Helvetica, sans-serif;
+  text-rendering: optimizeLegibility;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-outfit), var(--font-dm-sans), sans-serif;
+}
+
+button,
+a,
+input,
+select,
+textarea {
+  transition-duration: 180ms;
+  transition-property: color, background-color, border-color, box-shadow, opacity,
+    transform;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid rgb(57 174 244 / 28%);
+  outline-offset: 2px;
+}
+
+input,
+select,
+textarea {
+  accent-color: var(--brand-blue);
+}
+
+::selection {
+  background: rgb(57 120 246 / 22%);
+  color: var(--brand-navy);
+}
+
+::-webkit-scrollbar {
+  height: 8px;
+  width: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #b8cce4;
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background-clip: padding-box;
 }

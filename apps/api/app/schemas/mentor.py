@@ -1,7 +1,11 @@
 from datetime import datetime
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
+
+
+MentorStatus = Literal["pending", "active", "rejected", "inactive"]
 
 
 class MentorBase(BaseModel):
@@ -11,9 +15,21 @@ class MentorBase(BaseModel):
     years_of_experience: int | None = Field(default=None, ge=0)
     company_name: str | None = Field(default=None, max_length=255)
     designation: str | None = Field(default=None, max_length=255)
+    organisation: str | None = Field(default=None, max_length=255)
+    current_role: str | None = Field(default=None, max_length=255)
+    location: str | None = Field(default=None, max_length=255)
+    city: str | None = Field(default=None, max_length=255)
+    country: str | None = Field(default=None, max_length=255)
+    professional_headline: str | None = Field(default=None, max_length=500)
     linkedin_url: str | None = Field(default=None, max_length=2048)
     github_url: str | None = Field(default=None, max_length=2048)
-    status: str = Field(default="active", max_length=50)
+    headshot_url: str | None = Field(default=None, max_length=2048)
+    professional_headshot_url: str | None = Field(default=None, max_length=2048)
+    industries: list[str] = Field(default_factory=list)
+    support_preferences: list[str] = Field(default_factory=list)
+    mentor_statement: str | None = None
+    mentoring_statement: str | None = None
+    status: MentorStatus = "active"
 
 
 class MentorCreate(MentorBase):
@@ -31,9 +47,21 @@ class MentorUpdate(BaseModel):
     years_of_experience: int | None = Field(default=None, ge=0)
     company_name: str | None = Field(default=None, max_length=255)
     designation: str | None = Field(default=None, max_length=255)
+    organisation: str | None = Field(default=None, max_length=255)
+    current_role: str | None = Field(default=None, max_length=255)
+    location: str | None = Field(default=None, max_length=255)
+    city: str | None = Field(default=None, max_length=255)
+    country: str | None = Field(default=None, max_length=255)
+    professional_headline: str | None = Field(default=None, max_length=500)
     linkedin_url: str | None = Field(default=None, max_length=2048)
     github_url: str | None = Field(default=None, max_length=2048)
-    status: str | None = Field(default=None, max_length=50)
+    headshot_url: str | None = Field(default=None, max_length=2048)
+    professional_headshot_url: str | None = Field(default=None, max_length=2048)
+    industries: list[str] | None = None
+    support_preferences: list[str] | None = None
+    mentor_statement: str | None = None
+    mentoring_statement: str | None = None
+    status: MentorStatus | None = None
 
 
 class MentorResponse(MentorBase):

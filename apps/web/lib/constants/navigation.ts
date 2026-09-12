@@ -11,16 +11,9 @@ import {
   CalendarDays,
   FileText,
   MessageSquare,
-  ClipboardCheck,
-  Bell,
   BarChart3,
-  ShieldCheck,
-  Settings,
   Route,
-  FolderOpen,
-  Trophy,
   BookOpen,
-  UserCheck,
 } from "lucide-react";
 
 export type NavigationItem = {
@@ -122,12 +115,12 @@ export const adminNavigation: NavigationItem[] = [
     icon: Building2,
   },
   {
-    label: "Students",
+    label: "Enrolled Students",
     href: "/admin/students",
     icon: Users,
   },
   {
-    label: "Mentors",
+    label: "Enrolled Mentors",
     href: "/admin/mentors",
     icon: UserRound,
   },

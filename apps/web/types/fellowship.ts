@@ -1,3 +1,5 @@
+export type MentorStatus = "pending" | "active" | "rejected" | "inactive";
+
 export interface Mentor {
   id: string;
   user_id: string;
@@ -9,9 +11,21 @@ export interface Mentor {
   years_of_experience?: number | null;
   company_name?: string | null;
   designation?: string | null;
+  organisation?: string | null;
+  current_role?: string | null;
+  location?: string | null;
+  city?: string | null;
+  country?: string | null;
+  professional_headline?: string | null;
   linkedin_url?: string | null;
   github_url?: string | null;
-  status: string;
+  headshot_url?: string | null;
+  professional_headshot_url?: string | null;
+  industries: string[];
+  support_preferences: string[];
+  mentor_statement?: string | null;
+  mentoring_statement?: string | null;
+  status: MentorStatus;
   assigned_teams_count: number;
   created_at: string;
   updated_at: string;

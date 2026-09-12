@@ -21,7 +21,6 @@ export interface TwoFactorChallengeResponse {
   masked_email: string;
   methods: string[];
   totp_configured: boolean;
-  dev_code?: string | null;
   message?: string;
   access_token?: null;
   user?: null;
@@ -62,8 +61,12 @@ export async function verifyTwoFactor(
 
 export async function resendTwoFactorCode(
   twoFactorToken: string
-): Promise<{ success: boolean; message: string; dev_code?: string }> {
-  return apiClient<{ success: boolean; message: string; dev_code?: string }>("/auth/2fa/resend", {
+): Promise<{ success: boolean; message: string; two_factor_token: string }> {
+  return apiClient<{
+    success: boolean;
+    message: string;
+    two_factor_token: string;
+  }>("/auth/2fa/resend", {
     method: "POST",
     body: JSON.stringify({ two_factor_token: twoFactorToken }),
   });

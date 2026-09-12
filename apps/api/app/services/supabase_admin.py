@@ -29,20 +29,71 @@ class SupabaseAdminService:
         }
 
     def get_user_by_email(self, email: str) -> dict | None:
+        normalized_email = email.strip().lower()
+        page = 1
+        per_page = 1000
+        while True:
+            try:
+                response = httpx.get(
+                    f"{self.base_url}/auth/v1/admin/users",
+                    headers=self.headers,
+                    params={"page": page, "per_page": per_page},
+                    timeout=15,
+                )
+            except httpx.HTTPError as exc:
+                raise SupabaseAdminError(
+                    "Supabase user lookup could not be completed."
+                ) from exc
+
+            if response.status_code != 200:
+                raise SupabaseAdminError(
+                    f"Supabase user lookup failed with status {response.status_code}."
+                )
+            users = response.json().get("users", [])
+            for user in users:
+                if user.get("email", "").lower() == normalized_email:
+                    return user
+            if len(users) < per_page:
+                return None
+            page += 1
+
+    def invite_user(
+        self,
+        *,
+        email: str,
+        full_name: str,
+        redirect_to: str | None = None,
+    ) -> tuple[dict, bool]:
+        normalized_email = email.strip().lower()
+        existing = self.get_user_by_email(normalized_email)
+        if existing:
+            return existing, False
+
+        payload: dict = {
+            "email": normalized_email,
+            "data": {"full_name": full_name},
+        }
+        if redirect_to:
+            payload["redirect_to"] = redirect_to
+
         try:
-            response = httpx.get(
-                f"{self.base_url}/auth/v1/admin/users",
+            response = httpx.post(
+                f"{self.base_url}/auth/v1/invite",
                 headers=self.headers,
+                json=payload,
                 timeout=15,
             )
-            if response.status_code == 200:
-                users = response.json().get("users", [])
-                for u in users:
-                    if u.get("email", "").lower() == email.strip().lower():
-                        return u
-        except Exception:
-            pass
-        return None
+        except httpx.HTTPError as exc:
+            raise SupabaseAdminError(
+                "Supabase invitation could not be sent."
+            ) from exc
+
+        if response.status_code not in (200, 201):
+            raise SupabaseAdminError(
+                f"Supabase invitation failed with status {response.status_code}."
+            )
+
+        return response.json(), True
 
     def update_user(
         self,
@@ -67,7 +118,7 @@ class SupabaseAdminService:
         if response.status_code not in (200, 201):
             raise SupabaseAdminError(
                 f"Supabase user update failed: "
-                f"{response.status_code}: {response.text}"
+                f"status {response.status_code}."
             )
 
         return response.json()
@@ -116,7 +167,7 @@ class SupabaseAdminService:
 
             raise SupabaseAdminError(
                 f"Supabase user creation failed: "
-                f"{response.status_code}: {response.text}"
+                f"status {response.status_code}."
             )
 
         return response.json()
@@ -131,5 +182,5 @@ class SupabaseAdminService:
         if response.status_code not in (200, 204):
             raise SupabaseAdminError(
                 f"Supabase user deletion failed: "
-                f"{response.status_code}: {response.text}"
+                f"status {response.status_code}."
             )

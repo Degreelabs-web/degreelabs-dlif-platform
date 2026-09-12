@@ -4,6 +4,7 @@ from app.db.models.challenge_assignment import ChallengeAssignment
 from app.db.models.cohort import Cohort
 from app.db.models.company import Company
 from app.db.models.enrollment import Enrollment
+from app.db.models.enrollment_sync_run import EnrollmentSyncRun
 from app.db.models.feedback import Feedback
 from app.db.models.institution import Institution
 from app.db.models.mentor import Mentor
@@ -29,6 +30,7 @@ __all__ = [
     "Institution",
     "Cohort",
     "Enrollment",
+    "EnrollmentSyncRun",
     "StudentProfile",
     "Team",
     "TeamMember",
@@ -50,4 +52,4 @@ __all__ = [
     "SubmissionVersion",
     "SubmissionFile",
     "Feedback",
-]
+]

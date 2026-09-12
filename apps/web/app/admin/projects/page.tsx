@@ -1,7 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { fetchProjects, fetchCompanies, createProject } from "@/lib/api/fellowship";
+import { EntityActionsMenu } from "@/components/admin/EntityActionsMenu";
+import {
+  createProject,
+  deleteProject,
+  fetchCompanies,
+  fetchProjects,
+  updateProject,
+} from "@/lib/api/fellowship";
 import { Project, Company } from "@/types/fellowship";
 import { FolderGit2, Plus, Building2, Calendar, Target, Users } from "lucide-react";
 
@@ -11,6 +18,9 @@ export default function ProjectsPage() {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [search, setSearch] = useState("");
+  const [editingProject, setEditingProject] = useState<Project | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     company_id: "",
@@ -22,6 +32,7 @@ export default function ProjectsPage() {
     max_teams: 3,
     start_date: "",
     end_date: "",
+    status: "draft",
   });
 
   const loadData = async () => {
@@ -51,7 +62,8 @@ export default function ProjectsPage() {
       return;
     }
     try {
-      await createProject({
+      setSubmitting(true);
+      const payload = {
         company_id: formData.company_id,
         title: formData.title,
         description: formData.description,
@@ -61,8 +73,15 @@ export default function ProjectsPage() {
         max_teams: Number(formData.max_teams),
         start_date: formData.start_date || undefined,
         end_date: formData.end_date || undefined,
-      });
+        status: formData.status,
+      };
+      if (editingProject) {
+        await updateProject(editingProject.id, payload);
+      } else {
+        await createProject(payload);
+      }
       setShowModal(false);
+      setEditingProject(null);
       setFormData({
         company_id: "",
         title: "",
@@ -73,10 +92,53 @@ export default function ProjectsPage() {
         max_teams: 3,
         start_date: "",
         end_date: "",
+        status: "draft",
       });
-      loadData();
+      await loadData();
     } catch (err) {
-      alert("Failed to create project: " + (err as Error).message);
+      alert(`Failed to ${editingProject ? "update" : "create"} project: ${(err as Error).message}`);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const openCreateModal = () => {
+    setEditingProject(null);
+    setFormData({
+      company_id: companies[0]?.id || "", title: "", description: "",
+      objectives: "", expected_deliverables: "", difficulty: "intermediate",
+      max_teams: 3, start_date: "", end_date: "", status: "draft",
+    });
+    setShowModal(true);
+  };
+
+  const openEditModal = (project: Project) => {
+    setEditingProject(project);
+    setFormData({
+      company_id: project.company_id,
+      title: project.title,
+      description: project.description,
+      objectives: project.objectives,
+      expected_deliverables: project.expected_deliverables,
+      difficulty: project.difficulty,
+      max_teams: project.max_teams,
+      start_date: project.start_date || "",
+      end_date: project.end_date || "",
+      status: project.status,
+    });
+    setShowModal(true);
+  };
+
+  const handleDelete = async (project: Project) => {
+    if (!confirm(`Delete "${project.title}"? This action cannot be undone.`)) return;
+    try {
+      setDeletingId(project.id);
+      await deleteProject(project.id);
+      await loadData();
+    } catch (err) {
+      alert("Failed to delete project: " + (err as Error).message);
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -94,7 +156,7 @@ export default function ProjectsPage() {
         </div>
 
         <button
-          onClick={() => setShowModal(true)}
+          onClick={openCreateModal}
           className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-700 transition"
         >
           <Plus className="h-4 w-4" />
@@ -135,9 +197,17 @@ export default function ProjectsPage() {
                     <span>{project.company_name || "Partner Company"}</span>
                   </div>
                 </div>
-                <span className="rounded bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700 capitalize">
-                  {project.difficulty}
-                </span>
+                <div className="flex items-center gap-1">
+                  <span className="rounded bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700 capitalize">
+                    {project.difficulty}
+                  </span>
+                  <EntityActionsMenu
+                    label={project.title}
+                    onEdit={() => openEditModal(project)}
+                    onDelete={() => handleDelete(project)}
+                    deleteLabel={deletingId === project.id ? "Deleting..." : "Delete"}
+                  />
+                </div>
               </div>
 
               <p className="text-xs text-slate-600 line-clamp-3">{project.description}</p>
@@ -176,7 +246,9 @@ export default function ProjectsPage() {
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl space-y-4 max-h-[90vh] overflow-y-auto">
-            <h2 className="text-lg font-bold text-slate-900">Create Fellowship Project</h2>
+            <h2 className="text-lg font-bold text-slate-900">
+              {editingProject ? "Edit Fellowship Project" : "Create Fellowship Project"}
+            </h2>
             <form onSubmit={handleSubmit} className="space-y-3 text-sm">
               <div>
                 <label className="block text-xs font-medium text-slate-700">Sponsoring Partner Company</label>
@@ -241,7 +313,7 @@ export default function ProjectsPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid gap-3 sm:grid-cols-2">
                 <div>
                   <label className="block text-xs font-medium text-slate-700">Difficulty</label>
                   <select
@@ -267,7 +339,21 @@ export default function ProjectsPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-slate-700">Status</label>
+                <select
+                  value={formData.status}
+                  onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                  className="mt-1 w-full rounded-lg border border-slate-300 p-2 text-sm focus:border-slate-900 focus:outline-none"
+                >
+                  <option value="draft">Draft</option>
+                  <option value="active">Active</option>
+                  <option value="completed">Completed</option>
+                  <option value="archived">Archived</option>
+                </select>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
                 <div>
                   <label className="block text-xs font-medium text-slate-700">Start Date</label>
                   <input
@@ -292,15 +378,17 @@ export default function ProjectsPage() {
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
+                  disabled={submitting}
                   className="rounded-lg border border-slate-200 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
+                  disabled={submitting}
                   className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700"
                 >
-                  Create Project
+                  {submitting ? "Saving..." : editingProject ? "Save Changes" : "Create Project"}
                 </button>
               </div>
             </form>

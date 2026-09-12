@@ -17,10 +17,13 @@ import {
 import {
   fetchSessions,
   createSession,
+  updateSession,
+  deleteSession,
   generateDiscoverCurriculum,
 } from "@/lib/api/sessions";
 import { fetchCohorts } from "@/lib/api/cohorts";
 import { Cohort, Session } from "@/types/fellowship";
+import { EntityActionsMenu } from "@/components/admin/EntityActionsMenu";
 
 export default function AdminSessionsPage() {
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -30,6 +33,8 @@ export default function AdminSessionsPage() {
 
   // Create Session Modal
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [editingSession, setEditingSession] = useState<Session | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [submittingSession, setSubmittingSession] = useState(false);
   const [sessionFormError, setSessionFormError] = useState<string | null>(null);
   const [sessionData, setSessionData] = useState({
@@ -78,7 +83,35 @@ export default function AdminSessionsPage() {
     loadData();
   }, [selectedCohort]);
 
-  async function handleCreateSession(e: React.FormEvent) {
+  function openCreateModal() {
+    setEditingSession(null);
+    setSessionFormError(null);
+    setSessionData((prev) => ({
+      ...prev,
+      title: "",
+      description: "",
+      status: "scheduled",
+    }));
+    setIsCreateModalOpen(true);
+  }
+
+  function openEditModal(session: Session) {
+    setEditingSession(session);
+    setSessionFormError(null);
+    setSessionData({
+      cohort_id: session.cohort_id,
+      week_number: session.week_number,
+      title: session.title,
+      description: session.description || "",
+      scheduled_at: new Date(session.scheduled_at).toISOString().slice(0, 16),
+      duration_minutes: session.duration_minutes,
+      meeting_url: session.meeting_url || "",
+      status: session.status,
+    });
+    setIsCreateModalOpen(true);
+  }
+
+  async function handleSubmitSession(e: React.FormEvent) {
     e.preventDefault();
     setSessionFormError(null);
     setSubmittingSession(true);
@@ -87,13 +120,24 @@ export default function AdminSessionsPage() {
       if (!sessionData.cohort_id) {
         throw new Error("Please select a cohort.");
       }
-      await createSession({
-        ...sessionData,
+      const payload = {
         week_number: Number(sessionData.week_number),
+        title: sessionData.title,
+        description: sessionData.description,
+        scheduled_at: sessionData.scheduled_at,
         duration_minutes: Number(sessionData.duration_minutes),
-      });
+        meeting_url: sessionData.meeting_url,
+        status: sessionData.status,
+      };
+
+      if (editingSession) {
+        await updateSession(editingSession.id, payload);
+      } else {
+        await createSession({ ...payload, cohort_id: sessionData.cohort_id });
+      }
 
       setIsCreateModalOpen(false);
+      setEditingSession(null);
       setSessionData((prev) => ({
         ...prev,
         title: "",
@@ -102,9 +146,27 @@ export default function AdminSessionsPage() {
       }));
       loadData();
     } catch (err: any) {
-      setSessionFormError(err.message || "Failed to create session.");
+      setSessionFormError(
+        err.message || `Failed to ${editingSession ? "update" : "create"} session.`
+      );
     } finally {
       setSubmittingSession(false);
+    }
+  }
+
+  async function handleDeleteSession(session: Session) {
+    if (!window.confirm(`Delete session "${session.title}"? This cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      setDeletingId(session.id);
+      await deleteSession(session.id);
+      await loadData();
+    } catch (err) {
+      window.alert(err instanceof Error ? err.message : "Failed to delete session.");
+    } finally {
+      setDeletingId(null);
     }
   }
 
@@ -164,7 +226,7 @@ export default function AdminSessionsPage() {
             Generate Discover Track
           </button>
           <button
-            onClick={() => setIsCreateModalOpen(true)}
+            onClick={openCreateModal}
             className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
           >
             <PlusCircle className="h-4 w-4" />
@@ -174,14 +236,14 @@ export default function AdminSessionsPage() {
       </div>
 
       {/* Cohort Filter */}
-      <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="flex flex-col gap-2 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:gap-3">
         <label className="text-sm font-semibold text-slate-700">
           Cohort Schedule:
         </label>
         <select
           value={selectedCohort}
           onChange={(e) => setSelectedCohort(e.target.value)}
-          className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none"
+          className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none sm:w-auto"
         >
           <option value="">All Cohorts</option>
           {cohorts.map((c) => (
@@ -218,7 +280,7 @@ export default function AdminSessionsPage() {
               Generate Discover Track
             </button>
             <button
-              onClick={() => setIsCreateModalOpen(true)}
+              onClick={openCreateModal}
               className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
             >
               <PlusCircle className="h-4 w-4" />
@@ -289,6 +351,12 @@ export default function AdminSessionsPage() {
                       <ExternalLink className="h-3 w-3 text-slate-400" />
                     </a>
                   )}
+                  <EntityActionsMenu
+                    label={sess.title}
+                    onEdit={() => openEditModal(sess)}
+                    onDelete={() => handleDeleteSession(sess)}
+                    deleteLabel={deletingId === sess.id ? "Deleting..." : "Delete"}
+                  />
                 </div>
               </div>
             );
@@ -299,18 +367,23 @@ export default function AdminSessionsPage() {
       {/* Create Session Modal */}
       {isCreateModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
-          <div className="relative w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl">
+          <div className="relative max-h-[calc(100dvh-2rem)] w-full max-w-lg overflow-y-auto rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl">
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
               <div>
                 <h2 className="text-lg font-bold text-slate-900">
-                  Schedule Workshop Session
+                  {editingSession ? "Edit Workshop Session" : "Schedule Workshop Session"}
                 </h2>
                 <p className="text-xs text-slate-500">
-                  Plan a live fellowship sync, lecture, or review session.
+                  {editingSession
+                    ? "Update the workshop schedule and session details."
+                    : "Plan a live fellowship sync, lecture, or review session."}
                 </p>
               </div>
               <button
-                onClick={() => setIsCreateModalOpen(false)}
+                onClick={() => {
+                  setIsCreateModalOpen(false);
+                  setEditingSession(null);
+                }}
                 className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
               >
                 <X className="h-5 w-5" />
@@ -324,7 +397,7 @@ export default function AdminSessionsPage() {
               </div>
             )}
 
-            <form onSubmit={handleCreateSession} className="mt-4 space-y-4">
+            <form onSubmit={handleSubmitSession} className="mt-4 space-y-4">
               <div className="grid gap-3 sm:grid-cols-3">
                 <div className="sm:col-span-2">
                   <label className="block text-xs font-semibold text-slate-700">
@@ -332,11 +405,12 @@ export default function AdminSessionsPage() {
                   </label>
                   <select
                     required
+                    disabled={Boolean(editingSession)}
                     value={sessionData.cohort_id}
                     onChange={(e) =>
                       setSessionData({ ...sessionData, cohort_id: e.target.value })
                     }
-                    className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900"
+                    className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900 disabled:bg-slate-100 disabled:text-slate-500"
                   >
                     <option value="" disabled>
                       Select Cohort
@@ -456,10 +530,32 @@ export default function AdminSessionsPage() {
                 />
               </div>
 
+              {editingSession && (
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700">
+                    Status
+                  </label>
+                  <select
+                    value={sessionData.status}
+                    onChange={(e) =>
+                      setSessionData({ ...sessionData, status: e.target.value })
+                    }
+                    className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm capitalize text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900"
+                  >
+                    <option value="scheduled">Scheduled</option>
+                    <option value="completed">Completed</option>
+                    <option value="cancelled">Cancelled</option>
+                  </select>
+                </div>
+              )}
+
               <div className="mt-6 flex justify-end gap-3 pt-2">
                 <button
                   type="button"
-                  onClick={() => setIsCreateModalOpen(false)}
+                  onClick={() => {
+                    setIsCreateModalOpen(false);
+                    setEditingSession(null);
+                  }}
                   className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
                 >
                   Cancel
@@ -470,7 +566,7 @@ export default function AdminSessionsPage() {
                   className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-slate-800 disabled:opacity-50"
                 >
                   {submittingSession && <Loader2 className="h-4 w-4 animate-spin" />}
-                  Schedule Session
+                  {editingSession ? "Save Changes" : "Schedule Session"}
                 </button>
               </div>
             </form>
@@ -481,7 +577,7 @@ export default function AdminSessionsPage() {
       {/* Generate Discover Curriculum Modal */}
       {isDiscoverModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
-          <div className="relative w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl">
+          <div className="relative max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl">
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
               <div className="flex items-center gap-2">
                 <div className="rounded-xl bg-indigo-50 p-2 text-indigo-600">

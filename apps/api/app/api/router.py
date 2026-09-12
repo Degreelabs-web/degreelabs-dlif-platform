@@ -9,6 +9,7 @@ from app.api.routes.challenges import router as challenges_router
 from app.api.routes.cohorts import router as cohorts_router
 from app.api.routes.companies import router as companies_router
 from app.api.routes.enrollments import router as enrollments_router
+from app.api.routes.enrollment_sync import router as enrollment_sync_router
 from app.api.routes.feedback import router as feedback_router
 from app.api.routes.health import router as health_router
 from app.api.routes.institutions import router as institutions_router
@@ -52,6 +53,11 @@ api_router.include_router(
 api_router.include_router(
     enrollments_router,
     tags=["Enrollments"],
+)
+
+api_router.include_router(
+    enrollment_sync_router,
+    tags=["Enrollment Sync"],
 )
 
 api_router.include_router(

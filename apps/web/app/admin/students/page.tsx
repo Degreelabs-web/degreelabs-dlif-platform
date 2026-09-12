@@ -1,19 +1,24 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   Users,
   Search,
   PlusCircle,
-  Building2,
-  GraduationCap,
-  Mail,
   Loader2,
   X,
   CheckCircle2,
   AlertCircle,
 } from "lucide-react";
-import { fetchStudents, provisionStudent } from "@/lib/api/students";
+import { EntityActionsMenu } from "@/components/admin/EntityActionsMenu";
+import { DeleteConfirmationDialog } from "@/components/admin/DeleteConfirmationDialog";
+import { EnrollmentSyncStatus } from "@/components/admin/EnrollmentSyncStatus";
+import {
+  deleteStudent,
+  fetchStudents,
+  provisionStudent,
+  updateStudent,
+} from "@/lib/api/students";
 import { fetchInstitutions } from "@/lib/api/institutions";
 import { Institution, Student } from "@/types/fellowship";
 
@@ -30,6 +35,11 @@ export default function AdminStudentsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
+  const [editingStudent, setEditingStudent] = useState<Student | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [studentPendingDelete, setStudentPendingDelete] = useState<Student | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [directoryRefreshKey, setDirectoryRefreshKey] = useState(0);
 
   const [formData, setFormData] = useState({
     institution_id: "",
@@ -41,9 +51,10 @@ export default function AdminStudentsPage() {
     course: "Computer Science & Engineering",
     branch: "Information Technology",
     graduation_year: 2026,
+    status: "active",
   });
 
-  async function loadData() {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
       const [studentsData, institutionsData] = await Promise.all([
@@ -55,21 +66,26 @@ export default function AdminStudentsPage() {
       ]);
       setStudents(studentsData);
       setInstitutions(institutionsData);
-      if (institutionsData.length > 0 && !formData.institution_id) {
-        setFormData((prev) => ({ ...prev, institution_id: institutionsData[0].id }));
+      if (institutionsData.length > 0) {
+        setFormData((prev) =>
+          prev.institution_id
+            ? prev
+            : { ...prev, institution_id: institutionsData[0].id }
+        );
       }
     } catch (err) {
       console.error("Failed to load students", err);
     } finally {
       setLoading(false);
     }
-  }
-
-  useEffect(() => {
-    loadData();
   }, [selectedInstitution, selectedStatus]);
 
-  async function handleProvisionStudent(e: React.FormEvent) {
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => void loadData(), 0);
+    return () => window.clearTimeout(timeoutId);
+  }, [loadData]);
+
+  async function handleSubmitStudent(e: React.FormEvent) {
     e.preventDefault();
     setFormError(null);
     setFormSuccess(null);
@@ -79,21 +95,111 @@ export default function AdminStudentsPage() {
       if (!formData.institution_id) {
         throw new Error("Please select an institution.");
       }
-      await provisionStudent({
-        ...formData,
-        graduation_year: Number(formData.graduation_year),
-      });
+      if (editingStudent) {
+        await updateStudent(editingStudent.id, {
+          full_name: formData.full_name,
+          status: formData.status,
+          student_id: formData.student_id,
+          phone: formData.phone || undefined,
+          course: formData.course || undefined,
+          branch: formData.branch || undefined,
+          graduation_year: Number(formData.graduation_year),
+        });
+      } else {
+        await provisionStudent({
+          institution_id: formData.institution_id,
+          full_name: formData.full_name,
+          email: formData.email,
+          student_id: formData.student_id,
+          password: formData.password || undefined,
+          phone: formData.phone || undefined,
+          course: formData.course || undefined,
+          branch: formData.branch || undefined,
+          graduation_year: Number(formData.graduation_year),
+        });
+      }
 
-      setFormSuccess("Student successfully provisioned and account created!");
+      setFormSuccess(
+        editingStudent
+          ? "Student successfully updated!"
+          : "Student successfully added through the manual fallback."
+      );
+      if (!editingStudent) {
+        setDirectoryRefreshKey((value) => value + 1);
+      }
       setTimeout(() => {
         setIsModalOpen(false);
+        setEditingStudent(null);
         setFormSuccess(null);
         loadData();
       }, 1200);
-    } catch (err: any) {
-      setFormError(err.message || "Failed to provision student.");
+    } catch (err: unknown) {
+      setFormError(
+        err instanceof Error
+          ? err.message
+          : `Failed to ${editingStudent ? "update" : "provision"} student.`
+      );
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  function openCreateModal() {
+    setEditingStudent(null);
+    setFormError(null);
+    setFormSuccess(null);
+    setFormData({
+      institution_id: institutions[0]?.id || "", full_name: "", email: "",
+      student_id: "", password: "", phone: "",
+      course: "Computer Science & Engineering", branch: "Information Technology",
+      graduation_year: 2026, status: "active",
+    });
+    setIsModalOpen(true);
+  }
+
+  function openEditModal(student: Student) {
+    setEditingStudent(student);
+    setFormError(null);
+    setFormSuccess(null);
+    setFormData({
+      institution_id: student.profile?.institution_id || "",
+      full_name: student.full_name,
+      email: student.email,
+      student_id: student.profile?.student_id || "",
+      password: "",
+      phone: student.profile?.phone || "",
+      course: student.profile?.course || "",
+      branch: student.profile?.branch || "",
+      graduation_year: student.profile?.graduation_year || 2026,
+      status: student.status,
+    });
+    setIsModalOpen(true);
+  }
+
+  function requestDeleteStudent(student: Student) {
+    setDeleteError(null);
+    setStudentPendingDelete(student);
+  }
+
+  async function confirmDeleteStudent() {
+    if (!studentPendingDelete) return;
+
+    try {
+      setDeletingId(studentPendingDelete.id);
+      setDeleteError(null);
+      await deleteStudent(studentPendingDelete.id);
+      setStudents((current) =>
+        current.filter((student) => student.id !== studentPendingDelete.id)
+      );
+      setDirectoryRefreshKey((value) => value + 1);
+      setStudentPendingDelete(null);
+      await loadData();
+    } catch (err: unknown) {
+      setDeleteError(
+        err instanceof Error ? err.message : "Failed to delete the student."
+      );
+    } finally {
+      setDeletingId(null);
     }
   }
 
@@ -112,24 +218,30 @@ export default function AdminStudentsPage() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-            Student Management
+            Enrollment Management
           </p>
           <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-900">
-            Student Directory
+            Enrolled Students
           </h1>
           <p className="mt-1 text-sm text-slate-600">
-            Onboard, provision credentials, and track candidate profiles across partner institutions.
+            Review the synchronized student roster across partner institutions.
           </p>
         </div>
 
         <button
-          onClick={() => setIsModalOpen(true)}
+          onClick={openCreateModal}
           className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
         >
           <PlusCircle className="h-4 w-4" />
-          Provision Student
+          Add Student Manually
         </button>
       </div>
+
+      <EnrollmentSyncStatus
+        entity="students"
+        onSynced={loadData}
+        refreshKey={directoryRefreshKey}
+      />
 
       {/* Filter and Search Bar */}
       <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
@@ -144,7 +256,7 @@ export default function AdminStudentsPage() {
           />
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <select
             value={selectedInstitution}
             onChange={(e) => setSelectedInstitution(e.target.value)}
@@ -186,14 +298,14 @@ export default function AdminStudentsPage() {
               No students found
             </h3>
             <p className="mt-1 text-sm text-slate-500">
-              Get started by provisioning university students into the fellowship.
+              Connect the enrollment workbook or add a student manually.
             </p>
             <button
-              onClick={() => setIsModalOpen(true)}
+              onClick={openCreateModal}
               className="mt-4 inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
             >
               <PlusCircle className="h-4 w-4" />
-              Provision First Student
+              Add First Student Manually
             </button>
           </div>
         ) : (
@@ -207,6 +319,7 @@ export default function AdminStudentsPage() {
                   <th className="px-6 py-3.5">Course & Branch</th>
                   <th className="px-6 py-3.5">Grad Year</th>
                   <th className="px-6 py-3.5">Status</th>
+                  <th className="px-6 py-3.5 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -250,6 +363,14 @@ export default function AdminStudentsPage() {
                           {student.status}
                         </span>
                       </td>
+                      <td className="px-6 py-4 text-right">
+                        <EntityActionsMenu
+                          label={student.full_name}
+                          onEdit={() => openEditModal(student)}
+                          onDelete={() => requestDeleteStudent(student)}
+                          deleteLabel={deletingId === student.id ? "Deleting..." : "Delete"}
+                        />
+                      </td>
                     </tr>
                   );
                 })}
@@ -259,17 +380,32 @@ export default function AdminStudentsPage() {
         )}
       </div>
 
-      {/* Provision Student Modal */}
+      <DeleteConfirmationDialog
+        open={Boolean(studentPendingDelete)}
+        entityLabel="Student"
+        entityName={studentPendingDelete?.full_name || "this student"}
+        deleting={Boolean(deletingId)}
+        error={deleteError}
+        onCancel={() => {
+          setStudentPendingDelete(null);
+          setDeleteError(null);
+        }}
+        onConfirm={confirmDeleteStudent}
+      />
+
+      {/* Manual Add/Edit Student Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
-          <div className="relative w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl">
+          <div className="relative max-h-[calc(100dvh-2rem)] w-full max-w-lg overflow-y-auto rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl">
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
               <div>
                 <h2 className="text-lg font-bold text-slate-900">
-                  Provision New Student
+                  {editingStudent ? "Edit Student" : "Add Student Manually"}
                 </h2>
                 <p className="text-xs text-slate-500">
-                  Creates platform user, student profile, and authentication access.
+                  {editingStudent
+                    ? "Update the student profile and account status."
+                    : "Creates platform user, student profile, and authentication access."}
                 </p>
               </div>
               <button
@@ -294,13 +430,14 @@ export default function AdminStudentsPage() {
               </div>
             )}
 
-            <form onSubmit={handleProvisionStudent} className="mt-4 space-y-4">
+            <form onSubmit={handleSubmitStudent} className="mt-4 space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-700">
                   Partner Institution *
                 </label>
                 <select
                   required
+                  disabled={Boolean(editingStudent)}
                   value={formData.institution_id}
                   onChange={(e) =>
                     setFormData({ ...formData, institution_id: e.target.value })
@@ -360,6 +497,7 @@ export default function AdminStudentsPage() {
                   <input
                     type="email"
                     required
+                    disabled={Boolean(editingStudent)}
                     placeholder="student@institution.edu"
                     value={formData.email}
                     onChange={(e) =>
@@ -369,7 +507,7 @@ export default function AdminStudentsPage() {
                   />
                 </div>
 
-                <div>
+                {!editingStudent && <div>
                   <label className="block text-xs font-semibold text-slate-700">
                     Temporary Password *
                   </label>
@@ -383,7 +521,7 @@ export default function AdminStudentsPage() {
                     }
                     className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900"
                   />
-                </div>
+                </div>}
               </div>
 
               <div className="grid gap-3 sm:grid-cols-3">
@@ -433,6 +571,22 @@ export default function AdminStudentsPage() {
                 </div>
               </div>
 
+              {editingStudent && (
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700">
+                    Account Status
+                  </label>
+                  <select
+                    value={formData.status}
+                    onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                    className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900"
+                  >
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                  </select>
+                </div>
+              )}
+
               <div className="mt-6 flex justify-end gap-3 pt-2">
                 <button
                   type="button"
@@ -447,7 +601,7 @@ export default function AdminStudentsPage() {
                   className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-slate-800 disabled:opacity-50"
                 >
                   {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
-                  Provision Student
+                  {editingStudent ? "Save Changes" : "Add Student"}
                 </button>
               </div>
             </form>

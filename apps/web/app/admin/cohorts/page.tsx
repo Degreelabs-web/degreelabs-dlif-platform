@@ -14,7 +14,13 @@ import {
   AlertCircle,
   ArrowRight,
 } from "lucide-react";
-import { fetchCohorts, createCohort } from "@/lib/api/cohorts";
+import { EntityActionsMenu } from "@/components/admin/EntityActionsMenu";
+import {
+  fetchCohorts,
+  createCohort,
+  updateCohort,
+  deleteCohort,
+} from "@/lib/api/cohorts";
 import { fetchInstitutions } from "@/lib/api/institutions";
 import { Cohort, Institution } from "@/types/fellowship";
 
@@ -30,6 +36,8 @@ export default function AdminCohortsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
+  const [editingCohort, setEditingCohort] = useState<Cohort | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     institution_id: "",
@@ -66,7 +74,37 @@ export default function AdminCohortsPage() {
     loadData();
   }, [selectedInstitution, selectedStatus]);
 
-  async function handleCreateCohort(e: React.FormEvent) {
+  function openCreateModal() {
+    setEditingCohort(null);
+    setFormError(null);
+    setFormSuccess(null);
+    setFormData({
+      institution_id: institutions[0]?.id || "",
+      name: "",
+      academic_year: "2026-2027",
+      start_date: "2026-09-01",
+      end_date: "2027-05-31",
+      status: "active",
+    });
+    setIsModalOpen(true);
+  }
+
+  function openEditModal(cohort: Cohort) {
+    setEditingCohort(cohort);
+    setFormError(null);
+    setFormSuccess(null);
+    setFormData({
+      institution_id: cohort.institution_id,
+      name: cohort.name,
+      academic_year: cohort.academic_year,
+      start_date: cohort.start_date,
+      end_date: cohort.end_date,
+      status: cohort.status,
+    });
+    setIsModalOpen(true);
+  }
+
+  async function handleSubmitCohort(e: React.FormEvent) {
     e.preventDefault();
     setFormError(null);
     setFormSuccess(null);
@@ -76,10 +114,21 @@ export default function AdminCohortsPage() {
       if (!formData.institution_id) {
         throw new Error("Please select an institution.");
       }
-      await createCohort(formData);
-      setFormSuccess("Cohort successfully created!");
+      if (editingCohort) {
+        await updateCohort(editingCohort.id, {
+          name: formData.name,
+          academic_year: formData.academic_year,
+          start_date: formData.start_date,
+          end_date: formData.end_date,
+          status: formData.status,
+        });
+      } else {
+        await createCohort(formData);
+      }
+      setFormSuccess(`Cohort successfully ${editingCohort ? "updated" : "created"}!`);
       setTimeout(() => {
         setIsModalOpen(false);
+        setEditingCohort(null);
         setFormSuccess(null);
         setFormData({
           institution_id: institutions[0]?.id || "",
@@ -91,10 +140,27 @@ export default function AdminCohortsPage() {
         });
         loadData();
       }, 1000);
-    } catch (err: any) {
-      setFormError(err.message || "Failed to create cohort.");
+    } catch (err: unknown) {
+      setFormError(
+        err instanceof Error
+          ? err.message
+          : `Failed to ${editingCohort ? "update" : "create"} cohort.`
+      );
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function handleDeleteCohort(cohort: Cohort) {
+    if (!confirm(`Delete "${cohort.name}"? This action cannot be undone.`)) return;
+    try {
+      setDeletingId(cohort.id);
+      await deleteCohort(cohort.id);
+      await loadData();
+    } catch (err) {
+      alert("Failed to delete cohort: " + (err as Error).message);
+    } finally {
+      setDeletingId(null);
     }
   }
 
@@ -115,7 +181,7 @@ export default function AdminCohortsPage() {
         </div>
 
         <button
-          onClick={() => setIsModalOpen(true)}
+          onClick={openCreateModal}
           className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
         >
           <PlusCircle className="h-4 w-4" />
@@ -168,7 +234,7 @@ export default function AdminCohortsPage() {
             Create a cohort for an institution to structure students and teams.
           </p>
           <button
-            onClick={() => setIsModalOpen(true)}
+            onClick={openCreateModal}
             className="mt-4 inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
           >
             <PlusCircle className="h-4 w-4" />
@@ -187,7 +253,7 @@ export default function AdminCohortsPage() {
                 className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:border-slate-300 hover:shadow-md"
               >
                 <div>
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-start justify-between gap-3">
                     <span
                       className={`inline-flex items-center rounded-md px-2.5 py-1 text-xs font-semibold capitalize ${
                         cohort.status === "active"
@@ -197,9 +263,17 @@ export default function AdminCohortsPage() {
                     >
                       {cohort.status}
                     </span>
-                    <span className="text-xs font-medium text-slate-400">
-                      {cohort.academic_year}
-                    </span>
+                    <div className="flex items-center gap-1">
+                      <span className="text-xs font-medium text-slate-400">
+                        {cohort.academic_year}
+                      </span>
+                      <EntityActionsMenu
+                        label={cohort.name}
+                        onEdit={() => openEditModal(cohort)}
+                        onDelete={() => handleDeleteCohort(cohort)}
+                        deleteLabel={deletingId === cohort.id ? "Deleting..." : "Delete"}
+                      />
+                    </div>
                   </div>
 
                   <h3 className="mt-3 text-lg font-bold text-slate-900">
@@ -245,17 +319,19 @@ export default function AdminCohortsPage() {
         </div>
       )}
 
-      {/* Create Cohort Modal */}
+      {/* Create/Edit Cohort Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
           <div className="relative w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl">
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
               <div>
                 <h2 className="text-lg font-bold text-slate-900">
-                  Create Fellowship Cohort
+                  {editingCohort ? "Edit Fellowship Cohort" : "Create Fellowship Cohort"}
                 </h2>
                 <p className="text-xs text-slate-500">
-                  Establish a new learning cohort and academic cycle.
+                  {editingCohort
+                    ? "Update the cohort details and academic cycle."
+                    : "Establish a new learning cohort and academic cycle."}
                 </p>
               </div>
               <button
@@ -280,13 +356,14 @@ export default function AdminCohortsPage() {
               </div>
             )}
 
-            <form onSubmit={handleCreateCohort} className="mt-4 space-y-4">
+            <form onSubmit={handleSubmitCohort} className="mt-4 space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-700">
                   Partner Institution *
                 </label>
                 <select
                   required
+                  disabled={Boolean(editingCohort)}
                   value={formData.institution_id}
                   onChange={(e) =>
                     setFormData({ ...formData, institution_id: e.target.value })
@@ -401,7 +478,7 @@ export default function AdminCohortsPage() {
                   className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-slate-800 disabled:opacity-50"
                 >
                   {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
-                  Create Cohort
+                  {editingCohort ? "Save Changes" : "Create Cohort"}
                 </button>
               </div>
             </form>

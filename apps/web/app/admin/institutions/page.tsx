@@ -1,27 +1,31 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { apiClient } from "@/lib/api/client";
-import { Building2, Plus, CheckCircle2, School } from "lucide-react";
+import { EntityActionsMenu } from "@/components/admin/EntityActionsMenu";
+import {
+  createInstitution,
+  deleteInstitution,
+  fetchInstitutions,
+  updateInstitution,
+} from "@/lib/api/institutions";
+import { Institution } from "@/types/fellowship";
+import { Building2, Plus, CheckCircle2 } from "lucide-react";
 
-interface Institution {
-  id: string;
-  name: string;
-  code: string;
-  status: string;
-  created_at: string;
-}
+const emptyForm = { name: "", code: "", status: "active" };
 
 export default function InstitutionsPage() {
   const [institutions, setInstitutions] = useState<Institution[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
-  const [formData, setFormData] = useState({ name: "", code: "" });
+  const [editingInstitution, setEditingInstitution] = useState<Institution | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [formData, setFormData] = useState(emptyForm);
 
   const loadInstitutions = async () => {
     try {
       setLoading(true);
-      const data = await apiClient<Institution[]>("/institutions");
+      const data = await fetchInstitutions();
       setInstitutions(data);
     } catch (err) {
       console.error("Failed to load institutions", err);
@@ -36,19 +40,58 @@ export default function InstitutionsPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitting(true);
     try {
-      await apiClient<Institution>("/institutions", {
-        method: "POST",
-        body: JSON.stringify({
+      if (editingInstitution) {
+        await updateInstitution(editingInstitution.id, {
           name: formData.name,
           code: formData.code.toUpperCase(),
-        }),
-      });
+          status: formData.status,
+        });
+      } else {
+        await createInstitution({
+          name: formData.name,
+          code: formData.code.toUpperCase(),
+          status: formData.status,
+        });
+      }
       setShowModal(false);
-      setFormData({ name: "", code: "" });
-      loadInstitutions();
+      setEditingInstitution(null);
+      setFormData(emptyForm);
+      await loadInstitutions();
     } catch (err) {
-      alert("Failed to create institution: " + (err as Error).message);
+      alert(`Failed to ${editingInstitution ? "update" : "create"} institution: ${(err as Error).message}`);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const openCreateModal = () => {
+    setEditingInstitution(null);
+    setFormData(emptyForm);
+    setShowModal(true);
+  };
+
+  const openEditModal = (institution: Institution) => {
+    setEditingInstitution(institution);
+    setFormData({
+      name: institution.name,
+      code: institution.code,
+      status: institution.status,
+    });
+    setShowModal(true);
+  };
+
+  const handleDelete = async (institution: Institution) => {
+    if (!confirm(`Delete "${institution.name}"? This action cannot be undone.`)) return;
+    try {
+      setDeletingId(institution.id);
+      await deleteInstitution(institution.id);
+      await loadInstitutions();
+    } catch (err) {
+      alert("Failed to delete institution: " + (err as Error).message);
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -66,7 +109,7 @@ export default function InstitutionsPage() {
         </div>
 
         <button
-          onClick={() => setShowModal(true)}
+          onClick={openCreateModal}
           className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-700 transition"
         >
           <Plus className="h-4 w-4" />
@@ -89,17 +132,25 @@ export default function InstitutionsPage() {
               key={inst.id}
               className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm space-y-3 hover:border-slate-300 transition"
             >
-              <div className="flex items-start justify-between">
+              <div className="flex items-start justify-between gap-3">
                 <div>
                   <h3 className="font-semibold text-slate-900">{inst.name}</h3>
                   <span className="inline-block mt-1 font-mono text-xs text-slate-500 font-semibold bg-slate-100 px-2 py-0.5 rounded">
                     {inst.code}
                   </span>
                 </div>
-                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">
-                  <CheckCircle2 className="h-3 w-3" />
-                  {inst.status}
-                </span>
+                <div className="flex items-center gap-1">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">
+                    <CheckCircle2 className="h-3 w-3" />
+                    {inst.status}
+                  </span>
+                  <EntityActionsMenu
+                    label={inst.name}
+                    onEdit={() => openEditModal(inst)}
+                    onDelete={() => handleDelete(inst)}
+                    deleteLabel={deletingId === inst.id ? "Deleting..." : "Delete"}
+                  />
+                </div>
               </div>
               <div className="pt-2 border-t border-slate-100 text-xs text-slate-500">
                 Added on: {new Date(inst.created_at).toLocaleDateString()}
@@ -112,7 +163,9 @@ export default function InstitutionsPage() {
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl space-y-4">
-            <h2 className="text-lg font-bold text-slate-900">Onboard Institution</h2>
+            <h2 className="text-lg font-bold text-slate-900">
+              {editingInstitution ? "Edit Institution" : "Onboard Institution"}
+            </h2>
             <form onSubmit={handleSubmit} className="space-y-3 text-sm">
               <div>
                 <label className="block text-xs font-medium text-slate-700">Institution Name</label>
@@ -124,6 +177,18 @@ export default function InstitutionsPage() {
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   className="mt-1 w-full rounded-lg border border-slate-300 p-2 text-sm focus:border-slate-900 focus:outline-none"
                 />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-700">Status</label>
+                <select
+                  value={formData.status}
+                  onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                  className="mt-1 w-full rounded-lg border border-slate-300 p-2 text-sm focus:border-slate-900 focus:outline-none"
+                >
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </select>
               </div>
 
               <div>
@@ -142,15 +207,21 @@ export default function InstitutionsPage() {
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
+                  disabled={submitting}
                   className="rounded-lg border border-slate-200 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
+                  disabled={submitting}
                   className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700"
                 >
-                  Onboard Institution
+                  {submitting
+                    ? "Saving..."
+                    : editingInstitution
+                      ? "Save Changes"
+                      : "Onboard Institution"}
                 </button>
               </div>
             </form>

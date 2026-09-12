@@ -3,16 +3,19 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
+from app.core.rbac import require_admin
 from app.db.session import get_db
 from app.schemas.mentor import (
     MentorCreate,
     MentorDetailResponse,
+    MentorStatus,
     MentorUpdate,
 )
 from app.services.mentor import MentorService
 
 router = APIRouter(
     prefix="/mentors",
+    dependencies=[Depends(require_admin)],
 )
 
 
@@ -21,14 +24,27 @@ router = APIRouter(
     response_model=list[MentorDetailResponse],
 )
 def get_mentors(
-    status_filter: str | None = Query(default=None, alias="status"),
+    status_filter: MentorStatus | None = Query(default=None, alias="status"),
     search: str | None = Query(default=None),
+    organisation: str | None = Query(default=None),
+    industry: str | None = Query(default=None),
+    expertise: str | None = Query(default=None),
+    country: str | None = Query(default=None),
     skip: int = Query(default=0, ge=0),
     limit: int = Query(default=50, ge=1, le=100),
     db: Session = Depends(get_db),
 ):
     service = MentorService(db)
-    return service.get_all(status=status_filter, search=search, skip=skip, limit=limit)
+    return service.get_all(
+        status=status_filter,
+        search=search,
+        skip=skip,
+        limit=limit,
+        organisation=organisation,
+        industry=industry,
+        expertise=expertise,
+        country=country,
+    )
 
 
 @router.get(

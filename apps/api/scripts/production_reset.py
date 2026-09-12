@@ -1,7 +1,7 @@
 """Production Reset Script for DegreeLabs Impact Fellowship (DLIF).
 
 Purges all test students, mentors, submissions, and legacy test accounts,
-leaving only admin@degreelabs.com as the sole administrator in both
+leaving only samatha.reddy@degreelabs.com as the sole administrator in both
 PostgreSQL and Supabase Auth.
 """
 
@@ -18,9 +18,9 @@ from app.db.session import SessionLocal
 from app.db.models.user import User
 from app.services.supabase_admin import SupabaseAdminService, SupabaseAdminError
 
-ADMIN_EMAIL = "admin@degreelabs.com"
-ADMIN_PASSWORD = "AdminPassword123!"
-ADMIN_NAME = "DegreeLabs Administrator"
+ADMIN_EMAIL = "samatha.reddy@degreelabs.com"
+ADMIN_PASSWORD = "Samatha@805"
+ADMIN_NAME = "Samatha Reddy"
 
 def reset_production():
     print("=" * 65)
@@ -30,7 +30,7 @@ def reset_production():
     db = SessionLocal()
     supabase = SupabaseAdminService()
 
-    # 1. Provision / sync admin@degreelabs.com in Supabase Auth
+    # 1. Provision / sync samatha.reddy@degreelabs.com in Supabase Auth
     print(f"\n[1] Ensuring {ADMIN_EMAIL} exists in Supabase Auth...")
     try:
         supabase_user = supabase.create_user(
@@ -76,7 +76,7 @@ def reset_production():
         else:
             db.commit()
 
-    # 3. Ensure admin@degreelabs.com exists in DB with role='admin'
+    # 3. Ensure samatha.reddy@degreelabs.com exists in DB with role='admin'
     print(f"\n[3] Setting up {ADMIN_EMAIL} in PostgreSQL 'users' table...")
     existing_admin = db.query(User).filter(User.email == ADMIN_EMAIL).first()
     if existing_admin:

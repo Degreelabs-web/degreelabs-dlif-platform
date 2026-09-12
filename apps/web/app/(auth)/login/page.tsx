@@ -19,8 +19,8 @@ import {
   ArrowLeft,
   KeyRound,
   RefreshCw,
-  Sparkles,
 } from "lucide-react";
+import { DegreeLabsLogo } from "@/components/brand/DegreeLabsLogo";
 
 function LoginForm() {
   const router = useRouter();
@@ -42,19 +42,11 @@ function LoginForm() {
   const [twoFactorToken, setTwoFactorToken] = useState("");
   const [maskedEmail, setMaskedEmail] = useState("");
   const [twoFactorCode, setTwoFactorCode] = useState("");
-  const [devCode, setDevCode] = useState<string | null>(null);
   const [resendCooldown, setResendCooldown] = useState(0);
   const [resending, setResending] = useState(false);
   const [resendSuccess, setResendSuccess] = useState<string | null>(null);
 
   const codeInputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    const roleParam = searchParams.get("role");
-    if (roleParam && ["student", "mentor", "admin"].includes(roleParam)) {
-      setActiveTab(roleParam);
-    }
-  }, [searchParams]);
 
   // Resend cooldown timer
   useEffect(() => {
@@ -85,7 +77,6 @@ function LoginForm() {
       if (response.requires_2fa) {
         setTwoFactorToken(response.two_factor_token);
         setMaskedEmail(response.masked_email);
-        setDevCode(response.dev_code || null);
         setTwoFactorCode("");
         setStep("two_factor");
         setResendCooldown(30);
@@ -105,7 +96,7 @@ function LoginForm() {
     } catch (err) {
       setError(
         (err as Error).message ||
-          "Invalid credentials. Please check your email and password."
+        "Invalid credentials. Please check your email and password."
       );
     } finally {
       setLoading(false);
@@ -139,7 +130,7 @@ function LoginForm() {
     } catch (err) {
       setError(
         (err as Error).message ||
-          "Invalid or expired verification code. Please check and try again."
+        "Invalid or expired verification code. Please check and try again."
       );
     } finally {
       setLoading(false);
@@ -153,11 +144,12 @@ function LoginForm() {
     setResendSuccess(null);
 
     try {
-      const result = await resendTwoFactorCode(twoFactorToken);
-      if (result.dev_code) {
-        setDevCode(result.dev_code);
-      }
-      setResendSuccess("A fresh verification code has been generated.");
+      const response = await resendTwoFactorCode(twoFactorToken);
+      setTwoFactorToken(response.two_factor_token);
+      setResendSuccess(
+        response.message ||
+        "A fresh verification code was sent to your email address."
+      );
       setResendCooldown(30);
     } catch (err) {
       setError((err as Error).message || "Failed to resend code.");
@@ -189,7 +181,7 @@ function LoginForm() {
         "Enter your administrator credentials to access the operations console.",
       icon: ShieldCheck,
       badge: "Operations Console",
-      defaultPlaceholder: "admin@degreelabs.com",
+      defaultPlaceholder: "samatha.reddy@degreelabs.com",
     },
   }[activeTab as "student" | "mentor" | "admin"] || {
     title: "Sign in to your portal",
@@ -202,44 +194,37 @@ function LoginForm() {
   const ActiveIcon = portalInfo.icon;
 
   return (
-    <div className="w-full max-w-md space-y-6">
+    <div className="relative z-10 w-full max-w-[500px] space-y-5">
       {/* Branding Header */}
-      <div className="text-center">
-        <Link href="/" className="inline-block">
-          <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">
-            DegreeLabs
-          </h1>
-          <p className="text-sm font-medium text-slate-500">
-            Impact Fellowship Platform
-          </p>
+      <div className="flex flex-col items-center text-center">
+        <Link
+          href="/"
+          className="group inline-flex items-center rounded-2xl px-3 py-2 transition-transform hover:-translate-y-0.5"
+        >
+          <DegreeLabsLogo size="large" priority />
         </Link>
 
         {step === "credentials" ? (
           <>
-            <div className="mt-5 inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
-              <ActiveIcon className="h-3.5 w-3.5 text-slate-600" />
+            <div className="mt-5 flex w-fit items-center gap-2 rounded-full border border-brand-100 bg-brand-50 px-3.5 py-1.5 text-xs font-bold text-brand-700 shadow-sm">
+              <ActiveIcon className="h-3.5 w-3.5" />
               <span>{portalInfo.badge}</span>
             </div>
 
-            <h2 className="mt-3 text-xl font-bold text-slate-900">
+            <h2 className="mt-4 text-2xl font-bold tracking-tight text-slate-900">
               {portalInfo.title}
             </h2>
-            <p className="mt-1 text-xs text-slate-500 max-w-sm mx-auto">
+            <p className="mx-auto mt-1.5 max-w-md text-sm leading-5 text-slate-500">
               {portalInfo.subtitle}
             </p>
           </>
         ) : (
           <>
-            <div className="mt-5 inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700 border border-blue-200/60">
-              <ShieldCheck className="h-3.5 w-3.5 text-blue-600" />
-              <span>Two-Factor Security Active</span>
-            </div>
-
-            <h2 className="mt-3 text-xl font-bold text-slate-900">
+            <h2 className="mt-5 text-2xl font-bold tracking-tight text-slate-900">
               Two-Factor Authentication
             </h2>
-            <p className="mt-1 text-xs text-slate-500 max-w-sm mx-auto">
-              A 6-digit security code is required for {maskedEmail || email}.
+            <p className="mx-auto mt-1.5 max-w-sm text-sm leading-5 text-slate-500">
+              We sent a 6-digit security code to {maskedEmail || email}.
             </p>
           </>
         )}
@@ -247,18 +232,17 @@ function LoginForm() {
 
       {/* Role Selection Tabs (Only shown in credentials step) */}
       {step === "credentials" && (
-        <div className="grid grid-cols-3 gap-1 rounded-xl bg-slate-200/80 p-1 text-xs font-semibold">
+        <div className="grid grid-cols-3 gap-1.5 rounded-2xl border border-brand-100/70 bg-brand-100/60 p-1.5 text-xs font-semibold shadow-inner">
           <button
             type="button"
             onClick={() => {
               setActiveTab("student");
               setError(null);
             }}
-            className={`flex items-center justify-center gap-1.5 rounded-lg py-2 transition ${
-              activeTab === "student"
-                ? "bg-white text-slate-900 shadow-sm"
-                : "text-slate-600 hover:text-slate-900"
-            }`}
+            className={`flex items-center justify-center gap-1.5 rounded-lg py-2 transition ${activeTab === "student"
+                ? "bg-white text-brand-700 shadow-sm ring-1 ring-brand-100"
+                : "text-slate-600 hover:bg-white/50 hover:text-brand-700"
+              }`}
           >
             <UsersRound className="h-3.5 w-3.5" />
             Student
@@ -270,11 +254,10 @@ function LoginForm() {
               setActiveTab("mentor");
               setError(null);
             }}
-            className={`flex items-center justify-center gap-1.5 rounded-lg py-2 transition ${
-              activeTab === "mentor"
-                ? "bg-white text-slate-900 shadow-sm"
-                : "text-slate-600 hover:text-slate-900"
-            }`}
+            className={`flex items-center justify-center gap-1.5 rounded-lg py-2 transition ${activeTab === "mentor"
+                ? "bg-white text-brand-700 shadow-sm ring-1 ring-brand-100"
+                : "text-slate-600 hover:bg-white/50 hover:text-brand-700"
+              }`}
           >
             <UserRound className="h-3.5 w-3.5" />
             Mentor
@@ -286,11 +269,10 @@ function LoginForm() {
               setActiveTab("admin");
               setError(null);
             }}
-            className={`flex items-center justify-center gap-1.5 rounded-lg py-2 transition ${
-              activeTab === "admin"
-                ? "bg-white text-slate-900 shadow-sm"
-                : "text-slate-600 hover:text-slate-900"
-            }`}
+            className={`flex items-center justify-center gap-1.5 rounded-lg py-2 transition ${activeTab === "admin"
+                ? "bg-white text-brand-700 shadow-sm ring-1 ring-brand-100"
+                : "text-slate-600 hover:bg-white/50 hover:text-brand-700"
+              }`}
           >
             <ShieldCheck className="h-3.5 w-3.5" />
             Admin
@@ -313,7 +295,7 @@ function LoginForm() {
       )}
 
       {/* Main Form Card */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-7 shadow-sm space-y-5">
+      <div className="space-y-5 rounded-3xl border border-white bg-white/95 p-6 shadow-xl shadow-blue-950/[0.08] ring-1 ring-brand-100/80 sm:p-8">
         {step === "credentials" ? (
           /* STEP 1: CREDENTIALS FORM */
           <form onSubmit={(e) => handleLogin(e)} className="space-y-4">
@@ -331,7 +313,7 @@ function LoginForm() {
                   placeholder={portalInfo.defaultPlaceholder}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full rounded-lg border border-slate-300 py-2.5 pl-9 pr-3 text-sm text-slate-900 focus:border-slate-900 focus:outline-none"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50/60 py-3 pl-10 pr-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-brand-400 focus:bg-white focus:outline-none"
                 />
               </div>
             </div>
@@ -350,7 +332,7 @@ function LoginForm() {
                   placeholder="Enter password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full rounded-lg border border-slate-300 py-2.5 pl-9 pr-3 text-sm text-slate-900 focus:border-slate-900 focus:outline-none"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50/60 py-3 pl-10 pr-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-brand-400 focus:bg-white focus:outline-none"
                 />
               </div>
             </div>
@@ -358,7 +340,7 @@ function LoginForm() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full rounded-lg bg-slate-900 py-3 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:opacity-50 inline-flex items-center justify-center gap-2"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-500 to-brand-600 py-3.5 text-sm font-bold text-white shadow-lg shadow-blue-500/20 hover:-translate-y-0.5 hover:shadow-xl disabled:translate-y-0 disabled:opacity-50"
             >
               {loading ? (
                 <>
@@ -375,31 +357,7 @@ function LoginForm() {
           </form>
         ) : (
           /* STEP 2: TWO-FACTOR VERIFICATION FORM */
-          <div className="space-y-5">
-            {devCode && (
-              <div className="rounded-xl border border-amber-200 bg-amber-50 p-3.5 text-xs text-amber-800 space-y-1">
-                <div className="flex items-center gap-1.5 font-bold text-amber-900">
-                  <Sparkles className="h-4 w-4 text-amber-600" />
-                  <span>Development Security Code</span>
-                </div>
-                <p className="text-[11px] text-amber-700">
-                  For rapid local verification, your active OTP code is:
-                </p>
-                <div className="flex items-center justify-between pt-1">
-                  <span className="font-mono font-extrabold text-sm tracking-widest text-amber-950 bg-amber-100/70 px-2 py-0.5 rounded border border-amber-300">
-                    {devCode}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setTwoFactorCode(devCode)}
-                    className="text-[11px] font-bold text-blue-700 hover:underline"
-                  >
-                    Click to Auto-fill
-                  </button>
-                </div>
-              </div>
-            )}
-
+          <div>
             <form onSubmit={handleVerify2FA} className="space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-700">
@@ -412,26 +370,27 @@ function LoginForm() {
                   <input
                     ref={codeInputRef}
                     type="text"
+                    inputMode="numeric"
                     required
                     maxLength={8}
                     autoComplete="one-time-code"
-                    placeholder="Enter 6-digit code (e.g. 123456)"
+                    placeholder="Enter 6-digit code"
                     value={twoFactorCode}
                     onChange={(e) =>
                       setTwoFactorCode(e.target.value.replace(/\s+/g, ""))
                     }
-                    className="w-full rounded-lg border border-slate-300 py-2.5 pl-9 pr-3 text-center font-mono text-lg tracking-widest text-slate-900 focus:border-slate-900 focus:outline-none"
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50/60 py-3 pl-10 pr-10 text-center font-mono text-lg tracking-[0.25em] text-slate-900 placeholder:font-sans placeholder:text-sm placeholder:tracking-normal focus:border-brand-400 focus:bg-white focus:outline-none"
                   />
                 </div>
-                <p className="mt-1.5 text-[11px] text-slate-500">
-                  Enter the code from your email or Google/Microsoft Authenticator app.
+                <p className="mt-2 text-center text-xs text-slate-500">
+                  Check your email or authenticator app for the code.
                 </p>
               </div>
 
               <button
                 type="submit"
                 disabled={loading || twoFactorCode.trim().length < 6}
-                className="w-full rounded-lg bg-slate-900 py-3 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:opacity-50 inline-flex items-center justify-center gap-2"
+                className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-500 to-brand-600 py-3.5 text-sm font-bold text-white shadow-lg shadow-blue-500/20 hover:-translate-y-0.5 disabled:translate-y-0 disabled:opacity-50"
               >
                 {loading ? (
                   <>
@@ -448,7 +407,7 @@ function LoginForm() {
             </form>
 
             {/* Resend Action */}
-            <div className="flex items-center justify-between pt-3 border-t border-slate-100 text-xs text-slate-500">
+            <div className="mt-5 flex items-center justify-between border-t border-slate-100 pt-4 text-xs text-slate-500">
               <span>Didn&apos;t receive a code?</span>
               <button
                 type="button"
@@ -466,7 +425,7 @@ function LoginForm() {
             </div>
 
             {/* Back to Credentials */}
-            <div className="pt-2 text-center">
+            <div className="mt-5 text-center">
               <button
                 type="button"
                 onClick={() => {
@@ -485,8 +444,8 @@ function LoginForm() {
       </div>
 
       {/* Footer Navigation */}
-      <div className="text-center text-xs text-slate-500">
-        <Link href="/" className="hover:underline">
+      <div className="text-center text-xs font-semibold text-slate-500">
+        <Link href="/" className="inline-flex rounded-lg px-3 py-2 hover:bg-brand-50 hover:text-brand-700">
           &larr; Back to Home
         </Link>
       </div>
@@ -496,7 +455,9 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50 p-6">
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[radial-gradient(circle_at_top_left,_#dff3ff_0%,_transparent_38%),radial-gradient(circle_at_bottom_right,_#e2eaff_0%,_transparent_36%),linear-gradient(135deg,#f8fbff_0%,#f1f7ff_100%)] px-4 py-10 sm:px-6">
+      <div className="pointer-events-none absolute left-[8%] top-[12%] h-44 w-44 rounded-full bg-brand-400/10 blur-3xl" />
+      <div className="pointer-events-none absolute bottom-[8%] right-[10%] h-56 w-56 rounded-full bg-brand-500/10 blur-3xl" />
       <Suspense
         fallback={
           <div className="flex flex-col items-center gap-2 text-sm text-slate-500">

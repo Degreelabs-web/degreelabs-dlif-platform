@@ -180,10 +180,10 @@ export default function AssignmentsPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-slate-200">
+      <div className="flex max-w-full overflow-x-auto border-b border-slate-200">
         <button
           onClick={() => setActiveTab("mentors")}
-          className={`px-4 py-2.5 text-sm font-medium border-b-2 transition ${
+          className={`shrink-0 border-b-2 px-4 py-2.5 text-sm font-medium transition ${
             activeTab === "mentors"
               ? "border-slate-900 text-slate-900"
               : "border-transparent text-slate-500 hover:text-slate-700"
@@ -193,7 +193,7 @@ export default function AssignmentsPage() {
         </button>
         <button
           onClick={() => setActiveTab("projects")}
-          className={`px-4 py-2.5 text-sm font-medium border-b-2 transition ${
+          className={`shrink-0 border-b-2 px-4 py-2.5 text-sm font-medium transition ${
             activeTab === "projects"
               ? "border-slate-900 text-slate-900"
               : "border-transparent text-slate-500 hover:text-slate-700"
@@ -203,7 +203,7 @@ export default function AssignmentsPage() {
         </button>
         <button
           onClick={() => setActiveTab("cohorts")}
-          className={`px-4 py-2.5 text-sm font-medium border-b-2 transition ${
+          className={`shrink-0 border-b-2 px-4 py-2.5 text-sm font-medium transition ${
             activeTab === "cohorts"
               ? "border-slate-900 text-slate-900"
               : "border-transparent text-slate-500 hover:text-slate-700"

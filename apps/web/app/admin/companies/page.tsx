@@ -1,7 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { fetchCompanies, createCompany } from "@/lib/api/fellowship";
+import { EntityActionsMenu } from "@/components/admin/EntityActionsMenu";
+import {
+  createCompany,
+  deleteCompany,
+  fetchCompanies,
+  updateCompany,
+} from "@/lib/api/fellowship";
 import { Company } from "@/types/fellowship";
 import { Briefcase, Plus, Globe, Mail, CheckCircle2, ExternalLink } from "lucide-react";
 
@@ -10,6 +16,9 @@ export default function CompaniesPage() {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [search, setSearch] = useState("");
+  const [editingCompany, setEditingCompany] = useState<Company | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -40,8 +49,9 @@ export default function CompaniesPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitting(true);
     try {
-      await createCompany({
+      const payload = {
         name: formData.name,
         industry: formData.industry,
         profile: formData.profile,
@@ -50,8 +60,14 @@ export default function CompaniesPage() {
         contact_name: formData.contact_name || undefined,
         contact_phone: formData.contact_phone || undefined,
         logo_url: formData.logo_url || undefined,
-      });
+      };
+      if (editingCompany) {
+        await updateCompany(editingCompany.id, payload);
+      } else {
+        await createCompany(payload);
+      }
       setShowModal(false);
+      setEditingCompany(null);
       setFormData({
         name: "",
         industry: "",
@@ -62,9 +78,48 @@ export default function CompaniesPage() {
         contact_phone: "",
         logo_url: "",
       });
-      loadCompanies();
+      await loadCompanies();
     } catch (err) {
-      alert("Failed to create company: " + (err as Error).message);
+      alert(`Failed to ${editingCompany ? "update" : "create"} company: ${(err as Error).message}`);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const openCreateModal = () => {
+    setEditingCompany(null);
+    setFormData({
+      name: "", industry: "", profile: "", contact_email: "",
+      website: "", contact_name: "", contact_phone: "", logo_url: "",
+    });
+    setShowModal(true);
+  };
+
+  const openEditModal = (company: Company) => {
+    setEditingCompany(company);
+    setFormData({
+      name: company.name,
+      industry: company.industry,
+      profile: company.profile,
+      contact_email: company.contact_email,
+      website: company.website || "",
+      contact_name: company.contact_name || "",
+      contact_phone: company.contact_phone || "",
+      logo_url: company.logo_url || "",
+    });
+    setShowModal(true);
+  };
+
+  const handleDelete = async (company: Company) => {
+    if (!confirm(`Delete "${company.name}"? This action cannot be undone.`)) return;
+    try {
+      setDeletingId(company.id);
+      await deleteCompany(company.id);
+      await loadCompanies();
+    } catch (err) {
+      alert("Failed to delete company: " + (err as Error).message);
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -82,7 +137,7 @@ export default function CompaniesPage() {
         </div>
 
         <button
-          onClick={() => setShowModal(true)}
+          onClick={openCreateModal}
           className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-700 transition"
         >
           <Plus className="h-4 w-4" />
@@ -122,10 +177,18 @@ export default function CompaniesPage() {
                     {company.industry}
                   </span>
                 </div>
-                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">
-                  <CheckCircle2 className="h-3 w-3" />
-                  {company.status}
-                </span>
+                <div className="flex items-center gap-1">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">
+                    <CheckCircle2 className="h-3 w-3" />
+                    {company.status}
+                  </span>
+                  <EntityActionsMenu
+                    label={company.name}
+                    onEdit={() => openEditModal(company)}
+                    onDelete={() => handleDelete(company)}
+                    deleteLabel={deletingId === company.id ? "Deleting..." : "Delete"}
+                  />
+                </div>
               </div>
 
               <p className="text-xs text-slate-600 line-clamp-3">{company.profile}</p>
@@ -160,8 +223,10 @@ export default function CompaniesPage() {
 
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl space-y-4">
-            <h2 className="text-lg font-bold text-slate-900">Add Industry Partner</h2>
+          <div className="max-h-[90vh] w-full max-w-lg space-y-4 overflow-y-auto rounded-2xl bg-white p-6 shadow-xl">
+            <h2 className="text-lg font-bold text-slate-900">
+              {editingCompany ? "Edit Industry Partner" : "Add Industry Partner"}
+            </h2>
             <form onSubmit={handleSubmit} className="space-y-3 text-sm">
               <div>
                 <label className="block text-xs font-medium text-slate-700">Company Name</label>
@@ -197,7 +262,7 @@ export default function CompaniesPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid gap-3 sm:grid-cols-2">
                 <div>
                   <label className="block text-xs font-medium text-slate-700">Contact Email</label>
                   <input
@@ -219,7 +284,7 @@ export default function CompaniesPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid gap-3 sm:grid-cols-2">
                 <div>
                   <label className="block text-xs font-medium text-slate-700">Contact Person</label>
                   <input
@@ -244,15 +309,17 @@ export default function CompaniesPage() {
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
+                  disabled={submitting}
                   className="rounded-lg border border-slate-200 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
+                  disabled={submitting}
                   className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700"
                 >
-                  Save Company
+                  {submitting ? "Saving..." : editingCompany ? "Save Changes" : "Save Company"}
                 </button>
               </div>
             </form>
