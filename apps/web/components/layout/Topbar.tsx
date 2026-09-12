@@ -50,8 +50,9 @@ export default function Topbar({ role, onOpenNavigation }: TopbarProps) {
         <button
           type="button"
           onClick={onOpenNavigation}
-          className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm hover:border-brand-200 hover:bg-brand-50 hover:text-brand-600 lg:hidden"
+          className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:border-brand-200 hover:bg-brand-50 hover:text-brand-600 lg:hidden"
           aria-label="Open navigation"
+          title="Open navigation"
         >
           <Menu className="h-5 w-5" />
         </button>

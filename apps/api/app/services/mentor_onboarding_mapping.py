@@ -13,7 +13,13 @@ MENTOR_ONBOARDING_FIELDS: dict[str, tuple[str, ...]] = {
     ),
     "professional_headline": ("professional_headline", "headline"),
     "bio": ("bio", "short_professional_bio"),
-    "professional_headshot_url": ("professional_headshot_url", "professional_headshot", "headshot_url"),
+    "professional_headshot_url": (
+        "professional_headshot_url",
+        "professional_headshot",
+        "headshot_url",
+        "professional_headshot_option_1_link",
+        "professional_headshot_option_2_file_upload",
+    ),
     "expertise": ("expertise", "skills", "area_of_expertise", "areas_of_expertise"),
     "industries": ("industries", "industry"),
     "years_of_experience": (

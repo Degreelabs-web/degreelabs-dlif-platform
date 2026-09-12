@@ -89,11 +89,89 @@ class SupabaseAdminService:
             ) from exc
 
         if response.status_code not in (200, 201):
+            # An invitation requires Supabase Auth's own outbound mail service.
+            # If that service is unavailable, still provision the identity so a
+            # valid mentor record can be synchronized into the DLIF directory.
+            # The account can be activated through the existing admin workflow.
+            if response.status_code >= 500:
+                try:
+                    created_user = self.create_user(
+                        email=normalized_email,
+                        full_name=full_name,
+                        email_confirm=True,
+                    )
+                    return created_user, True
+                except SupabaseAdminError:
+                    pass
             raise SupabaseAdminError(
                 f"Supabase invitation failed with status {response.status_code}."
             )
 
         return response.json(), True
+
+    def create_pending_mentor_user(
+        self,
+        *,
+        email: str,
+        full_name: str,
+    ) -> tuple[dict, bool]:
+        """Create an email-confirmed identity with no usable password.
+
+        Mentors receive a separately generated recovery link immediately after
+        their local pending record commits. This avoids relying on Supabase's
+        invite mailer and, importantly, never creates or emails a temporary
+        password.
+        """
+        normalized_email = email.strip().lower()
+        existing = self.get_user_by_email(normalized_email)
+        if existing:
+            return existing, False
+        return (
+            self.create_user(
+                email=normalized_email,
+                full_name=full_name,
+                email_confirm=True,
+            ),
+            True,
+        )
+
+    def generate_password_setup_link(
+        self,
+        *,
+        email: str,
+        redirect_to: str,
+    ) -> str:
+        """Ask Supabase Auth to mint a short-lived, single-use recovery URL."""
+        if not redirect_to:
+            raise SupabaseAdminError(
+                "MENTOR_PASSWORD_SETUP_REDIRECT_URL is not configured."
+            )
+        try:
+            response = httpx.post(
+                f"{self.base_url}/auth/v1/admin/generate_link",
+                headers=self.headers,
+                json={
+                    "type": "recovery",
+                    "email": email.strip().lower(),
+                    "options": {"redirect_to": redirect_to},
+                },
+                timeout=15,
+            )
+        except httpx.HTTPError as exc:
+            raise SupabaseAdminError(
+                "Supabase password setup link could not be generated."
+            ) from exc
+
+        if response.status_code not in (200, 201):
+            raise SupabaseAdminError(
+                "Supabase password setup link generation failed."
+            )
+        action_link = response.json().get("action_link")
+        if not isinstance(action_link, str) or not action_link:
+            raise SupabaseAdminError(
+                "Supabase did not return a password setup link."
+            )
+        return action_link
 
     def update_user(
         self,

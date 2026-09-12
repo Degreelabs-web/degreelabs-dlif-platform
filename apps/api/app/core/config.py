@@ -33,6 +33,9 @@ class Settings(BaseSettings):
     enrollment_sync_enabled: bool = False
     enrollment_excel_source_type: str = "local"
     enrollment_excel_source: str = ""
+    # Persistent destination for browser-uploaded workbooks. This remains
+    # available even when the primary source is Google Sheets.
+    enrollment_upload_source: str = "data/enrollment-upload.xlsx"
     enrollment_student_sheet: str = "Students"
     enrollment_mentor_sheet: str = "Mentors"
     enrollment_google_spreadsheet_id: str = ""
@@ -42,6 +45,9 @@ class Settings(BaseSettings):
     mentor_onboarding_requires_approval: bool = False
     enrollment_sync_interval_minutes: int = 5
     enrollment_invite_redirect_url: str = ""
+    # Exact URL allowed in Supabase Auth redirect URLs. Password setup links
+    # are generated server-side and sent by the configured email provider.
+    mentor_password_setup_redirect_url: str = ""
     enrollment_upload_max_mb: int = 10
     
     model_config = SettingsConfigDict(

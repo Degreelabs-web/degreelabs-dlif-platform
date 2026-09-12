@@ -19,18 +19,34 @@ export async function apiClient<T>(
   const isFormData =
     typeof FormData !== "undefined" && requestOptions.body instanceof FormData;
 
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-    ...requestOptions,
-    headers: {
-      ...(isFormData ? {} : { "Content-Type": "application/json" }),
-      ...(token
-        ? {
-            Authorization: `Bearer ${token}`,
-          }
-        : {}),
-      ...headers,
-    },
-  });
+  const request = () =>
+    fetch(`${API_BASE_URL}${endpoint}`, {
+      ...requestOptions,
+      // Direct API reads must reflect the latest sync/import state.
+      cache: requestOptions.cache ?? "no-store",
+      headers: {
+        ...(isFormData ? {} : { "Content-Type": "application/json" }),
+        ...(token
+          ? {
+              Authorization: `Bearer ${token}`,
+            }
+          : {}),
+        ...headers,
+      },
+    });
+
+  let response: Response;
+  try {
+    response = await request();
+  } catch (error) {
+    // Uvicorn restarts briefly interrupt an in-flight browser request. Retry
+    // safe reads once instead of surfacing a Next.js error overlay.
+    if ((requestOptions.method ?? "GET").toUpperCase() !== "GET") {
+      throw error;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 350));
+    response = await request();
+  }
 
   if (!response.ok) {
     const errorText = await response.text();

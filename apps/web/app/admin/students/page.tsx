@@ -37,6 +37,7 @@ export default function AdminStudentsPage() {
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [statusUpdatingId, setStatusUpdatingId] = useState<string | null>(null);
   const [studentPendingDelete, setStudentPendingDelete] = useState<Student | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [directoryRefreshKey, setDirectoryRefreshKey] = useState(0);
@@ -203,6 +204,32 @@ export default function AdminStudentsPage() {
     }
   }
 
+  async function changeStudentStatus(
+    student: Student,
+    nextStatus: "active" | "inactive"
+  ) {
+    if (student.status === nextStatus) return;
+
+    try {
+      setStatusUpdatingId(student.id);
+      const updatedStudent = await updateStudent(student.id, { status: nextStatus });
+      setStudents((current) =>
+        current.map((item) =>
+          item.id === student.id ? { ...item, status: updatedStudent.status } : item
+        )
+      );
+      await loadData();
+    } catch (err) {
+      alert(
+        `Failed to update ${student.full_name}'s status: ${
+          err instanceof Error ? err.message : "Please try again."
+        }`
+      );
+    } finally {
+      setStatusUpdatingId(null);
+    }
+  }
+
   const filteredStudents = students.filter((s) => {
     const matchSearch =
       s.full_name.toLowerCase().includes(search.toLowerCase()) ||
@@ -353,15 +380,25 @@ export default function AdminStudentsPage() {
                         {student.profile?.graduation_year || "—"}
                       </td>
                       <td className="px-6 py-4">
-                        <span
-                          className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ${
+                        <select
+                          aria-label={`Status for ${student.full_name}`}
+                          value={student.status === "inactive" ? "inactive" : "active"}
+                          disabled={statusUpdatingId === student.id}
+                          onChange={(event) =>
+                            void changeStudentStatus(
+                              student,
+                              event.target.value as "active" | "inactive"
+                            )
+                          }
+                          className={`rounded-full border px-2.5 py-1 text-xs font-semibold capitalize outline-none transition disabled:cursor-wait disabled:opacity-60 ${
                             student.status === "active"
-                              ? "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-600/20"
-                              : "bg-slate-100 text-slate-700"
+                              ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                              : "border-slate-200 bg-slate-100 text-slate-700"
                           }`}
                         >
-                          {student.status}
-                        </span>
+                          <option value="active">Active</option>
+                          <option value="inactive">Inactive</option>
+                        </select>
                       </td>
                       <td className="px-6 py-4 text-right">
                         <EntityActionsMenu

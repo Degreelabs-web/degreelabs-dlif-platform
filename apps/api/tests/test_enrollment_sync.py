@@ -42,6 +42,16 @@ class MutableSource:
         return WorkbookRows(students=self.students, mentors=self.mentors)
 
 
+class FailingSource:
+    source_type = "test"
+
+    def is_configured(self) -> bool:
+        return True
+
+    def read(self) -> WorkbookRows:
+        raise RuntimeError("Source is unavailable")
+
+
 class FakeSupabaseAdmin:
     def __init__(self) -> None:
         self.users: dict[str, dict] = {}
@@ -69,6 +79,20 @@ class FakeSupabaseAdmin:
         }
         self.users[normalized] = user
         return user, True
+
+    def create_pending_mentor_user(
+        self,
+        *,
+        email: str,
+        full_name: str,
+    ) -> tuple[dict, bool]:
+        return self.invite_user(email=email, full_name=full_name)
+
+    def generate_password_setup_link(self, *, email: str, redirect_to: str) -> str:
+        del redirect_to
+        if email.strip().lower() not in self.users:
+            raise RuntimeError("Missing fake user")
+        return "https://example.test/set-password#access_token=test-token"
 
     def update_user(
         self,
@@ -249,6 +273,23 @@ def test_invalid_student_is_skipped_and_reported(db: Session) -> None:
     assert db.scalar(select(func.count(User.id))) == 0
 
 
+def test_source_failure_is_recorded_without_masking_the_original_error(db: Session) -> None:
+    result = EnrollmentSyncService(
+        db,
+        source=FailingSource(),  # type: ignore[arg-type]
+        supabase=FakeSupabaseAdmin(),  # type: ignore[arg-type]
+        config=Settings(
+            _env_file=None,
+            database_url="sqlite://",
+            supabase_url="https://example.supabase.co",
+            supabase_service_role_key="test-service-role-key-that-is-long-enough",
+        ),
+    ).run(use_lock=False)
+
+    assert result.status == "failed"
+    assert result.last_error == "Unexpected synchronization error."
+
+
 def test_new_mentor_is_created_and_second_sync_is_idempotent(db: Session) -> None:
     source = MutableSource(students=[], mentors=[mentor_row()])
     supabase = FakeSupabaseAdmin()
@@ -278,6 +319,59 @@ def test_changed_mentor_is_updated_without_duplication(db: Session) -> None:
     assert mentor is not None
     assert mentor.designation == "Principal Scientist"
     assert db.scalar(select(func.count(Mentor.id))) == 1
+
+
+def test_sync_removes_sheet_managed_mentor_absent_from_complete_source(db: Session) -> None:
+    source = MutableSource(
+        students=[],
+        mentors=[
+            mentor_row(email="keep@example.com", full_name="Keep Mentor"),
+            mentor_row(email="remove@example.com", full_name="Remove Mentor"),
+        ],
+    )
+    supabase = FakeSupabaseAdmin()
+    service = build_service(db, source, supabase)
+
+    service.run(use_lock=False)
+    assert {
+        mentor.enrollment_source_key for mentor in db.scalars(select(Mentor)).all()
+    } == {"test:dlif"}
+    source.mentors = [mentor_row(email="keep@example.com", full_name="Keep Mentor")]
+    service.run(use_lock=False)
+
+    assert db.scalar(select(func.count(Mentor.id))) == 1
+    assert db.scalar(select(func.count(User.id))) == 1
+    assert "remove@example.com" not in supabase.users
+
+
+def test_sync_never_removes_manually_created_mentor(db: Session) -> None:
+    source = MutableSource(students=[], mentors=[mentor_row(email="sheet@example.com")])
+    supabase = FakeSupabaseAdmin()
+    service = build_service(db, source, supabase)
+    service.run(use_lock=False)
+
+    manual_user = User(
+        id=uuid4(),
+        email="manual@example.com",
+        full_name="Manual Mentor",
+        role="mentor",
+        status="active",
+    )
+    db.add(manual_user)
+    db.flush()
+    db.add(
+        Mentor(
+            user_id=manual_user.id,
+            mentor_category="dlif",
+            enrollment_source_key="manual",
+        )
+    )
+    db.commit()
+
+    source.mentors = [mentor_row(email="sheet@example.com")]
+    service.run(use_lock=False)
+
+    assert db.scalar(select(User).where(User.email == "manual@example.com")) is not None
 
 
 def test_mentor_form_response_fields_are_mapped_and_persisted(db: Session) -> None:
@@ -379,6 +473,32 @@ def test_same_mentor_email_submitted_twice_updates_existing_profile(db: Session)
     assert mentor.designation == "Director"
 
 
+def test_sync_repairs_an_orphaned_mentor_user_profile(db: Session) -> None:
+    email = "orphaned-mentor@example.com"
+    auth_id = uuid5(NAMESPACE_URL, email)
+    db.add(
+        User(
+            id=auth_id,
+            email=email,
+            full_name="Orphaned Mentor",
+            role="mentor",
+            status="active",
+        )
+    )
+    db.commit()
+
+    source = MutableSource(
+        students=[],
+        mentors=[mentor_row(email=email, company="Repair Labs")],
+    )
+    result = build_service(db, source, FakeSupabaseAdmin()).run(use_lock=False)
+
+    mentor = db.scalar(select(Mentor).where(Mentor.user_id == auth_id))
+    assert result.mentors_created == 1
+    assert mentor is not None
+    assert mentor.company_name == "Repair Labs"
+
+
 def test_mentor_approval_mode_creates_pending_and_admin_can_approve(db: Session) -> None:
     source = MutableSource(
         students=[],
@@ -450,7 +570,7 @@ def test_enrolled_mentors_response_returns_onboarding_fields_and_filters(db: Ses
     build_service(db, source, FakeSupabaseAdmin()).run(use_lock=False)
 
     mentors = MentorService(db).get_all(
-        status="active",
+        status="pending",
         organisation="Microsoft",
         industry="Tech",
         expertise="Pyth",
@@ -598,6 +718,18 @@ def workbook_bytes() -> BytesIO:
     return output
 
 
+def student_only_workbook_bytes() -> BytesIO:
+    output = BytesIO()
+    workbook = Workbook()
+    students = workbook.active
+    students.title = "Students"
+    students.append(["full_name", "email", "roll_number", "institution_code"])
+    students.append(["Maya Rao", "maya@example.edu", "AIT-002", "AIT"])
+    workbook.save(output)
+    output.seek(0)
+    return output
+
+
 def test_uploaded_workbook_atomically_becomes_master_source(tmp_path) -> None:
     destination = tmp_path / "master.xlsx"
     service = EnrollmentWorkbookUploadService(
@@ -624,3 +756,66 @@ def test_upload_rejects_non_xlsx_files(tmp_path) -> None:
 
     with pytest.raises(EnrollmentUploadError, match="Only .xlsx"):
         service.save("students.csv", BytesIO(b"not a workbook"))
+
+
+def test_student_upload_works_when_google_sheets_is_primary_source(tmp_path) -> None:
+    destination = tmp_path / "uploaded-students.xlsx"
+    service = EnrollmentWorkbookUploadService(
+        Settings(
+            _env_file=None,
+            enrollment_excel_source_type="google_sheets",
+            enrollment_excel_source="",
+            enrollment_upload_source=str(destination),
+        )
+    )
+
+    saved_path = service.save(
+        "students.xlsx",
+        student_only_workbook_bytes(),
+        entity="students",
+    )
+
+    assert saved_path == destination
+    rows = LocalExcelEnrollmentSource(
+        str(destination),
+        "Students",
+        "Mentors",
+        include_mentors=False,
+    ).read()
+    assert rows.students[0]["email"] == "maya@example.edu"
+
+
+def test_mentor_form_response_sheet_and_headshot_columns_are_supported(tmp_path, db) -> None:
+    workbook_path = tmp_path / "mentor-form-responses.xlsx"
+    workbook = Workbook()
+    responses = workbook.active
+    responses.title = "Form responses 1"
+    responses.append(
+        [
+            "Email address",
+            "Full name",
+            "Professional headshot (Option 1: Link)",
+            "Professional headshot (Option 2: File Upload)",
+        ]
+    )
+    responses.append(
+        [
+            "mentor@example.com",
+            "Mentor Example",
+            None,
+            "https://drive.google.com/open?id=profile-photo",
+        ]
+    )
+    workbook.save(workbook_path)
+
+    source = LocalExcelEnrollmentSource(
+        str(workbook_path),
+        "Students",
+        "Mentors",
+        include_students=False,
+    )
+    rows = source.read()
+    parsed = EnrollmentSyncService(db)._parse_mentor(rows.mentors[0])
+
+    assert rows.mentors[0]["full_name"] == "Mentor Example"
+    assert parsed.headshot_url == "https://drive.google.com/open?id=profile-photo"

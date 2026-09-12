@@ -1,4 +1,5 @@
 export type MentorStatus = "pending" | "active" | "rejected" | "inactive";
+export type MentorCategory = "dlif" | "external_specialist";
 
 export interface Mentor {
   id: string;
@@ -26,6 +27,7 @@ export interface Mentor {
   mentor_statement?: string | null;
   mentoring_statement?: string | null;
   status: MentorStatus;
+  mentor_category: MentorCategory;
   assigned_teams_count: number;
   created_at: string;
   updated_at: string;

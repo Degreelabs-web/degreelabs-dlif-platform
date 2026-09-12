@@ -17,11 +17,13 @@ import {
   triggerEnrollmentSync,
   uploadEnrollmentWorkbook,
 } from "@/lib/api/enrollmentSync";
+import { MentorCategory } from "@/types/fellowship";
 
 type EnrollmentSyncStatusProps = {
   entity: "students" | "mentors";
   onSynced: () => void | Promise<void>;
   refreshKey?: number;
+  mentorCategory?: MentorCategory;
 };
 
 const POLL_DELAY_MS = 1500;
@@ -35,6 +37,7 @@ export function EnrollmentSyncStatus({
   entity,
   onSynced,
   refreshKey = 0,
+  mentorCategory = "dlif",
 }: EnrollmentSyncStatusProps) {
   const [status, setStatus] = useState<EnrollmentSyncStatusData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -45,14 +48,16 @@ export function EnrollmentSyncStatus({
   const uploadInputRef = useRef<HTMLInputElement>(null);
 
   async function loadStatus() {
-    const data = await fetchEnrollmentSyncStatus();
+    const data = await fetchEnrollmentSyncStatus(
+      entity === "mentors" ? mentorCategory : undefined
+    );
     setStatus(data);
     return data;
   }
 
   useEffect(() => {
     let active = true;
-    fetchEnrollmentSyncStatus()
+    fetchEnrollmentSyncStatus(entity === "mentors" ? mentorCategory : undefined)
       .then((data) => {
         if (active) setStatus(data);
       })
@@ -71,7 +76,7 @@ export function EnrollmentSyncStatus({
     return () => {
       active = false;
     };
-  }, [refreshKey]);
+  }, [entity, mentorCategory, refreshKey]);
 
   async function pollUntilComplete(previousRunId?: string) {
     for (let attempt = 0; attempt < MAX_POLL_ATTEMPTS; attempt += 1) {
@@ -123,7 +128,7 @@ export function EnrollmentSyncStatus({
     setMessage(null);
     const previousRunId = status?.latest_run?.id;
     try {
-      const response = await uploadEnrollmentWorkbook(file);
+      const response = await uploadEnrollmentWorkbook(file, entity, mentorCategory);
       setMessage(response.message);
       await pollUntilComplete(previousRunId);
     } catch (reason: unknown) {
@@ -143,7 +148,9 @@ export function EnrollmentSyncStatus({
       ? status?.enrolled_students ?? 0
       : status?.enrolled_mentors ?? 0;
   const entityLabel = entity === "students" ? "enrolled students" : "enrolled mentors";
-  const isLocalSource = status?.source_type?.toLowerCase() === "local";
+  // Browser uploads use the dedicated upload endpoint and do not depend on
+  // the configured Google Sheets/local synchronization source.
+  const supportsExcelUpload = true;
 
   return (
     <section className="rounded-2xl border border-brand-100 bg-white p-4 shadow-sm sm:p-5">
@@ -155,13 +162,19 @@ export function EnrollmentSyncStatus({
             </span>
             <div>
               <p className="text-xs font-medium text-slate-500">
-                {status?.source_type === "google_sheets"
+                {entity === "students"
+                  ? "Excel upload"
+                  : status?.source_type === "google_sheets"
                   ? "Google Sheets source"
                   : "Enrollment source"}
               </p>
               <p className="mt-0.5 flex items-center gap-1.5 text-sm font-bold text-slate-900">
                 {loading ? (
                   "Checking..."
+                ) : entity === "students" ? (
+                  <>
+                    <CheckCircle2 className="h-4 w-4 text-emerald-500" /> Ready to upload
+                  </>
                 ) : status?.connected ? (
                   <>
                     <CheckCircle2 className="h-4 w-4 text-emerald-500" /> Connected
@@ -203,7 +216,7 @@ export function EnrollmentSyncStatus({
         </div>
 
         <div className="flex flex-col gap-2 sm:flex-row">
-          {isLocalSource && (
+          {supportsExcelUpload && (
             <>
               <input
                 ref={uploadInputRef}

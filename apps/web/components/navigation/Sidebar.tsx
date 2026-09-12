@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { X } from "lucide-react";
-import { useEffect } from "react";
+import { ChevronDown, X } from "lucide-react";
+import { useEffect, useState } from "react";
 
 import {
   adminNavigation,
@@ -20,6 +20,7 @@ type SidebarProps = {
 
 export default function Sidebar({ role, open, onClose }: SidebarProps) {
   const pathname = usePathname();
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     if (!open) {
@@ -97,6 +98,59 @@ export default function Sidebar({ role, open, onClose }: SidebarProps) {
             const isActive =
               pathname === item.href ||
               (item.href !== `/${role}` && pathname.startsWith(item.href));
+            const isExpanded = Boolean(expandedGroups[item.href] || isActive);
+
+            if (item.children) {
+              return (
+                <div key={item.href} className="space-y-1">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setExpandedGroups((groups) => ({
+                        ...groups,
+                        [item.href]: !isExpanded,
+                      }))
+                    }
+                    aria-expanded={isExpanded}
+                    className={`group flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-left text-sm font-semibold transition ${
+                      isActive
+                        ? "bg-brand-50 text-brand-700"
+                        : "text-slate-600 hover:bg-brand-50 hover:text-brand-700"
+                    }`}
+                  >
+                    <Icon className="h-[18px] w-[18px] shrink-0 text-brand-500" />
+                    <span className="flex-1">{item.label}</span>
+                    <ChevronDown
+                      className={`h-4 w-4 transition-transform ${
+                        isExpanded ? "rotate-180" : ""
+                      }`}
+                    />
+                  </button>
+                  {isExpanded && (
+                    <div className="ml-6 space-y-1 border-l border-brand-100 pl-3">
+                      {item.children.map((child) => {
+                        const isChildActive = pathname === child.href;
+                        return (
+                          <Link
+                            key={child.href}
+                            href={child.href}
+                            onClick={onClose}
+                            aria-current={isChildActive ? "page" : undefined}
+                            className={`block rounded-lg px-3 py-2 text-sm font-semibold transition ${
+                              isChildActive
+                                ? "bg-gradient-to-r from-brand-500 to-brand-600 text-white shadow-sm"
+                                : "text-slate-600 hover:bg-brand-50 hover:text-brand-700"
+                            }`}
+                          >
+                            {child.label}
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            }
 
             return (
               <Link

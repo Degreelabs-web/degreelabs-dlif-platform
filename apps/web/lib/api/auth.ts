@@ -72,6 +72,17 @@ export async function resendTwoFactorCode(
   });
 }
 
+export async function completeMentorOnboarding(
+  password: string,
+  recoveryToken: string
+): Promise<UserSession> {
+  return apiClient<UserSession>("/auth/mentor-onboarding/complete", {
+    method: "POST",
+    token: recoveryToken,
+    body: JSON.stringify({ password }),
+  });
+}
+
 export function getStoredUser(): UserSession | null {
   if (typeof window === "undefined") return null;
   const userStr = localStorage.getItem("dlif_user");

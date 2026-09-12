@@ -1,4 +1,5 @@
 import { apiClient } from "@/lib/api/client";
+import { MentorCategory } from "@/types/fellowship";
 
 export interface EnrollmentSyncRun {
   id: string;
@@ -31,8 +32,13 @@ export interface EnrollmentSyncStatus {
   latest_run?: EnrollmentSyncRun | null;
 }
 
-export function fetchEnrollmentSyncStatus(): Promise<EnrollmentSyncStatus> {
-  return apiClient<EnrollmentSyncStatus>("/admin/enrollment-sync/status");
+export function fetchEnrollmentSyncStatus(
+  mentorCategory?: MentorCategory
+): Promise<EnrollmentSyncStatus> {
+  const query = mentorCategory
+    ? `?mentor_category=${encodeURIComponent(mentorCategory)}`
+    : "";
+  return apiClient<EnrollmentSyncStatus>(`/admin/enrollment-sync/status${query}`);
 }
 
 export function triggerEnrollmentSync(): Promise<{
@@ -42,12 +48,18 @@ export function triggerEnrollmentSync(): Promise<{
   return apiClient("/admin/enrollment-sync", { method: "POST" });
 }
 
-export function uploadEnrollmentWorkbook(file: File): Promise<{
+export function uploadEnrollmentWorkbook(
+  file: File,
+  entity: "students" | "mentors" | "both" = "both",
+  mentorCategory: MentorCategory = "dlif"
+): Promise<{
   accepted: boolean;
   message: string;
 }> {
   const body = new FormData();
   body.append("workbook", file);
+  body.append("entity", entity);
+  body.append("mentor_category", mentorCategory);
   return apiClient("/admin/enrollment-sync/upload", {
     method: "POST",
     body,

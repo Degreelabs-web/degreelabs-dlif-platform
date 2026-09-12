@@ -65,6 +65,11 @@ class MentorService:
             mentor_statement=mentor.mentor_statement,
             mentoring_statement=mentor.mentor_statement,
             status=mentor.status,
+            mentor_category=mentor.mentor_category,
+            password_setup_status=mentor.password_setup_status,
+            password_setup_sent_at=mentor.password_setup_sent_at,
+            password_setup_completed_at=mentor.password_setup_completed_at,
+            enrollment_source_key=mentor.enrollment_source_key,
             created_at=mentor.created_at,
             updated_at=mentor.updated_at,
             full_name=user.full_name if user else None,
@@ -82,6 +87,7 @@ class MentorService:
         industry: str | None = None,
         expertise: str | None = None,
         country: str | None = None,
+        mentor_category: str | None = None,
     ) -> list[MentorDetailResponse]:
         rows = self.mentor_repo.get_all(
             status=status,
@@ -92,6 +98,7 @@ class MentorService:
             industry=industry,
             expertise=expertise,
             country=country,
+            mentor_category=mentor_category,
         )
         return [
             self._build_detail_response(mentor, user, assigned_teams_count)
@@ -231,6 +238,8 @@ class MentorService:
             support_preferences=data.support_preferences or [],
             mentor_statement=data.mentoring_statement or data.mentor_statement,
             status=data.status,
+            mentor_category=data.mentor_category,
+            enrollment_source_key="manual",
         )
 
         try:
@@ -290,6 +299,8 @@ class MentorService:
             user = self.db.scalar(select(User).where(User.id == mentor.user_id))
             if user is not None:
                 user.status = data.status
+        if data.mentor_category is not None:
+            mentor.mentor_category = data.mentor_category
 
         try:
             updated = self.mentor_repo.update(mentor)

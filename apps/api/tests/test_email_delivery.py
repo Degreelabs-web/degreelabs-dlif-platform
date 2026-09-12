@@ -30,7 +30,7 @@ def smtp_config(**overrides):
 @patch("app.services.email_delivery.ssl.create_default_context")
 @patch("app.services.email_delivery.smtplib.SMTP")
 def test_sends_code_to_exact_recipient_over_starttls(mock_smtp, mock_context):
-    client = mock_smtp.return_value.__enter__.return_value
+    client = mock_smtp.return_value
     service = EmailDeliveryService(smtp_config())
 
     service.send_two_factor_code(
@@ -56,7 +56,7 @@ def test_sends_code_to_exact_recipient_over_starttls(mock_smtp, mock_context):
 
 @patch("app.services.email_delivery.smtplib.SMTP_SSL")
 def test_supports_implicit_tls_without_starttls(mock_smtp_ssl):
-    client = mock_smtp_ssl.return_value.__enter__.return_value
+    client = mock_smtp_ssl.return_value
     service = EmailDeliveryService(
         smtp_config(smtp_port=465, smtp_use_tls=False, smtp_use_ssl=True)
     )
@@ -100,7 +100,7 @@ def test_rejects_invalid_configuration_before_connecting(
 
 @patch("app.services.email_delivery.smtplib.SMTP")
 def test_wraps_smtp_delivery_errors(mock_smtp):
-    client = mock_smtp.return_value.__enter__.return_value
+    client = mock_smtp.return_value
     client.send_message.side_effect = smtplib.SMTPException("rejected")
     service = EmailDeliveryService(smtp_config())
 
@@ -108,3 +108,15 @@ def test_wraps_smtp_delivery_errors(mock_smtp):
         service.send_two_factor_code("student@example.edu", "123456")
 
     assert isinstance(error.value.__cause__, smtplib.SMTPException)
+
+
+@patch("app.services.email_delivery.smtplib.SMTP")
+def test_does_not_report_failure_when_quit_fails_after_delivery(mock_smtp):
+    client = mock_smtp.return_value
+    client.quit.side_effect = smtplib.SMTPServerDisconnected("connection closed")
+    service = EmailDeliveryService(smtp_config())
+
+    service.send_two_factor_code("student@example.edu", "123456")
+
+    client.send_message.assert_called_once()
+    client.close.assert_called_once()

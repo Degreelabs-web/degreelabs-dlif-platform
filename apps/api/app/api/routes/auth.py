@@ -13,6 +13,7 @@ from app.core.config import settings
 from app.core.rbac import require_admin
 from app.core.security import get_current_user_token
 from app.db.models.user import User
+from app.db.models.mentor import Mentor
 from app.db.session import get_db
 from app.schemas.user import (
     TwoFactorConfirmRequest,
@@ -20,6 +21,7 @@ from app.schemas.user import (
     TwoFactorSetupResponse,
     TwoFactorVerifyRequest,
     UserLoginRequest,
+    MentorOnboardingCompleteRequest,
     UserLoginResponse,
     UserProvisionRequest,
     UserProvisionResponse,
@@ -38,6 +40,7 @@ from app.services.user_provisioning import (
     UserProvisioningError,
     UserProvisioningService,
 )
+from app.services.supabase_admin import SupabaseAdminError, SupabaseAdminService
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 logger = logging.getLogger(__name__)
@@ -189,6 +192,59 @@ def login(
         user=UserProvisionResponse.model_validate(user),
         requires_2fa=False,
     )
+
+
+@router.post(
+    "/mentor-onboarding/complete",
+    response_model=UserProvisionResponse,
+)
+def complete_mentor_onboarding(
+    data: MentorOnboardingCompleteRequest,
+    token: dict = Depends(get_current_user_token),
+    db: Session = Depends(get_db),
+):
+    """Activate a pending mentor after Supabase verified a recovery link.
+
+    The only credential accepted here is a valid, short-lived Supabase Auth
+    recovery session. No onboarding token is stored in DLIF's database.
+    """
+    user_id = _challenge_user_id(token)
+    user = db.get(User, user_id)
+    if user is None or user.role != "mentor":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This password setup link is not valid for a mentor account.",
+        )
+    if user.status != "pending":
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="This mentor account has already completed onboarding or is unavailable.",
+        )
+
+    mentor = db.query(Mentor).filter(Mentor.user_id == user.id).first()
+    if mentor is None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="The mentor profile is unavailable. Please contact DegreeLabs support.",
+        )
+
+    try:
+        SupabaseAdminService().update_user(str(user.id), password=data.password)
+    except (RuntimeError, SupabaseAdminError) as exc:
+        logger.exception("Unable to complete mentor onboarding for user %s", user.id)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="We could not save your password securely. Please try again shortly.",
+        ) from exc
+
+    now = datetime.now(timezone.utc)
+    user.status = "active"
+    mentor.status = "active"
+    mentor.password_setup_status = "completed"
+    mentor.password_setup_completed_at = now
+    db.commit()
+    db.refresh(user)
+    return UserProvisionResponse.model_validate(user)
 
 
 @router.post(

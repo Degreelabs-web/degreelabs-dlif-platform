@@ -20,6 +20,10 @@ export type NavigationItem = {
   label: string;
   href: string;
   icon: React.ComponentType<{ className?: string }>;
+  children?: Array<{
+    label: string;
+    href: string;
+  }>;
 };
 
 export const studentNavigation: NavigationItem[] = [
@@ -123,6 +127,13 @@ export const adminNavigation: NavigationItem[] = [
     label: "Enrolled Mentors",
     href: "/admin/mentors",
     icon: UserRound,
+    children: [
+      { label: "DLIF Mentors", href: "/admin/mentors" },
+      {
+        label: "External Specialist Mentors",
+        href: "/admin/mentors/external-specialists",
+      },
+    ],
   },
   {
     label: "Cohorts",

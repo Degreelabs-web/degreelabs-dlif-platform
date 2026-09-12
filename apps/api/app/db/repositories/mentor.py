@@ -22,6 +22,7 @@ class MentorRepository:
         industry: str | None = None,
         expertise: str | None = None,
         country: str | None = None,
+        mentor_category: str | None = None,
     ) -> list[tuple[Mentor, User | None, int]]:
         use_database_array_filters = self.db.bind is None or self.db.bind.dialect.name != "sqlite"
         statement = (
@@ -38,6 +39,8 @@ class MentorRepository:
 
         if status is not None:
             statement = statement.where(Mentor.status == status)
+        if mentor_category is not None:
+            statement = statement.where(Mentor.mentor_category == mentor_category)
         if organisation:
             statement = statement.where(Mentor.company_name.ilike(f"%{organisation}%"))
         if country:

@@ -1,11 +1,18 @@
 from __future__ import annotations
+from app.services.enrollment_sources.base import normalize_header
 
+import logging
 import re
 from datetime import datetime, timezone
 from uuid import UUID
 
+# pyrefly: ignore [missing-import]
 from pydantic import ValidationError
+# pyrefly: ignore [missing-import]
 from sqlalchemy import func, select, text
+# pyrefly: ignore [missing-import]
+from sqlalchemy.exc import IntegrityError
+# pyrefly: ignore [missing-import]
 from sqlalchemy.orm import Session
 
 from app.core.config import Settings, settings
@@ -13,15 +20,18 @@ from app.db.models.enrollment_sync_run import EnrollmentSyncRun
 from app.db.models.institution import Institution
 from app.db.models.mentor import Mentor
 from app.db.models.student_profile import StudentProfile
+from app.db.models.team_mentor_assignment import TeamMentorAssignment
 from app.db.models.user import User
 from app.schemas.enrollment_sync import MentorEnrollmentRow, StudentEnrollmentRow
 from app.services.enrollment_sources import EnrollmentSource, build_enrollment_source
 from app.services.mentor_onboarding_mapping import MENTOR_ONBOARDING_FIELDS
+from app.services.email_delivery import EmailDeliveryError, EmailDeliveryService
 from app.services.supabase_admin import SupabaseAdminError, SupabaseAdminService
 
 
 ENROLLMENT_SYNC_LOCK_ID = 445_549_463
 MAX_RECORDED_ERRORS = 100
+logger = logging.getLogger(__name__)
 
 
 class EnrollmentSyncAlreadyRunning(RuntimeError):
@@ -42,6 +52,8 @@ class EnrollmentSyncService:
         self.source = source or build_enrollment_source(config)
         self.supabase = supabase
         self._pending_auth_user_id: str | None = None
+        self._pending_password_setup: dict[str, str] | None = None
+        self._delivery_failures = 0
 
     def run(self, *, trigger: str = "manual", use_lock: bool = True) -> EnrollmentSyncRun:
         lock_acquired = False
@@ -75,11 +87,16 @@ class EnrollmentSyncService:
                 self._process_row(sync_run, "student", row)
             for row in rows.mentors:
                 self._process_row(sync_run, "mentor", row)
+            self._reconcile_removed_mentors(sync_run, rows.mentors)
 
             sync_run.status = (
-                "partial" if sync_run.rows_skipped else "success"
+                "partial" if sync_run.rows_skipped or self._delivery_failures else "success"
             )
         except Exception as exc:
+            # This handles source-level failures (for example, Google Sheets
+            # connectivity or reconciliation errors), where no individual row
+            # context exists yet.
+            logger.exception("Enrollment synchronization failed")
             self.db.rollback()
             sync_run = self.db.get(EnrollmentSyncRun, sync_run.id)
             if sync_run is None:
@@ -107,6 +124,7 @@ class EnrollmentSyncService:
         sync_run.rows_processed += 1
         row_number = int(raw_row.get("_row_number", 0) or 0)
         self._pending_auth_user_id = None
+        self._pending_password_setup = None
 
         try:
             with self.db.begin_nested():
@@ -126,6 +144,9 @@ class EnrollmentSyncService:
                         sync_run.mentors_updated += 1
             self.db.commit()
             self._pending_auth_user_id = None
+            if self._pending_password_setup is not None:
+                self._pending_password_setup["row_number"] = str(row_number)
+            self._deliver_pending_password_setup(sync_run)
         except Exception as exc:
             self.db.rollback()
             if self._pending_auth_user_id:
@@ -150,6 +171,56 @@ class EnrollmentSyncService:
                 sync_run.validation_errors = errors
             self.db.commit()
             self._pending_auth_user_id = None
+            self._pending_password_setup = None
+
+    def _deliver_pending_password_setup(self, sync_run: EnrollmentSyncRun) -> None:
+        """Deliver after the pending mentor has committed.
+
+        A delivery outage must never roll back the imported mentor or leave an
+        untracked Supabase identity. The account remains pending and an admin
+        can retry through the resend endpoint.
+        """
+        pending = self._pending_password_setup
+        self._pending_password_setup = None
+        if pending is None:
+            return
+
+        mentor = self.db.get(Mentor, UUID(pending["mentor_id"]))
+        if mentor is None:
+            return
+        try:
+            if self.supabase is None:
+                raise SupabaseAdminError("Supabase administration is not configured.")
+            setup_link = self.supabase.generate_password_setup_link(
+                email=pending["email"],
+                redirect_to=self.config.mentor_password_setup_redirect_url,
+            )
+            EmailDeliveryService(self.config).send_password_setup_link(
+                pending["email"],
+                pending["full_name"],
+                setup_link,
+            )
+            mentor.password_setup_status = "sent"
+            mentor.password_setup_sent_at = datetime.now(timezone.utc)
+            self.db.commit()
+        except (SupabaseAdminError, EmailDeliveryError, ValueError) as exc:
+            self.db.rollback()
+            mentor = self.db.get(Mentor, UUID(pending["mentor_id"]))
+            if mentor is not None:
+                mentor.password_setup_status = "failed"
+                self.db.commit()
+            self._delivery_failures += 1
+            errors = list(sync_run.validation_errors or [])
+            if len(errors) < MAX_RECORDED_ERRORS:
+                errors.append(
+                    {
+                        "sheet": "mentor",
+                        "row": pending.get("row_number", 0),
+                        "message": f"Mentor imported as pending, but setup email failed: {self._safe_error(exc)}",
+                    }
+                )
+                sync_run.validation_errors = errors
+                self.db.commit()
 
     def _sync_student(self, row: StudentEnrollmentRow) -> tuple[str, str | None]:
         if self.supabase is None:
@@ -251,6 +322,71 @@ class EnrollmentSyncService:
             return "updated", None
         return "unchanged", None
 
+    def run_mentor_submission(
+        self,
+        values: dict[str, object],
+        *,
+        trigger: str = "google_form",
+    ) -> EnrollmentSyncRun:
+        """
+        Process one mentor submitted from the Google Form webhook.
+        Reuses the existing mentor parsing, validation, Supabase provisioning,
+        DB upsert, error handling, and sync-run tracking.
+        """
+
+        sync_run = EnrollmentSyncRun(
+            trigger=trigger,
+            source_type="google_form",
+            status="running",
+            validation_errors=[],
+        )
+
+        self.db.add(sync_run)
+        self.db.commit()
+        self.db.refresh(sync_run)
+
+        try:
+            if self.supabase is None:
+                self.supabase = SupabaseAdminService()
+
+            normalized_row = {
+                normalize_header(key): value
+                for key, value in values.items()
+            }
+
+            self._process_row(
+                sync_run,
+                "mentor",
+                normalized_row,
+            )
+
+            sync_run = self.db.get(EnrollmentSyncRun, sync_run.id)
+            if sync_run is None:
+                raise RuntimeError("Enrollment sync run could not be reloaded.")
+
+            sync_run.status = (
+                "partial"
+                if sync_run.rows_skipped or self._delivery_failures
+                else "success"
+            )
+
+        except Exception as exc:
+            self.db.rollback()
+
+            sync_run = self.db.get(EnrollmentSyncRun, sync_run.id)
+            if sync_run is None:
+                raise
+
+            sync_run.status = "failed"
+            sync_run.last_error = self._safe_error(exc)
+
+        finally:
+            sync_run.completed_at = datetime.now(timezone.utc)
+            self.db.commit()
+            self.db.refresh(sync_run)
+
+        return sync_run
+
     def _sync_mentor(self, row: MentorEnrollmentRow) -> tuple[str, str | None]:
         if self.supabase is None:
             raise SupabaseAdminError("Supabase administration is not configured.")
@@ -258,19 +394,16 @@ class EnrollmentSyncService:
         user = self.db.scalar(
             select(User).where(func.lower(User.email) == email)
         )
-        desired_status = row.status
-        if user is None and self.config.mentor_onboarding_requires_approval:
-            desired_status = "pending"
-        elif desired_status is None:
-            desired_status = user.status if user is not None else "active"
+        # Spreadsheet imports must never activate an account before the owner
+        # has chosen a password. Existing account status is preserved.
+        desired_status = "pending" if user is None else user.status
 
         auth_user = self.supabase.get_user_by_email(email)
         created_auth = False
         if auth_user is None:
-            auth_user, created_auth = self.supabase.invite_user(
+            auth_user, created_auth = self.supabase.create_pending_mentor_user(
                 email=email,
                 full_name=row.full_name,
-                redirect_to=self.config.enrollment_invite_redirect_url or None,
             )
 
         auth_user_id = auth_user.get("id")
@@ -307,9 +440,17 @@ class EnrollmentSyncService:
                 support_preferences=row.support_preferences,
                 mentor_statement=row.mentor_statement,
                 status=desired_status,
+                mentor_category=row.mentor_category,
+                enrollment_source_key=self._mentor_source_key(row.mentor_category),
             )
             self.db.add(mentor)
             self.db.flush()
+            self._pending_password_setup = {
+                "mentor_id": str(mentor.id),
+                "email": email,
+                "full_name": row.full_name,
+                "row_number": "0",
+            }
             return "created", auth_user_id if created_auth else None
 
         if str(user.id) != auth_user_id:
@@ -320,6 +461,7 @@ class EnrollmentSyncService:
             raise ValueError("The email already belongs to a non-mentor account.")
 
         mentor = self.db.scalar(select(Mentor).where(Mentor.user_id == user.id))
+        created_profile = mentor is None
         if mentor is None:
             mentor = Mentor(user_id=user.id)
             self.db.add(mentor)
@@ -347,13 +489,106 @@ class EnrollmentSyncService:
                 "support_preferences": row.support_preferences,
                 "mentor_statement": row.mentor_statement,
                 "status": desired_status,
+                "mentor_category": row.mentor_category,
+                "enrollment_source_key": self._mentor_source_key(row.mentor_category),
             },
         )
         if changed:
             self.supabase.update_user(auth_user_id, full_name=row.full_name)
             self.db.flush()
-            return "updated", None
+            # A previous interrupted import can leave a Supabase/local User
+            # without a Mentor profile. Repair that orphan on the next sync
+            # and report it as a created directory record.
+            return "created" if created_profile else "updated", None
         return "unchanged", None
+
+    def _mentor_source_key(self, mentor_category: str) -> str:
+        return f"{self.source.source_type}:{mentor_category}"
+
+    def _reconcile_removed_mentors(
+        self,
+        sync_run: EnrollmentSyncRun,
+        raw_rows: list[dict[str, object]],
+    ) -> None:
+        """Remove roster-owned mentors absent from a complete valid snapshot.
+
+        We intentionally do nothing on an empty or invalid snapshot: a bad
+        Google Sheets response must never erase the directory. Legacy records
+        with no source key are adopted only for this Sheet-managed category;
+        manually created mentors are explicitly tagged ``manual``.
+        """
+        if not raw_rows or sync_run.rows_skipped:
+            return
+
+        emails_by_category: dict[str, set[str]] = {}
+        try:
+            for raw_row in raw_rows:
+                parsed = self._parse_mentor(raw_row)
+                emails_by_category.setdefault(parsed.mentor_category, set()).add(
+                    str(parsed.email).lower()
+                )
+        except (ValidationError, ValueError):
+            return
+
+        for category, source_emails in emails_by_category.items():
+            source_key = self._mentor_source_key(category)
+            candidates = self.db.execute(
+                select(Mentor, User)
+                .join(User, User.id == Mentor.user_id)
+                .where(Mentor.mentor_category == category)
+                .where(
+                    (Mentor.enrollment_source_key == source_key)
+                    | (Mentor.enrollment_source_key.is_(None))
+                )
+            ).all()
+            for mentor, user in candidates:
+                if user.email.lower() in source_emails:
+                    continue
+                dependent_assignments = self.db.scalar(
+                    select(func.count(TeamMentorAssignment.id)).where(
+                        TeamMentorAssignment.mentor_id == mentor.id,
+                    )
+                ) or 0
+                if dependent_assignments:
+                    self._append_sync_error(
+                        sync_run,
+                        "mentor",
+                        0,
+                        f"Mentor '{user.email}' was removed from the source but still has team-assignment records, so it was kept.",
+                    )
+                    continue
+                try:
+                    if self.supabase is None:
+                        raise SupabaseAdminError("Supabase administration is not configured.")
+                    self.supabase.delete_user(str(user.id))
+                    # PostgreSQL also cascades this through users, but delete
+                    # the profile explicitly so the behavior is deterministic
+                    # for every supported database and test environment.
+                    self.db.delete(mentor)
+                    self.db.flush()
+                    self.db.delete(user)
+                    self.db.commit()
+                except (SupabaseAdminError, IntegrityError, ValueError) as exc:
+                    self.db.rollback()
+                    self._append_sync_error(
+                        sync_run,
+                        "mentor",
+                        0,
+                        f"Could not remove '{user.email}' after it was removed from the source: {self._safe_error(exc)}",
+                    )
+
+    def _append_sync_error(
+        self,
+        sync_run: EnrollmentSyncRun,
+        sheet: str,
+        row: int,
+        message: str,
+    ) -> None:
+        errors = list(sync_run.validation_errors or [])
+        if len(errors) < MAX_RECORDED_ERRORS:
+            errors.append({"sheet": sheet, "row": row, "message": message})
+            sync_run.validation_errors = errors
+            self.db.commit()
 
     def _find_institution(self, value: str) -> Institution | None:
         normalized = value.strip().lower()
@@ -436,6 +671,10 @@ class EnrollmentSyncService:
                 "status": self._normalize_mentor_status(
                     self._pick_mapped(row, "status")
                 ),
+                "mentor_category": self._optional_text(
+                    self._pick(row, "mentor_category")
+                )
+                or "dlif",
             }
         )
 

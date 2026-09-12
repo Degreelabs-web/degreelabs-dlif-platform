@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 import tempfile
 from pathlib import Path
-from typing import BinaryIO
+from typing import BinaryIO, Literal
 
 from app.core.config import Settings, settings
 from app.services.enrollment_sources.excel import LocalExcelEnrollmentSource
@@ -17,19 +17,23 @@ class EnrollmentWorkbookUploadService:
     def __init__(self, config: Settings = settings) -> None:
         self.config = config
 
-    def save(self, filename: str | None, source_file: BinaryIO) -> Path:
-        if self.config.enrollment_excel_source_type.strip().lower() != "local":
-            raise EnrollmentUploadError(
-                "Browser uploads are available only for the local workbook source."
-            )
+    def save(
+        self,
+        filename: str | None,
+        source_file: BinaryIO,
+        *,
+        entity: Literal["students", "mentors", "both"] = "both",
+    ) -> Path:
         if not filename or Path(filename).suffix.lower() != ".xlsx":
             raise EnrollmentUploadError("Only .xlsx enrollment workbooks are accepted.")
-        if not self.config.enrollment_excel_source.strip():
-            raise EnrollmentUploadError(
-                "ENROLLMENT_EXCEL_SOURCE must be configured before uploading."
-            )
 
-        destination = Path(self.config.enrollment_excel_source).expanduser().resolve()
+        destination_value = (
+            self.config.enrollment_excel_source.strip()
+            or self.config.enrollment_upload_source.strip()
+        )
+        if not destination_value:
+            raise EnrollmentUploadError("No destination is configured for uploaded workbooks.")
+        destination = Path(destination_value).expanduser().resolve()
         destination.parent.mkdir(parents=True, exist_ok=True)
         max_bytes = max(1, self.config.enrollment_upload_max_mb) * 1024 * 1024
         temporary_path: Path | None = None
@@ -55,11 +59,24 @@ class EnrollmentWorkbookUploadService:
             if total_bytes == 0:
                 raise EnrollmentUploadError("The uploaded workbook is empty.")
 
-            LocalExcelEnrollmentSource(
+            uploaded_rows = LocalExcelEnrollmentSource(
                 str(temporary_path),
                 self.config.enrollment_student_sheet,
                 self.config.enrollment_mentor_sheet,
+                include_students=entity in ("students", "both"),
+                include_mentors=entity in ("mentors", "both"),
+                allow_missing_sheets=True,
             ).read()
+            if entity == "students" and not uploaded_rows.students:
+                raise EnrollmentUploadError(
+                    f"Workbook must contain at least one row in the '{self.config.enrollment_student_sheet}' sheet."
+                )
+            if entity == "mentors" and not uploaded_rows.mentors:
+                raise EnrollmentUploadError(
+                    f"Workbook must contain at least one row in the '{self.config.enrollment_mentor_sheet}' sheet."
+                )
+            if entity == "both" and not (uploaded_rows.students or uploaded_rows.mentors):
+                raise EnrollmentUploadError("Workbook does not contain any enrollment rows.")
             os.replace(temporary_path, destination)
             temporary_path = None
             return destination

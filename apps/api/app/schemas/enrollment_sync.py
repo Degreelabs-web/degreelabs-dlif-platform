@@ -1,9 +1,11 @@
 from datetime import datetime
+from typing import Any, Literal
 from uuid import UUID
 
+# pyrefly: ignore [missing-import]
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
-from app.schemas.mentor import MentorStatus
+from app.schemas.mentor import MentorCategory, MentorStatus
 
 
 class StudentEnrollmentRow(BaseModel):
@@ -44,6 +46,7 @@ class MentorEnrollmentRow(BaseModel):
     expertise: list[str] = Field(default_factory=list)
     industries: list[str] = Field(default_factory=list)
     status: MentorStatus | None = None
+    mentor_category: MentorCategory = "dlif"
     years_of_experience: int | None = Field(default=None, ge=0)
     support_preferences: list[str] = Field(default_factory=list)
     mentor_statement: str | None = None
@@ -57,6 +60,13 @@ class MentorEnrollmentRow(BaseModel):
     @classmethod
     def normalize_email(cls, value: EmailStr) -> str:
         return str(value).strip().lower()
+
+
+class MentorGoogleFormWebhookRequest(BaseModel):
+    source: Literal["google_form"] = "google_form"
+    response_id: str | None = None
+    submitted_at: datetime | None = None
+    values: dict[str, Any]
 
 
 class EnrollmentSyncRunResponse(BaseModel):

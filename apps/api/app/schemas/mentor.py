@@ -6,6 +6,7 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 
 MentorStatus = Literal["pending", "active", "rejected", "inactive"]
+MentorCategory = Literal["dlif", "external_specialist"]
 
 
 class MentorBase(BaseModel):
@@ -30,6 +31,7 @@ class MentorBase(BaseModel):
     mentor_statement: str | None = None
     mentoring_statement: str | None = None
     status: MentorStatus = "active"
+    mentor_category: MentorCategory = "dlif"
 
 
 class MentorCreate(MentorBase):
@@ -62,6 +64,7 @@ class MentorUpdate(BaseModel):
     mentor_statement: str | None = None
     mentoring_statement: str | None = None
     status: MentorStatus | None = None
+    mentor_category: MentorCategory | None = None
 
 
 class MentorResponse(MentorBase):
@@ -69,6 +72,10 @@ class MentorResponse(MentorBase):
     user_id: UUID
     created_at: datetime
     updated_at: datetime
+    password_setup_status: str = "pending"
+    password_setup_sent_at: datetime | None = None
+    password_setup_completed_at: datetime | None = None
+    enrollment_source_key: str | None = None
 
     model_config = ConfigDict(from_attributes=True)
 

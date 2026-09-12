@@ -1,3 +1,4 @@
+# pyrefly: ignore [missing-import]
 from fastapi.testclient import TestClient
 
 from app.api.routes import enrollment_sync as enrollment_sync_routes
@@ -40,26 +41,27 @@ class ConfiguredGoogleSource:
 
 
 def test_google_form_event_queues_secure_sheet_sync(monkeypatch) -> None:
-    calls: list[str] = []
+    calls: list[dict[str, object]] = []
     monkeypatch.setattr(settings, "enrollment_google_webhook_secret", "test-secret")
     monkeypatch.setattr(
         enrollment_sync_routes,
-        "build_enrollment_source",
-        lambda: ConfiguredGoogleSource(),
-    )
-    monkeypatch.setattr(
-        enrollment_sync_routes,
-        "_run_sync_background",
-        lambda trigger: calls.append(trigger),
+        "_run_mentor_submission_background",
+        lambda values: calls.append(values),
     )
 
     response = TestClient(app).post(
         "/api/v1/admin/enrollment-sync/google-form",
         headers={"X-DLIF-Ingestion-Secret": "test-secret"},
+        json={
+            "values": {
+                "Email address": "mentor@example.com",
+                "Full name": "Mentor Example",
+            }
+        },
     )
 
     assert response.status_code == 202
-    assert calls == ["google_form"]
+    assert calls == [{"Email address": "mentor@example.com", "Full name": "Mentor Example"}]
 
 
 def test_google_form_event_rejects_invalid_secret(monkeypatch) -> None:
@@ -68,6 +70,7 @@ def test_google_form_event_rejects_invalid_secret(monkeypatch) -> None:
     response = TestClient(app).post(
         "/api/v1/admin/enrollment-sync/google-form",
         headers={"X-DLIF-Ingestion-Secret": "wrong-secret"},
+        json={"values": {}},
     )
 
     assert response.status_code == 401

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { EntityActionsMenu } from "@/components/admin/EntityActionsMenu";
 import { DeleteConfirmationDialog } from "@/components/admin/DeleteConfirmationDialog";
 import { EnrollmentSyncStatus } from "@/components/admin/EnrollmentSyncStatus";
@@ -10,7 +11,7 @@ import {
   fetchMentors,
   updateMentor,
 } from "@/lib/api/fellowship";
-import { Mentor, MentorStatus } from "@/types/fellowship";
+import { Mentor, MentorCategory, MentorStatus } from "@/types/fellowship";
 import {
   UserRound,
   Plus,
@@ -85,6 +86,14 @@ function mentorStatusClasses(status: string): string {
 }
 
 export default function MentorsPage() {
+  const pathname = usePathname();
+  const mentorCategory: MentorCategory = pathname.includes("external-specialists")
+    ? "external_specialist"
+    : "dlif";
+  const isExternalSpecialists = mentorCategory === "external_specialist";
+  const directoryTitle = isExternalSpecialists
+    ? "External Specialist Mentors"
+    : "DLIF Mentors";
   const [mentors, setMentors] = useState<Mentor[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -133,6 +142,7 @@ export default function MentorsPage() {
         industry: industryFilter || undefined,
         expertise: expertiseFilter || undefined,
         country: countryFilter || undefined,
+        mentor_category: mentorCategory,
       });
       setMentors(data);
     } catch (err) {
@@ -140,7 +150,7 @@ export default function MentorsPage() {
     } finally {
       setLoading(false);
     }
-  }, [search, statusFilter, organisationFilter, industryFilter, expertiseFilter, countryFilter]);
+  }, [search, statusFilter, organisationFilter, industryFilter, expertiseFilter, countryFilter, mentorCategory]);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => void loadMentors(), 250);
@@ -166,6 +176,7 @@ export default function MentorsPage() {
         professional_headshot_url: formData.headshot_url || undefined,
         support_preferences: splitList(formData.support_preferences),
         mentoring_statement: formData.mentor_statement || undefined,
+        mentor_category: mentorCategory,
       };
       if (editingMentor) {
         await updateMentor(editingMentor.id, profileData);
@@ -318,10 +329,12 @@ export default function MentorsPage() {
         <div>
           <p className="text-sm font-medium text-slate-500">Admin Portal</p>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-            Enrolled Mentors
+            {directoryTitle}
           </h1>
           <p className="text-sm text-slate-600">
-            Review synchronized industry mentors and their fellowship assignments.
+            {isExternalSpecialists
+              ? "Review and manage specialist mentors imported from external sources."
+              : "Review synchronized DLIF mentors and their fellowship assignments."}
           </p>
         </div>
 
@@ -330,7 +343,7 @@ export default function MentorsPage() {
           className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-700 transition"
         >
           <Plus className="h-4 w-4" />
-          Add Mentor Manually
+          Add {isExternalSpecialists ? "Specialist Mentor" : "DLIF Mentor"}
         </button>
       </div>
 
@@ -338,6 +351,7 @@ export default function MentorsPage() {
         entity="mentors"
         onSynced={loadMentors}
         refreshKey={directoryRefreshKey}
+        mentorCategory={mentorCategory}
       />
 
       <div className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-4 md:grid-cols-3 xl:grid-cols-8">

@@ -2,6 +2,7 @@ import { apiClient } from "@/lib/api/client";
 import {
   Company,
   Mentor,
+  MentorCategory,
   MentorStatus,
   MentorPortalContext,
   Project,
@@ -20,6 +21,7 @@ export async function fetchMentors(params?: {
   industry?: string;
   expertise?: string;
   country?: string;
+  mentor_category?: MentorCategory;
 }): Promise<Mentor[]> {
   const query = new URLSearchParams();
   if (params?.status) query.append("status", params.status);
@@ -28,6 +30,7 @@ export async function fetchMentors(params?: {
   if (params?.industry) query.append("industry", params.industry);
   if (params?.expertise) query.append("expertise", params.expertise);
   if (params?.country) query.append("country", params.country);
+  if (params?.mentor_category) query.append("mentor_category", params.mentor_category);
   const qs = query.toString() ? `?${query.toString()}` : "";
   return apiClient<Mentor[]>(`/mentors${qs}`);
 }
@@ -59,6 +62,7 @@ export async function createMentor(data: {
   support_preferences?: string[];
   mentor_statement?: string;
   mentoring_statement?: string;
+  mentor_category?: MentorCategory;
 }): Promise<Mentor> {
   return apiClient<Mentor>("/mentors", {
     method: "POST",
@@ -90,6 +94,7 @@ export async function updateMentor(
     mentor_statement?: string;
     mentoring_statement?: string;
     status?: MentorStatus;
+    mentor_category?: MentorCategory;
   }
 ): Promise<Mentor> {
   return apiClient<Mentor>(`/mentors/${id}`, {

@@ -36,28 +36,80 @@ class EmailDeliveryService:
             )
 
             if self.config.smtp_use_ssl:
-                with smtplib.SMTP_SSL(
+                client = smtplib.SMTP_SSL(
                     self.config.smtp_host,
                     self.config.smtp_port,
                     timeout=self.config.smtp_timeout_seconds,
                     context=ssl.create_default_context(),
-                ) as client:
-                    self._authenticate_and_send(client, message, use_tls=False)
+                )
+                self._send_and_close(client, message, use_tls=False)
             else:
-                with smtplib.SMTP(
+                client = smtplib.SMTP(
                     self.config.smtp_host,
                     self.config.smtp_port,
                     timeout=self.config.smtp_timeout_seconds,
-                ) as client:
-                    self._authenticate_and_send(
-                        client,
-                        message,
-                        use_tls=self.config.smtp_use_tls,
-                    )
+                )
+                self._send_and_close(
+                    client,
+                    message,
+                    use_tls=self.config.smtp_use_tls,
+                )
         except (OSError, ValueError, smtplib.SMTPException) as exc:
             raise EmailDeliveryError(
                 "The verification email could not be delivered."
             ) from exc
+
+    def send_password_setup_link(
+        self,
+        recipient_email: str,
+        full_name: str,
+        setup_link: str,
+    ) -> None:
+        """Deliver a one-time Supabase recovery link; never send a password."""
+        self._validate_configuration()
+        try:
+            message = EmailMessage()
+            message["Subject"] = "Set up your DegreeLabs mentor account"
+            message["From"] = (
+                f"{self.config.smtp_from_name} <{self.config.smtp_from_email}>"
+            )
+            message["To"] = recipient_email
+            message.set_content(
+                "\n".join(
+                    [
+                        f"Hello {full_name},",
+                        "",
+                        "Your DegreeLabs mentor profile is ready.",
+                        "Use this secure, one-time link to set your password:",
+                        setup_link,
+                        "",
+                        "If you did not expect this email, you can safely ignore it.",
+                    ]
+                )
+            )
+            safe_name = escape(full_name)
+            safe_link = escape(setup_link, quote=True)
+            message.add_alternative(
+                f'''<!doctype html><html><body style="margin:0;background:#f5f9ff;font-family:Arial,sans-serif;color:#10233f"><div style="max-width:520px;margin:0 auto;padding:40px 20px"><div style="background:#fff;border:1px solid #d8e5f5;border-radius:20px;padding:32px"><div style="font-size:24px;font-weight:800">Degree<span style="color:#3978f6">Labs</span></div><p style="margin:24px 0 8px;font-size:18px;font-weight:700">Set up your mentor account</p><p>Hello {safe_name}, your mentor profile is ready. Choose a password to activate your account.</p><p style="margin:28px 0"><a href="{safe_link}" style="display:inline-block;background:#2563eb;color:#fff;padding:14px 22px;border-radius:10px;text-decoration:none;font-weight:700">Set your password</a></p><p style="color:#58708e;font-size:14px;line-height:1.6">This link is single-use and expires according to the security policy. We will never email you a password.</p></div></div></body></html>''',
+                subtype="html",
+            )
+            if self.config.smtp_use_ssl:
+                client = smtplib.SMTP_SSL(
+                    self.config.smtp_host,
+                    self.config.smtp_port,
+                    timeout=self.config.smtp_timeout_seconds,
+                    context=ssl.create_default_context(),
+                )
+                self._send_and_close(client, message, use_tls=False)
+            else:
+                client = smtplib.SMTP(
+                    self.config.smtp_host,
+                    self.config.smtp_port,
+                    timeout=self.config.smtp_timeout_seconds,
+                )
+                self._send_and_close(client, message, use_tls=self.config.smtp_use_tls)
+        except (OSError, ValueError, smtplib.SMTPException) as exc:
+            raise EmailDeliveryError("The password setup email could not be delivered.") from exc
 
     def _validate_configuration(self) -> None:
         required = {
@@ -148,6 +200,26 @@ class EmailDeliveryService:
             )
 
         client.send_message(message)
+
+    def _send_and_close(
+        self,
+        client: smtplib.SMTP,
+        message: EmailMessage,
+        *,
+        use_tls: bool,
+    ) -> None:
+        """Deliver a message without treating a post-delivery QUIT failure as a send failure."""
+        delivered = False
+        try:
+            self._authenticate_and_send(client, message, use_tls=use_tls)
+            delivered = True
+        finally:
+            try:
+                client.quit()
+            except (OSError, smtplib.SMTPException):
+                client.close()
+                if not delivered:
+                    raise
 
     def _build_html_message(self, code: str, expires_in_minutes: int) -> str:
         safe_code = escape(code)

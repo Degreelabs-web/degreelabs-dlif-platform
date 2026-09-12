@@ -115,6 +115,42 @@ class Mentor(Base):
         index=True,
     )
 
+    mentor_category: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
+        default="dlif",
+        index=True,
+    )
+
+    # Identifies whether this profile is managed by a roster source or was
+    # created manually. It lets synchronization safely reconcile deletions
+    # without deleting manually provisioned mentors.
+    enrollment_source_key: Mapped[str | None] = mapped_column(
+        String(100),
+        nullable=True,
+        index=True,
+    )
+
+    # Supabase owns the one-time recovery token. We retain only delivery and
+    # completion metadata so an administrator can safely re-send a setup link
+    # without persisting a credential or token in the application database.
+    password_setup_status: Mapped[str] = mapped_column(
+        String(30),
+        nullable=False,
+        default="pending",
+        index=True,
+    )
+
+    password_setup_sent_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
+    password_setup_completed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
