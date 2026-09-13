@@ -83,6 +83,22 @@ export async function completeMentorOnboarding(
   });
 }
 
+export async function updateCurrentUserProfile(
+  fullName: string
+): Promise<UserSession> {
+  const user = await apiClient<UserSession>("/auth/me", {
+    method: "PATCH",
+    body: JSON.stringify({ full_name: fullName }),
+  });
+
+  if (typeof window !== "undefined") {
+    localStorage.setItem("dlif_user", JSON.stringify(user));
+    window.dispatchEvent(new Event("dlif_user_updated"));
+  }
+
+  return user;
+}
+
 export function getStoredUser(): UserSession | null {
   if (typeof window === "undefined") return null;
   const userStr = localStorage.getItem("dlif_user");

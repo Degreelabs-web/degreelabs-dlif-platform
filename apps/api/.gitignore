@@ -1,0 +1,12 @@
+# Local API runtime files
+uvicorn-local.log
+uvicorn-local-error.log
+
+# Local enrollment/test data
+data/
+
+# Secrets / credentials
+secrets/
+
+# Environment variables
+.env

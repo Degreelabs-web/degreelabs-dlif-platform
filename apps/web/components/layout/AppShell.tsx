@@ -21,6 +21,7 @@ export default function AppShell({
   const router = useRouter();
   const pathname = usePathname();
   const [mobileNavigationOpen, setMobileNavigationOpen] = useState(false);
+  const [desktopNavigationCollapsed, setDesktopNavigationCollapsed] = useState(false);
   const hydrated = useSyncExternalStore(
     subscribeToHydration,
     () => true,
@@ -74,20 +75,24 @@ export default function AppShell({
   }
 
   return (
-    <div className="flex min-h-screen bg-[linear-gradient(135deg,#f8fbff_0%,#f2f7ff_52%,#f8fbff_100%)]">
+    <div className="flex h-screen overflow-hidden bg-[linear-gradient(135deg,#f8fbff_0%,#f2f7ff_52%,#f8fbff_100%)]">
       <Sidebar
         role={role}
         open={mobileNavigationOpen}
+        desktopCollapsed={desktopNavigationCollapsed}
+        onToggleDesktop={() =>
+          setDesktopNavigationCollapsed((collapsed) => !collapsed)
+        }
         onClose={() => setMobileNavigationOpen(false)}
       />
 
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <Topbar
           role={role}
           onOpenNavigation={() => setMobileNavigationOpen(true)}
         />
 
-        <main className="flex-1 overflow-y-auto">
+        <main className="min-h-0 flex-1 overflow-y-auto">
           <div className="mx-auto w-full max-w-[1440px] p-3 sm:p-6 lg:p-8">
             {children}
           </div>

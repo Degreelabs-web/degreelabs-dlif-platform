@@ -93,9 +93,6 @@ class EnrollmentSyncService:
                 "partial" if sync_run.rows_skipped or self._delivery_failures else "success"
             )
         except Exception as exc:
-            # This handles source-level failures (for example, Google Sheets
-            # connectivity or reconciliation errors), where no individual row
-            # context exists yet.
             logger.exception("Enrollment synchronization failed")
             self.db.rollback()
             sync_run = self.db.get(EnrollmentSyncRun, sync_run.id)

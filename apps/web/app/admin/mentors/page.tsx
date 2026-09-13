@@ -45,11 +45,15 @@ function mentorHeadshotUrl(value?: string | null): string | null {
 
   try {
     const url = new URL(source);
-    if (url.hostname === "drive.google.com") {
-      const pathMatch = url.pathname.match(/\/file\/d\/([^/]+)/);
+    const isGoogleDrive =
+      url.hostname === "drive.google.com" ||
+      url.hostname === "docs.google.com";
+
+    if (isGoogleDrive) {
+      const pathMatch = url.pathname.match(/\/(?:file\/)?d\/([^/?]+)/);
       const fileId = url.searchParams.get("id") || pathMatch?.[1];
       if (fileId) {
-        return `https://drive.google.com/thumbnail?id=${encodeURIComponent(fileId)}&sz=w400`;
+        return `https://drive.google.com/thumbnail?id=${encodeURIComponent(fileId)}&sz=w800`;
       }
     }
   } catch {
@@ -72,7 +76,10 @@ function mentorLocation(mentor: Mentor): string {
 }
 
 function mentorPhoto(mentor: Mentor): string | null {
-  return mentorHeadshotUrl(mentor.professional_headshot_url || mentor.headshot_url);
+  return (
+    mentorHeadshotUrl(mentor.professional_headshot_url) ||
+    mentorHeadshotUrl(mentor.headshot_url)
+  );
 }
 
 function mentorStatusClasses(status: string): string {

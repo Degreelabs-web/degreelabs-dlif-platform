@@ -40,6 +40,18 @@ class UserProvisionResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class UserProfileUpdateRequest(BaseModel):
+    full_name: str = Field(..., min_length=2, max_length=255)
+
+    @field_validator("full_name")
+    @classmethod
+    def normalize_full_name(cls, value: str) -> str:
+        normalized = " ".join(value.split())
+        if len(normalized) < 2:
+            raise ValueError("Full name must contain at least 2 characters.")
+        return normalized
+
+
 class UserLoginRequest(BaseModel):
     email: EmailStr
     password: str

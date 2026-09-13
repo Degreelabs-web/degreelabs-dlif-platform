@@ -23,6 +23,7 @@ from app.schemas.user import (
     UserLoginRequest,
     MentorOnboardingCompleteRequest,
     UserLoginResponse,
+    UserProfileUpdateRequest,
     UserProvisionRequest,
     UserProvisionResponse,
 )
@@ -236,6 +237,19 @@ def complete_mentor_onboarding(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="We could not save your password securely. Please try again shortly.",
         ) from exc
+
+
+@router.patch("/me", response_model=UserProvisionResponse)
+def update_current_user_profile(
+    data: UserProfileUpdateRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Allow an authenticated user to update their own display name."""
+    current_user.full_name = data.full_name
+    db.commit()
+    db.refresh(current_user)
+    return current_user
 
     now = datetime.now(timezone.utc)
     user.status = "active"
