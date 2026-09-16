@@ -67,10 +67,60 @@ def _run_mentor_submission_background(
         db.close()
 
 
-def _run_sync_background(trigger: str = "manual") -> None:
+def _local_workbook_source(
+    workbook_path: str | Path,
+    entity: Literal["students", "mentors", "both"],
+    mentor_category: MentorCategory,
+) -> LocalExcelEnrollmentSource:
+    return LocalExcelEnrollmentSource(
+        str(workbook_path),
+        settings.enrollment_student_sheet,
+        settings.enrollment_mentor_sheet,
+        include_students=entity in ("students", "both"),
+        include_mentors=entity in ("mentors", "both"),
+        allow_missing_sheets=False,
+        mentor_category=mentor_category if entity in ("mentors", "both") else None,
+    )
+
+
+def _resolve_sync_source(
+    entity: Literal["students", "mentors", "both"],
+    mentor_category: MentorCategory,
+):
+    """Pick the correct ingestion source without mixing student and mentor data."""
+    uploaded_workbook = Path(settings.enrollment_upload_source).expanduser()
+
+    # Student sync always reuses the latest saved student workbook when one exists.
+    if entity == "students" and uploaded_workbook.is_file():
+        return _local_workbook_source(uploaded_workbook, entity, mentor_category)
+
+    source = build_enrollment_source()
+    # Google Form/Sheets onboarding is mentor-only. Do not let a student sync
+    # silently succeed with an empty student set when no student workbook exists.
+    if entity == "students" and not isinstance(source, LocalExcelEnrollmentSource):
+        raise ValueError(
+            "Upload a student enrollment workbook before using Sync Now."
+        )
+    if source.is_configured():
+        if isinstance(source, LocalExcelEnrollmentSource):
+            return _local_workbook_source(source.path, entity, mentor_category)
+        return source
+
+    if uploaded_workbook.is_file():
+        return _local_workbook_source(uploaded_workbook, entity, mentor_category)
+
+    raise ValueError("Upload an enrollment workbook before using Sync Now.")
+
+
+def _run_sync_background(
+    entity: Literal["students", "mentors", "both"],
+    mentor_category: MentorCategory,
+    trigger: str = "manual",
+) -> None:
     db = SessionLocal()
     try:
-        EnrollmentSyncService(db).run(trigger=trigger)
+        source = _resolve_sync_source(entity, mentor_category)
+        EnrollmentSyncService(db, source=source).run(trigger=trigger, entity=entity)
     except EnrollmentSyncAlreadyRunning:
         logger.info("Enrollment sync request skipped because another run is active.")
     except Exception:
@@ -87,16 +137,8 @@ def _run_uploaded_workbook_sync(
 ) -> None:
     db = SessionLocal()
     try:
-        source = LocalExcelEnrollmentSource(
-            workbook_path,
-            settings.enrollment_student_sheet,
-            settings.enrollment_mentor_sheet,
-            include_students=entity in ("students", "both"),
-            include_mentors=entity in ("mentors", "both"),
-            allow_missing_sheets=True,
-            mentor_category=mentor_category if entity in ("mentors", "both") else None,
-        )
-        EnrollmentSyncService(db, source=source).run(trigger=trigger)
+        source = _local_workbook_source(workbook_path, entity, mentor_category)
+        EnrollmentSyncService(db, source=source).run(trigger=trigger, entity=entity)
     except Exception:
         logger.exception("Uploaded workbook synchronization failed.")
     finally:
@@ -105,6 +147,7 @@ def _run_uploaded_workbook_sync(
 
 @router.get("/status", response_model=EnrollmentSyncStatusResponse)
 def get_enrollment_sync_status(
+    entity: Literal["students", "mentors", "both"] = Query(default="both"),
     mentor_category: MentorCategory | None = None,
     _current_admin: User = Depends(require_admin),
     db: Session = Depends(get_db),
@@ -112,7 +155,7 @@ def get_enrollment_sync_status(
     uploaded_workbook = Path(settings.enrollment_upload_source).expanduser()
     has_uploaded_workbook = uploaded_workbook.is_file()
     try:
-        source = build_enrollment_source()
+        source = _resolve_sync_source(entity, mentor_category or "dlif")
         connected = source.is_configured()
         source_type = source.source_type
     except ValueError:
@@ -124,7 +167,9 @@ def get_enrollment_sync_status(
         source_type = "uploaded_excel"
 
     latest_run = db.scalar(
-        select(EnrollmentSyncRun).order_by(EnrollmentSyncRun.started_at.desc())
+        select(EnrollmentSyncRun)
+        .where(EnrollmentSyncRun.entity == entity)
+        .order_by(EnrollmentSyncRun.started_at.desc())
     )
     enrolled_students = db.scalar(
         select(func.count(StudentProfile.id))
@@ -157,31 +202,34 @@ def trigger_enrollment_sync(
     entity: Literal["students", "mentors", "both"] = Query(default="both"),
     mentor_category: MentorCategory = Query(default="dlif"),
     _current_admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
 ):
     try:
-        source = build_enrollment_source()
+        _resolve_sync_source(entity, mentor_category)
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=str(exc),
         ) from exc
 
-    if source.is_configured():
-        background_tasks.add_task(_run_sync_background, "manual")
-    else:
-        uploaded_workbook = Path(settings.enrollment_upload_source).expanduser()
-        if not uploaded_workbook.is_file():
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Upload an enrollment workbook before using Sync Now.",
-            )
-        background_tasks.add_task(
-            _run_uploaded_workbook_sync,
-            str(uploaded_workbook),
-            entity,
-            mentor_category,
-            "manual",
+    active_run = db.scalar(
+        select(EnrollmentSyncRun.id).where(
+            EnrollmentSyncRun.entity == entity,
+            EnrollmentSyncRun.status == "running",
         )
+    )
+    if active_run:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="An enrollment synchronization is already running.",
+        )
+
+    background_tasks.add_task(
+        _run_sync_background,
+        entity,
+        mentor_category,
+        "manual",
+    )
     return EnrollmentSyncTriggerResponse(
         accepted=True,
         message="Enrollment synchronization was queued.",

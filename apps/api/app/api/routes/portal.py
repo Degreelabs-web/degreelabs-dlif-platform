@@ -17,15 +17,12 @@ router = APIRouter(
     "/student-context",
 )
 def get_student_context(
-    user_id: UUID | None = Query(default=None, description="User ID of the student"),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     service = PortalExperienceService(db)
-    target_id = user_id if (user_id and current_user.role == "admin") else current_user.id
-
     try:
-        return service.get_student_portal_context(target_id)
+        return service.get_student_portal_context(current_user.id)
     except LookupError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

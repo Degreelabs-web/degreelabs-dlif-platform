@@ -241,6 +241,21 @@ def test_new_student_is_created_and_second_sync_is_idempotent(db: Session) -> No
     assert db.scalar(select(func.count(StudentProfile.id))) == 1
 
 
+def test_student_only_sync_does_not_create_or_reconcile_mentors(db: Session) -> None:
+    add_institution(db)
+    source = MutableSource(students=[student_row()], mentors=[mentor_row()])
+    result = build_service(db, source, FakeSupabaseAdmin()).run(
+        entity="students",
+        use_lock=False,
+    )
+
+    assert result.entity == "students"
+    assert result.students_created == 1
+    assert result.mentors_created == 0
+    assert db.scalar(select(func.count(StudentProfile.id))) == 1
+    assert db.scalar(select(func.count(Mentor.id))) == 0
+
+
 def test_changed_student_is_updated_without_duplication(db: Session) -> None:
     add_institution(db)
     source = MutableSource(students=[student_row()], mentors=[])
@@ -302,6 +317,21 @@ def test_new_mentor_is_created_and_second_sync_is_idempotent(db: Session) -> Non
     assert second.mentors_created == 0
     assert second.mentors_updated == 0
     assert db.scalar(select(func.count(User.id))) == 1
+    assert db.scalar(select(func.count(Mentor.id))) == 1
+
+
+def test_mentor_only_sync_does_not_create_students(db: Session) -> None:
+    add_institution(db)
+    source = MutableSource(students=[student_row()], mentors=[mentor_row()])
+    result = build_service(db, source, FakeSupabaseAdmin()).run(
+        entity="mentors",
+        use_lock=False,
+    )
+
+    assert result.entity == "mentors"
+    assert result.students_created == 0
+    assert result.mentors_created == 1
+    assert db.scalar(select(func.count(StudentProfile.id))) == 0
     assert db.scalar(select(func.count(Mentor.id))) == 1
 
 
@@ -647,6 +677,48 @@ def test_local_excel_source_reads_configured_sheets(tmp_path) -> None:
         rows.mentors[0]["complete_this_sentence_as_a_mentor_i_help_fellows"]
         == "build confidence."
     )
+
+
+def test_local_excel_source_detects_a_single_batch_student_roster(tmp_path) -> None:
+    workbook_path = tmp_path / "batch-01.xlsx"
+    workbook = Workbook()
+    student_sheet = workbook.active
+    student_sheet.title = "BATCH 01"
+    student_sheet.append(
+        [
+            "Student ID",
+            "Student Name",
+            "Email",
+            "WhatsApp Number",
+            "College Name",
+            "Course",
+            "Branch",
+        ]
+    )
+    student_sheet.append(
+        [
+            "DL-IF/2026/001",
+            "Shrihari Chikkodikar",
+            "shrihari@example.edu",
+            9380459314,
+            "KLS Gogte Institute of Technology",
+            "Engineering",
+            "Information Science & Engineering",
+        ]
+    )
+    workbook.save(workbook_path)
+
+    rows = LocalExcelEnrollmentSource(
+        str(workbook_path),
+        "Students",
+        "Mentors",
+        include_mentors=False,
+    ).read()
+
+    assert len(rows.students) == 1
+    assert rows.students[0]["student_id"] == "DL-IF/2026/001"
+    assert rows.students[0]["college_name"] == "KLS Gogte Institute of Technology"
+    assert rows.students[0]["whatsapp_number"] == 9380459314
 
 
 def test_google_sheets_source_reads_form_response_headers() -> None:

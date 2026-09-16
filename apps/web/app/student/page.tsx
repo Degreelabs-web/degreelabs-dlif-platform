@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { fetchStudentPortalContext } from "@/lib/api/fellowship";
-import { apiClient } from "@/lib/api/client";
 import { getStoredUser } from "@/lib/api/auth";
 import { StudentPortalContext } from "@/types/fellowship";
 import {
@@ -12,8 +11,6 @@ import {
   Building2,
   FolderGit2,
   CheckCircle2,
-  Calendar,
-  ArrowRight,
   School,
   FileText,
   Clock,
@@ -42,8 +39,7 @@ export default function StudentDashboard() {
     async function loadStudentContext() {
       try {
         setLoading(true);
-        const user = getStoredUser();
-        const data = await fetchStudentPortalContext(user?.id);
+        const data = await fetchStudentPortalContext();
         setContext(data);
       } catch (err) {
         console.error("Failed to load student context", err);
@@ -89,6 +85,35 @@ export default function StudentDashboard() {
           Active Fellow
         </div>
       </div>
+
+      <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <div>
+            <h2 className="text-base font-bold text-slate-900">My Profile</h2>
+            <p className="text-xs text-slate-500">Your synchronized enrollment information</p>
+          </div>
+          <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-semibold capitalize text-emerald-700">
+            {context?.student?.status || "active"}
+          </span>
+        </div>
+        <dl className="grid gap-x-6 gap-y-4 text-sm sm:grid-cols-2 lg:grid-cols-3">
+          {[
+            ["Name", context?.student?.full_name],
+            ["Email", context?.student?.email],
+            ["Student ID", context?.student?.student_id],
+            ["Institution", context?.student?.institution_name],
+            ["Course", context?.student?.course],
+            ["Branch", context?.student?.branch],
+            ["Graduation year", context?.student?.graduation_year],
+            ["Phone", context?.student?.phone],
+          ].map(([label, value]) => (
+            <div key={String(label)} className="min-w-0">
+              <dt className="text-xs font-medium text-slate-500">{label}</dt>
+              <dd className="mt-1 break-words font-semibold text-slate-900">{value || "Not provided"}</dd>
+            </div>
+          ))}
+        </dl>
+      </section>
 
       {/* 11-Stage Student Journey Progress Stepper */}
       <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">

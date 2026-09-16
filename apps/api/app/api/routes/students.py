@@ -40,6 +40,7 @@ def get_students(
         alias="status",
         description="Filter by student user status",
     ),
+    _current_admin: User = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
     service = StudentService(db)
@@ -90,6 +91,7 @@ def provision_student(
 )
 def get_student(
     user_id: UUID,
+    _current_admin: User = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
     service = StudentService(db)
@@ -109,6 +111,7 @@ def get_student(
 )
 def create_student(
     data: StudentCreate,
+    _current_admin: User = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
     service = StudentService(db)
@@ -133,6 +136,7 @@ def create_student(
 def update_student(
     user_id: UUID,
     data: StudentUpdate,
+    _current_admin: User = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
     service = StudentService(db)
@@ -158,6 +162,7 @@ def update_student(
 )
 def delete_student(
     user_id: UUID,
+    _current_admin: User = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
     service = StudentService(db)

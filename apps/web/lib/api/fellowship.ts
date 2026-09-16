@@ -309,9 +309,8 @@ export async function assignStudentToCohort(data: {
 
 // ==================== Portal Context ====================
 
-export async function fetchStudentPortalContext(userId?: string): Promise<StudentPortalContext> {
-  const query = userId && userId !== "undefined" ? `?user_id=${userId}` : "";
-  return apiClient<StudentPortalContext>(`/portal/student-context${query}`);
+export async function fetchStudentPortalContext(): Promise<StudentPortalContext> {
+  return apiClient<StudentPortalContext>("/portal/student-context");
 }
 
 export async function fetchMentorPortalContext(userId?: string): Promise<MentorPortalContext> {

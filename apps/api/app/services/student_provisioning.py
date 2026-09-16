@@ -37,6 +37,8 @@ class StudentProvisioningService:
         password: str | None = None,
     ) -> tuple[User, StudentProfile]:
 
+        email = email.strip().lower()
+
         # 1. Validate institution.
         institution = self.db.get(Institution, institution_id)
 
@@ -53,6 +55,13 @@ class StudentProvisioningService:
         )
 
         if existing_user is not None:
+            if existing_user.role != "student":
+                raise StudentProvisioningError(
+                    "This email is already assigned to a "
+                    f"{existing_user.role} account. Use a different email "
+                    "address for the student."
+                )
+
             existing_profile = (
                 self.db.query(StudentProfile)
                 .filter(StudentProfile.user_id == existing_user.id)
@@ -88,6 +97,40 @@ class StudentProvisioningService:
                 self.db.refresh(existing_user)
                 self.db.refresh(existing_profile)
                 return existing_user, existing_profile
+
+            # A student identity can predate its directory profile (for example,
+            # after an interrupted import). Complete the missing profile rather
+            # than attempting to insert a second User row for the same email.
+            try:
+                if password:
+                    self.supabase.update_user(
+                        str(existing_user.id),
+                        password=password,
+                        full_name=full_name,
+                    )
+
+                existing_user.full_name = full_name
+                existing_user.status = "active"
+                profile = StudentProfile(
+                    user_id=existing_user.id,
+                    institution_id=institution_id,
+                    student_id=student_id,
+                    phone=phone,
+                    course=course,
+                    branch=branch,
+                    graduation_year=graduation_year,
+                )
+                self.db.add(profile)
+                self.db.commit()
+                self.db.refresh(existing_user)
+                self.db.refresh(profile)
+                return existing_user, profile
+            except (SupabaseAdminError, IntegrityError) as exc:
+                self.db.rollback()
+                raise StudentProvisioningError(
+                    "The existing student account could not be completed. "
+                    "Please verify the student ID and try again."
+                ) from exc
 
         supabase_user: dict | None = None
 
@@ -148,7 +191,7 @@ class StudentProvisioningService:
             self.db.rollback()
             raise StudentProvisioningError(str(exc)) from exc
 
-        except (ValueError, IntegrityError) as exc:
+        except ValueError as exc:
             self.db.rollback()
 
             # Compensating action:
@@ -164,4 +207,20 @@ class StudentProvisioningService:
 
             raise StudentProvisioningError(
                 "Could not provision student."
+            ) from exc
+
+        except IntegrityError as exc:
+            self.db.rollback()
+
+            # Compensating action: Auth succeeded but the directory records
+            # could not be committed.
+            if supabase_user and supabase_user.get("id"):
+                try:
+                    self.supabase.delete_user(supabase_user["id"])
+                except SupabaseAdminError:
+                    pass
+
+            raise StudentProvisioningError(
+                "A student record with this email or directory information "
+                "already exists. Review the email and student ID, then try again."
             ) from exc

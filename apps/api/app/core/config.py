@@ -49,6 +49,10 @@ class Settings(BaseSettings):
     # are generated server-side and sent by the configured email provider.
     mentor_password_setup_redirect_url: str = ""
     enrollment_upload_max_mb: int = 10
+
+    material_storage_bucket: str = "dlif-student-materials"
+    material_max_upload_mb: int = 50
+    material_signed_url_ttl_seconds: int = 600
     
     model_config = SettingsConfigDict(
         env_file=".env",

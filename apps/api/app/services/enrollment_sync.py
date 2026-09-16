@@ -55,7 +55,15 @@ class EnrollmentSyncService:
         self._pending_password_setup: dict[str, str] | None = None
         self._delivery_failures = 0
 
-    def run(self, *, trigger: str = "manual", use_lock: bool = True) -> EnrollmentSyncRun:
+    def run(
+        self,
+        *,
+        trigger: str = "manual",
+        entity: str = "both",
+        use_lock: bool = True,
+    ) -> EnrollmentSyncRun:
+        if entity not in {"students", "mentors", "both"}:
+            raise ValueError("Unsupported enrollment synchronization entity.")
         lock_acquired = False
         if use_lock:
             lock_acquired = bool(
@@ -71,6 +79,7 @@ class EnrollmentSyncService:
 
         sync_run = EnrollmentSyncRun(
             trigger=trigger,
+            entity=entity,
             source_type=self.source.source_type,
             status="running",
             validation_errors=[],
@@ -83,11 +92,13 @@ class EnrollmentSyncService:
             if self.supabase is None:
                 self.supabase = SupabaseAdminService()
             rows = self.source.read()
-            for row in rows.students:
-                self._process_row(sync_run, "student", row)
-            for row in rows.mentors:
-                self._process_row(sync_run, "mentor", row)
-            self._reconcile_removed_mentors(sync_run, rows.mentors)
+            if entity in {"students", "both"}:
+                for row in rows.students:
+                    self._process_row(sync_run, "student", row)
+            if entity in {"mentors", "both"}:
+                for row in rows.mentors:
+                    self._process_row(sync_run, "mentor", row)
+                self._reconcile_removed_mentors(sync_run, rows.mentors)
 
             sync_run.status = (
                 "partial" if sync_run.rows_skipped or self._delivery_failures else "success"
@@ -333,6 +344,7 @@ class EnrollmentSyncService:
 
         sync_run = EnrollmentSyncRun(
             trigger=trigger,
+            entity="mentors",
             source_type="google_form",
             status="running",
             validation_errors=[],
@@ -600,20 +612,39 @@ class EnrollmentSyncService:
         self._validate_role(row, "student")
         return StudentEnrollmentRow.model_validate(
             {
-                "full_name": self._pick(row, "full_name", "name"),
-                "email": self._pick(row, "email", "email_address"),
-                "student_id": self._pick(row, "student_id", "roll_number", "roll_no"),
+                "full_name": self._pick(row, "full_name", "student_name", "name"),
+                "email": self._pick(row, "email", "email_address", "student_email"),
+                "student_id": self._pick(
+                    row,
+                    "student_id",
+                    "student_id_roll_no",
+                    "student_roll_number",
+                    "roll_number",
+                    "roll_no",
+                    "roll_no_id",
+                ),
                 "institution": self._pick(
-                    row, "institution_code", "institution", "college"
+                    row,
+                    "institution_code",
+                    "institution_name",
+                    "institution",
+                    "college",
+                    "college_name",
                 ),
                 "course": self._optional_text(self._pick(row, "course")),
                 "branch": self._optional_text(self._pick(row, "branch")),
                 "graduation_year": self._optional_int(
-                    self._pick(row, "graduation_year", "graduation")
+                    self._pick(row, "graduation_year", "passing_year", "graduation")
                 ),
                 "status": self._normalize_status(self._pick(row, "status")),
                 "phone": self._optional_text(
-                    self._pick(row, "phone", "phone_number", "mobile_number")
+                    self._pick(
+                        row,
+                        "phone",
+                        "phone_number",
+                        "mobile_number",
+                        "whatsapp_number",
+                    )
                 ),
             }
         )
@@ -694,6 +725,8 @@ class EnrollmentSyncService:
     def _optional_text(value: object | None) -> str | None:
         if value is None:
             return None
+        if isinstance(value, float) and value.is_integer():
+            value = int(value)
         normalized = " ".join(str(value).strip().split())
         return normalized or None
 

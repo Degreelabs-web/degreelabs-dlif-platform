@@ -48,6 +48,40 @@ function LoginForm() {
 
   const codeInputRef = useRef<HTMLInputElement>(null);
 
+  const redirectToAuthorizedPortal = (role: "student" | "mentor" | "admin") => {
+    // A selected tab is only an intended portal. Access must always be based on
+    // the role returned by the authenticated API session.
+    if (role !== activeTab) {
+      localStorage.removeItem("dlif_token");
+      localStorage.removeItem("dlif_user");
+      setError(
+        `This account is registered as a ${role}. Please use the ${role} sign-in tab.`
+      );
+      setStep("credentials");
+      return;
+    }
+
+    // Non-admin accounts must never be sent to an arbitrary saved redirect.
+    // This prevents a student sign-in from opening a mentor workspace (and vice versa).
+    if (role === "student") {
+      router.replace("/student");
+      return;
+    }
+
+    if (role === "mentor") {
+      router.replace("/mentor");
+      return;
+    }
+
+    // Administrators may return to an admin URL after authenticating.
+    if (redirectUrl?.startsWith("/admin")) {
+      router.replace(redirectUrl);
+      return;
+    }
+
+    router.replace("/admin");
+  };
+
   // Resend cooldown timer
   useEffect(() => {
     if (resendCooldown <= 0) return;
@@ -83,16 +117,7 @@ function LoginForm() {
         return;
       }
 
-      const userRole = response.user.role;
-      if (redirectUrl && redirectUrl.startsWith("/")) {
-        router.push(redirectUrl);
-      } else if (userRole === "admin") {
-        router.push("/admin");
-      } else if (userRole === "mentor") {
-        router.push("/mentor");
-      } else {
-        router.push("/student");
-      }
+      redirectToAuthorizedPortal(response.user.role);
     } catch (err) {
       setError(
         (err as Error).message ||
@@ -116,17 +141,7 @@ function LoginForm() {
 
     try {
       const response = await verifyTwoFactor(twoFactorToken, twoFactorCode.trim());
-      const userRole = response.user.role;
-
-      if (redirectUrl && redirectUrl.startsWith("/")) {
-        router.push(redirectUrl);
-      } else if (userRole === "admin") {
-        router.push("/admin");
-      } else if (userRole === "mentor") {
-        router.push("/mentor");
-      } else {
-        router.push("/student");
-      }
+      redirectToAuthorizedPortal(response.user.role);
     } catch (err) {
       setError(
         (err as Error).message ||

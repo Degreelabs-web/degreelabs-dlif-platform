@@ -60,6 +60,10 @@ export default function AppShell({
 
   }, [hydrated, pathname, role, router, token, userRole]);
 
+  useEffect(() => {
+    setDesktopNavigationCollapsed(localStorage.getItem("dlif_sidebar_collapsed") === "true");
+  }, []);
+
   // Loading / verifying state
   if (!isAuthorized) {
     return (
@@ -80,9 +84,11 @@ export default function AppShell({
         role={role}
         open={mobileNavigationOpen}
         desktopCollapsed={desktopNavigationCollapsed}
-        onToggleDesktop={() =>
-          setDesktopNavigationCollapsed((collapsed) => !collapsed)
-        }
+        onToggleDesktop={() => setDesktopNavigationCollapsed((collapsed) => {
+          const next = !collapsed;
+          localStorage.setItem("dlif_sidebar_collapsed", String(next));
+          return next;
+        })}
         onClose={() => setMobileNavigationOpen(false)}
       />
 

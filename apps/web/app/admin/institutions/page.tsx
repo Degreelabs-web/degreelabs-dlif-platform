@@ -1,17 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { ChangeEvent, useEffect, useRef, useState } from "react";
 import { EntityActionsMenu } from "@/components/admin/EntityActionsMenu";
 import {
   createInstitution,
   deleteInstitution,
   fetchInstitutions,
+  importInstitutions,
   updateInstitution,
 } from "@/lib/api/institutions";
 import { Institution } from "@/types/fellowship";
-import { Building2, Plus, CheckCircle2 } from "lucide-react";
+import { Building2, CheckCircle2, Plus, Upload } from "lucide-react";
 
-const emptyForm = { name: "", code: "", status: "active" };
+const emptyForm = { name: "", code: "", address: "", status: "active" };
 
 export default function InstitutionsPage() {
   const [institutions, setInstitutions] = useState<Institution[]>([]);
@@ -20,7 +21,10 @@ export default function InstitutionsPage() {
   const [editingInstitution, setEditingInstitution] = useState<Institution | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [importNotice, setImportNotice] = useState<string | null>(null);
   const [formData, setFormData] = useState(emptyForm);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const loadInstitutions = async () => {
     try {
@@ -35,7 +39,10 @@ export default function InstitutionsPage() {
   };
 
   useEffect(() => {
-    loadInstitutions();
+    const timeoutId = window.setTimeout(() => {
+      void loadInstitutions();
+    }, 0);
+    return () => window.clearTimeout(timeoutId);
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -46,12 +53,14 @@ export default function InstitutionsPage() {
         await updateInstitution(editingInstitution.id, {
           name: formData.name,
           code: formData.code.toUpperCase(),
+          address: formData.address || null,
           status: formData.status,
         });
       } else {
         await createInstitution({
           name: formData.name,
           code: formData.code.toUpperCase(),
+          address: formData.address || null,
           status: formData.status,
         });
       }
@@ -77,9 +86,35 @@ export default function InstitutionsPage() {
     setFormData({
       name: institution.name,
       code: institution.code,
+      address: institution.address || "",
       status: institution.status,
     });
     setShowModal(true);
+  };
+
+  const handleWorkbookUpload = async (event: ChangeEvent<HTMLInputElement>) => {
+    const workbook = event.target.files?.[0];
+    event.target.value = "";
+    if (!workbook) return;
+
+    setUploading(true);
+    setImportNotice(null);
+    try {
+      const result = await importInstitutions(workbook);
+      setImportNotice(
+        `Import completed: ${result.created} created, ${result.updated} updated, ${result.skipped} skipped.`
+      );
+      if (result.errors.length) {
+        setImportNotice(
+          `Import completed with issues: ${result.created} created, ${result.updated} updated, ${result.skipped} skipped. ${result.errors[0]}`
+        );
+      }
+      await loadInstitutions();
+    } catch (err) {
+      setImportNotice(`Import failed: ${(err as Error).message}`);
+    } finally {
+      setUploading(false);
+    }
   };
 
   const handleDelete = async (institution: Institution) => {
@@ -108,14 +143,38 @@ export default function InstitutionsPage() {
           </p>
         </div>
 
-        <button
-          onClick={openCreateModal}
-          className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-700 transition"
-        >
-          <Plus className="h-4 w-4" />
-          Add Institution
-        </button>
+        <div className="flex flex-wrap items-center gap-3">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            className="hidden"
+            onChange={handleWorkbookUpload}
+          />
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            className="inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-white px-4 py-2.5 text-sm font-semibold text-blue-700 transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <Upload className="h-4 w-4" />
+            {uploading ? "Importing..." : "Upload Excel"}
+          </button>
+          <button
+            onClick={openCreateModal}
+            className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-700 transition"
+          >
+            <Plus className="h-4 w-4" />
+            Add Institution
+          </button>
+        </div>
       </div>
+
+      {importNotice && (
+        <div className="rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-800">
+          {importNotice}
+        </div>
+      )}
 
       {loading ? (
         <div className="p-8 text-center text-slate-500 text-sm">Loading institutions...</div>
@@ -153,6 +212,7 @@ export default function InstitutionsPage() {
                 </div>
               </div>
               <div className="pt-2 border-t border-slate-100 text-xs text-slate-500">
+                {inst.address && <p className="mb-2 text-sm text-slate-600">{inst.address}</p>}
                 Added on: {new Date(inst.created_at).toLocaleDateString()}
               </div>
             </div>
@@ -178,7 +238,6 @@ export default function InstitutionsPage() {
                   className="mt-1 w-full rounded-lg border border-slate-300 p-2 text-sm focus:border-slate-900 focus:outline-none"
                 />
               </div>
-
               <div>
                 <label className="block text-xs font-medium text-slate-700">Status</label>
                 <select
@@ -189,6 +248,17 @@ export default function InstitutionsPage() {
                   <option value="active">Active</option>
                   <option value="inactive">Inactive</option>
                 </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-700">Address</label>
+                <textarea
+                  rows={2}
+                  placeholder="Campus address or location"
+                  value={formData.address}
+                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                  className="mt-1 w-full resize-y rounded-lg border border-slate-300 p-2 text-sm focus:border-slate-900 focus:outline-none"
+                />
               </div>
 
               <div>

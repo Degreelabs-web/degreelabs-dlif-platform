@@ -49,6 +49,7 @@ export function EnrollmentSyncStatus({
 
   async function loadStatus() {
     const data = await fetchEnrollmentSyncStatus(
+      entity,
       entity === "mentors" ? mentorCategory : undefined
     );
     setStatus(data);
@@ -57,7 +58,7 @@ export function EnrollmentSyncStatus({
 
   useEffect(() => {
     let active = true;
-    fetchEnrollmentSyncStatus(entity === "mentors" ? mentorCategory : undefined)
+    fetchEnrollmentSyncStatus(entity, entity === "mentors" ? mentorCategory : undefined)
       .then((data) => {
         if (active) setStatus(data);
       })
@@ -85,9 +86,13 @@ export function EnrollmentSyncStatus({
       const run = nextStatus.latest_run;
       if (run && run.id !== previousRunId && run.status !== "running") {
         setMessage(
-          run.status === "success"
-            ? "Enrollment synchronization completed."
-            : `Synchronization completed with ${run.rows_skipped} skipped row(s).`
+          `${entity === "students" ? "Student" : "Mentor"} synchronization ${
+            run.status === "success" ? "completed" : "completed with issues"
+          }: ${
+            entity === "students" ? run.students_created : run.mentors_created
+          } created, ${
+            entity === "students" ? run.students_updated : run.mentors_updated
+          } updated, ${run.rows_skipped} skipped.`
         );
         await onSynced();
         return;
@@ -103,7 +108,10 @@ export function EnrollmentSyncStatus({
     const previousRunId = status?.latest_run?.id;
 
     try {
-      const response = await triggerEnrollmentSync();
+      const response = await triggerEnrollmentSync(
+        entity,
+        entity === "mentors" ? mentorCategory : undefined
+      );
       setMessage(response.message);
 
       await pollUntilComplete(previousRunId);
@@ -171,9 +179,9 @@ export function EnrollmentSyncStatus({
               <p className="mt-0.5 flex items-center gap-1.5 text-sm font-bold text-slate-900">
                 {loading ? (
                   "Checking..."
-                ) : entity === "students" ? (
+                ) : status?.connected ? (
                   <>
-                    <CheckCircle2 className="h-4 w-4 text-emerald-500" /> Ready to upload
+                    <CheckCircle2 className="h-4 w-4 text-emerald-500" /> Connected
                   </>
                 ) : status?.connected ? (
                   <>

@@ -72,6 +72,7 @@ class MentorGoogleFormWebhookRequest(BaseModel):
 class EnrollmentSyncRunResponse(BaseModel):
     id: UUID
     trigger: str
+    entity: Literal["students", "mentors", "both"]
     source_type: str
     status: str
     started_at: datetime

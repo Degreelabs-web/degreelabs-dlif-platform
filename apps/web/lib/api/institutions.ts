@@ -37,3 +37,21 @@ export async function deleteInstitution(id: string): Promise<void> {
     method: "DELETE",
   });
 }
+
+export type InstitutionImportResult = {
+  created: number;
+  updated: number;
+  skipped: number;
+  errors: string[];
+};
+
+export async function importInstitutions(
+  workbook: File
+): Promise<InstitutionImportResult> {
+  const formData = new FormData();
+  formData.append("workbook", workbook);
+  return apiClient<InstitutionImportResult>("/institutions/import", {
+    method: "POST",
+    body: formData,
+  });
+}

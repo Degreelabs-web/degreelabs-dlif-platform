@@ -7,6 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field
 class InstitutionBase(BaseModel):
     name: str = Field(..., min_length=2, max_length=255)
     code: str = Field(..., min_length=2, max_length=100)
+    address: str | None = Field(default=None, max_length=500)
     status: str = Field(default="active", max_length=50)
 
 
@@ -17,7 +18,15 @@ class InstitutionCreate(InstitutionBase):
 class InstitutionUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=2, max_length=255)
     code: str | None = Field(default=None, min_length=2, max_length=100)
+    address: str | None = Field(default=None, max_length=500)
     status: str | None = Field(default=None, max_length=50)
+
+
+class InstitutionImportResponse(BaseModel):
+    created: int
+    updated: int
+    skipped: int
+    errors: list[str] = Field(default_factory=list)
 
 
 class InstitutionResponse(InstitutionBase):

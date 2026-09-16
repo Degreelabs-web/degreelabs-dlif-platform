@@ -27,10 +27,21 @@ class EnrollmentWorkbookUploadService:
         if not filename or Path(filename).suffix.lower() != ".xlsx":
             raise EnrollmentUploadError("Only .xlsx enrollment workbooks are accepted.")
 
-        destination_value = (
-            self.config.enrollment_excel_source.strip()
-            or self.config.enrollment_upload_source.strip()
-        )
+        # This is the latest Admin-uploaded workbook.  Local disk is suitable
+        # for development; production deployments should replace this seam with
+        # durable object storage while keeping the same service contract.
+        upload_destination = self.config.enrollment_upload_source.strip()
+        master_destination = self.config.enrollment_excel_source.strip()
+        # Keep the legacy configured workbook path when an application has not
+        # explicitly configured a separate upload destination. This also makes
+        # a local source and the admin upload point at the same master file.
+        if (
+            master_destination
+            and upload_destination == "data/enrollment-upload.xlsx"
+        ):
+            destination_value = master_destination
+        else:
+            destination_value = upload_destination or master_destination
         if not destination_value:
             raise EnrollmentUploadError("No destination is configured for uploaded workbooks.")
         destination = Path(destination_value).expanduser().resolve()

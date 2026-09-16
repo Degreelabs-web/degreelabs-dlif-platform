@@ -43,7 +43,7 @@ class LocalExcelEnrollmentSource:
         )
         try:
             students = (
-                self._read_sheet(workbook, self.student_sheet)
+                self._read_student_sheet(workbook)
                 if self.include_students
                 else []
             )
@@ -64,6 +64,44 @@ class LocalExcelEnrollmentSource:
             return WorkbookRows(students=students, mentors=mentors)
         finally:
             workbook.close()
+
+    def _read_student_sheet(self, workbook) -> list[dict[str, object]]:
+        aliases = ("Student Roster", "Student Details", "Student Data")
+        configured_names = (self.student_sheet, *aliases)
+        if any(name in workbook.sheetnames for name in configured_names):
+            return self._read_sheet(
+                workbook,
+                self.student_sheet,
+                aliases=aliases,
+            )
+
+        candidates = [
+            worksheet.title
+            for worksheet in workbook.worksheets
+            if self._looks_like_student_roster(worksheet)
+        ]
+        if len(candidates) == 1:
+            return self._read_sheet(workbook, candidates[0])
+        if self.allow_missing_sheets and not candidates:
+            return []
+        if len(candidates) > 1:
+            raise ValueError(
+                "Workbook has multiple possible student roster sheets. "
+                "Set ENROLLMENT_STUDENT_SHEET to the intended sheet name."
+            )
+        raise ValueError(
+            "Workbook must contain a student roster with Student ID, Student Name, "
+            "and Email columns."
+        )
+
+    @staticmethod
+    def _looks_like_student_roster(worksheet) -> bool:
+        rows = worksheet.iter_rows(min_row=1, max_row=1, values_only=True)
+        header_row = next(rows, ())
+        headers = {normalize_header(value) for value in header_row}
+        has_student_id = bool(headers & {"student_id", "roll_number", "roll_no"})
+        has_name = bool(headers & {"student_name", "full_name", "name"})
+        return has_student_id and has_name and "email" in headers
 
     def _read_sheet(
         self,

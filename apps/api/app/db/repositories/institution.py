@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.db.models.institution import Institution
@@ -22,6 +22,10 @@ class InstitutionRepository:
         statement = select(Institution).where(Institution.code == code)
         return self.db.scalar(statement)
 
+    def get_by_name(self, name: str) -> Institution | None:
+        statement = select(Institution).where(func.lower(Institution.name) == name.lower())
+        return self.db.scalar(statement)
+
     def create(self, institution: Institution) -> Institution:
         self.db.add(institution)
         self.db.commit()
@@ -38,4 +42,4 @@ class InstitutionRepository:
         self.db.commit()
 
     def rollback(self) -> None:
-        self.db.rollback()
+        self.db.rollback()

@@ -4,6 +4,7 @@ import { MentorCategory } from "@/types/fellowship";
 export interface EnrollmentSyncRun {
   id: string;
   trigger: string;
+  entity: "students" | "mentors" | "both";
   source_type: string;
   status: "running" | "success" | "partial" | "failed";
   started_at: string;
@@ -33,19 +34,24 @@ export interface EnrollmentSyncStatus {
 }
 
 export function fetchEnrollmentSyncStatus(
+  entity: "students" | "mentors" | "both",
   mentorCategory?: MentorCategory
 ): Promise<EnrollmentSyncStatus> {
-  const query = mentorCategory
-    ? `?mentor_category=${encodeURIComponent(mentorCategory)}`
-    : "";
-  return apiClient<EnrollmentSyncStatus>(`/admin/enrollment-sync/status${query}`);
+  const query = new URLSearchParams({ entity });
+  if (mentorCategory) query.set("mentor_category", mentorCategory);
+  return apiClient<EnrollmentSyncStatus>(`/admin/enrollment-sync/status?${query.toString()}`);
 }
 
-export function triggerEnrollmentSync(): Promise<{
+export function triggerEnrollmentSync(
+  entity: "students" | "mentors" | "both",
+  mentorCategory?: MentorCategory
+): Promise<{
   accepted: boolean;
   message: string;
 }> {
-  return apiClient("/admin/enrollment-sync", { method: "POST" });
+  const query = new URLSearchParams({ entity });
+  if (mentorCategory) query.set("mentor_category", mentorCategory);
+  return apiClient(`/admin/enrollment-sync?${query.toString()}`, { method: "POST" });
 }
 
 export function uploadEnrollmentWorkbook(

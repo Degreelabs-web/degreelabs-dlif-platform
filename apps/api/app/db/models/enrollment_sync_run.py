@@ -20,6 +20,13 @@ class EnrollmentSyncRun(Base):
         default=uuid4,
     )
     trigger: Mapped[str] = mapped_column(String(30), nullable=False)
+    entity: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+        default="both",
+        server_default="both",
+        index=True,
+    )
     source_type: Mapped[str] = mapped_column(String(50), nullable=False)
     status: Mapped[str] = mapped_column(String(30), nullable=False, index=True)
     started_at: Mapped[datetime] = mapped_column(
@@ -44,4 +51,3 @@ class EnrollmentSyncRun(Base):
         nullable=False,
     )
     last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
-

@@ -7,6 +7,14 @@ from app.db.models.enrollment import Enrollment
 from app.db.models.enrollment_sync_run import EnrollmentSyncRun
 from app.db.models.feedback import Feedback
 from app.db.models.institution import Institution
+from app.db.models.material import (
+    Material,
+    MaterialAsset,
+    MaterialCohort,
+    MaterialEngagement,
+    MaterialInstitution,
+    MaterialMentorCategory,
+)
 from app.db.models.mentor import Mentor
 from app.db.models.project import Project
 from app.db.models.recording import Recording
@@ -28,6 +36,12 @@ from app.db.models.user import User
 __all__ = [
     "User",
     "Institution",
+    "Material",
+    "MaterialAsset",
+    "MaterialCohort",
+    "MaterialInstitution",
+    "MaterialMentorCategory",
+    "MaterialEngagement",
     "Cohort",
     "Enrollment",
     "EnrollmentSyncRun",

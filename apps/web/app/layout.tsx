@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { DM_Sans, Geist_Mono, Outfit } from "next/font/google";
 import "./globals.css";
+import { ToastProvider } from "@/components/ui/ToastProvider";
 
 const dmSans = DM_Sans({
   variable: "--font-dm-sans",
@@ -34,7 +35,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       className={`${dmSans.variable} ${outfit.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col"><ToastProvider>{children}</ToastProvider></body>
     </html>
   );
 }

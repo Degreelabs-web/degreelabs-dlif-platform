@@ -1,3 +1,4 @@
+import re
 from uuid import UUID
 
 from sqlalchemy.exc import IntegrityError
@@ -29,6 +30,7 @@ class InstitutionService:
         institution = Institution(
             name=data.name,
             code=data.code,
+            address=data.address,
             status=data.status,
         )
 
@@ -78,4 +80,65 @@ class InstitutionService:
             return False
 
         self.repository.delete(institution)
-        return True
+        return True
+
+    def import_rows(self, rows: list[dict[str, str | None]]) -> dict[str, object]:
+        """Create or update institutions from validated spreadsheet rows."""
+        created = updated = skipped = 0
+        errors: list[str] = []
+
+        for row in rows:
+            row_number = row["row_number"] or "?"
+            name = (row["name"] or "").strip()
+            if not name:
+                skipped += 1
+                errors.append(f"Row {row_number}: institution name is required.")
+                continue
+
+            address = (row["address"] or "").strip() or None
+            supplied_code = (row["code"] or "").strip().upper()
+            existing = self.repository.get_by_name(name)
+
+            try:
+                if existing:
+                    if address:
+                        existing.address = address
+                    if row["status"]:
+                        existing.status = row["status"]
+                    self.repository.update(existing)
+                    updated += 1
+                    continue
+
+                code = supplied_code or self._next_generated_code(name)
+                if self.repository.get_by_code(code):
+                    skipped += 1
+                    errors.append(
+                        f"Row {row_number}: code '{code}' is already assigned to another institution."
+                    )
+                    continue
+
+                self.repository.create(
+                    Institution(
+                        name=name,
+                        code=code,
+                        address=address,
+                        status=row["status"] or "active",
+                    )
+                )
+                created += 1
+            except IntegrityError:
+                self.repository.rollback()
+                skipped += 1
+                errors.append(f"Row {row_number}: could not save '{name}'.")
+
+        return {"created": created, "updated": updated, "skipped": skipped, "errors": errors}
+
+    def _next_generated_code(self, name: str) -> str:
+        words = re.findall(r"[A-Za-z0-9]+", name.upper())
+        stem = "-".join(words[:4])[:72] or "INSTITUTION"
+        candidate = stem
+        suffix = 2
+        while self.repository.get_by_code(candidate):
+            candidate = f"{stem[:90]}-{suffix}"
+            suffix += 1
+        return candidate

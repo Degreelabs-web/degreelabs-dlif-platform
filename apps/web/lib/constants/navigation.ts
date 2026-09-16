@@ -77,6 +77,11 @@ export const studentNavigation: NavigationItem[] = [
     href: "/student/feedback",
     icon: MessageSquare,
   },
+  {
+    label: "Student Centric Materials",
+    href: "/student/materials",
+    icon: BookOpen,
+  },
 ];
 
 export const mentorNavigation: NavigationItem[] = [
@@ -104,6 +109,11 @@ export const mentorNavigation: NavigationItem[] = [
     label: "Submission Reviews",
     href: "/mentor/reviews",
     icon: FileText,
+  },
+  {
+    label: "Mentor Resources",
+    href: "/mentor/materials",
+    icon: BookOpen,
   },
 ];
 
@@ -179,5 +189,10 @@ export const adminNavigation: NavigationItem[] = [
     label: "Reports",
     href: "/admin/reports",
     icon: BarChart3,
+  },
+  {
+    label: "Student Centric Materials",
+    href: "/admin/materials",
+    icon: BookOpen,
   },
 ];

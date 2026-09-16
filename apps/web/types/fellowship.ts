@@ -118,6 +118,9 @@ export interface StudentPortalContext {
     student_id: string;
     full_name: string;
     email: string;
+    phone?: string | null;
+    status?: string | null;
+    institution_id?: string | null;
     institution_name?: string | null;
     course?: string | null;
     branch?: string | null;
@@ -214,6 +217,7 @@ export interface Institution {
   id: string;
   name: string;
   code: string;
+  address?: string | null;
   status: string;
   created_at: string;
   updated_at: string;
@@ -222,12 +226,14 @@ export interface Institution {
 export interface InstitutionCreate {
   name: string;
   code: string;
+  address?: string | null;
   status?: string;
 }
 
 export interface InstitutionUpdate {
   name?: string;
   code?: string;
+  address?: string | null;
   status?: string;
 }
 

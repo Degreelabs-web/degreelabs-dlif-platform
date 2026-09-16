@@ -29,6 +29,11 @@ class Institution(Base):
         nullable=False,
     )
 
+    address: Mapped[str | None] = mapped_column(
+        String(500),
+        nullable=True,
+    )
+
     status: Mapped[str] = mapped_column(
         String(50),
         nullable=False,

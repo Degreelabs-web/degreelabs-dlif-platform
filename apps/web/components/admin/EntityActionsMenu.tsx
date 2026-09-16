@@ -6,6 +6,8 @@ import {
     EllipsisVertical,
     Eye,
     Pencil,
+    RotateCcw,
+    Send,
     Trash2,
 } from "lucide-react";
 
@@ -13,6 +15,9 @@ interface EntityActionsMenuProps {
     label: string;
     onView?: () => void;
     onEdit?: () => void;
+    onPublish?: () => void;
+    publishLabel?: string;
+    onRestore?: () => void;
     onDelete?: () => void;
     deleteLabel?: string;
 }
@@ -21,6 +26,9 @@ export function EntityActionsMenu({
     label,
     onView,
     onEdit,
+    onPublish,
+    publishLabel = "Publish",
+    onRestore,
     onDelete,
     deleteLabel = "Delete",
 }: EntityActionsMenuProps) {
@@ -32,8 +40,8 @@ export function EntityActionsMenu({
     function openMenu(button: HTMLButtonElement) {
         const rect = button.getBoundingClientRect();
         const menuWidth = 176;
-        const actionCount = [onView, onEdit, onDelete].filter(Boolean).length;
-        const hasDeleteDivider = Boolean(onDelete && (onView || onEdit));
+        const actionCount = [onView, onEdit, onPublish, onRestore, onDelete].filter(Boolean).length;
+        const hasDeleteDivider = Boolean(onDelete && (onView || onEdit || onPublish || onRestore));
         const menuHeight = actionCount * 42 + (hasDeleteDivider ? 9 : 0) + 12;
         const gap = 8;
         const viewportPadding = 12;
@@ -139,6 +147,36 @@ export function EntityActionsMenu({
                         >
                             <Pencil className="h-4 w-4" />
                             Edit
+                        </button>
+                    )}
+
+                    {onPublish && (
+                        <button
+                            type="button"
+                            role="menuitem"
+                            onClick={() => {
+                                setOpen(false);
+                                onPublish();
+                            }}
+                            className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left text-sm font-medium text-emerald-700 hover:bg-emerald-50"
+                        >
+                            <Send className="h-4 w-4" />
+                            {publishLabel}
+                        </button>
+                    )}
+
+                    {onRestore && (
+                        <button
+                            type="button"
+                            role="menuitem"
+                            onClick={() => {
+                                setOpen(false);
+                                onRestore();
+                            }}
+                            className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left text-sm font-medium text-brand-700 hover:bg-brand-50"
+                        >
+                            <RotateCcw className="h-4 w-4" />
+                            Restore draft
                         </button>
                     )}
 
