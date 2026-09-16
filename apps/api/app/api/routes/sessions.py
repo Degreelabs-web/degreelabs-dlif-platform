@@ -3,6 +3,8 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
+from app.core.rbac import require_admin
+from app.db.models.user import User
 from app.db.session import get_db
 from app.schemas.session import (
     DiscoverCurriculumGenerateRequest,
@@ -19,6 +21,7 @@ from app.schemas.session import (
     SessionUpdate,
 )
 from app.services.session import SessionService
+from app.services.auth import get_current_user
 
 
 router = APIRouter(
@@ -44,10 +47,12 @@ def get_sessions(
     status_filter: str | None = Query(
         default=None, alias="status", description="Filter by status"
     ),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     service = SessionService(db)
-    return service.get_all(
+    return service.get_all_for_user(
+        current_user,
         cohort_id=cohort_id,
         week_number=week_number,
         status=status_filter,
@@ -60,10 +65,11 @@ def get_sessions(
 )
 def get_session(
     session_id: UUID,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     service = SessionService(db)
-    session_obj = service.get_by_id(session_id)
+    session_obj = service.get_for_user(current_user, session_id)
     if not session_obj:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -79,6 +85,7 @@ def get_session(
 )
 def create_session(
     data: SessionCreate,
+    _: User = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
     service = SessionService(db)
@@ -92,6 +99,7 @@ def create_session(
 def update_session(
     session_id: UUID,
     data: SessionUpdate,
+    _: User = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
     service = SessionService(db)
@@ -104,6 +112,7 @@ def update_session(
 )
 def delete_session(
     session_id: UUID,
+    _: User = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
     service = SessionService(db)
@@ -122,6 +131,7 @@ def delete_session(
 def generate_discover_curriculum(
     cohort_id: UUID,
     request: DiscoverCurriculumGenerateRequest = DiscoverCurriculumGenerateRequest(),
+    _: User = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
     service = SessionService(db)
@@ -138,9 +148,12 @@ def generate_discover_curriculum(
 )
 def get_session_tasks(
     session_id: UUID,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     service = SessionService(db)
+    if not service.get_for_user(current_user, session_id):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
     return service.get_tasks(session_id)
 
 
@@ -152,6 +165,7 @@ def get_session_tasks(
 def create_session_task(
     session_id: UUID,
     data: SessionTaskCreate,
+    _: User = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
     service = SessionService(db)
@@ -166,6 +180,7 @@ def update_session_task(
     session_id: UUID,
     task_id: UUID,
     data: SessionTaskUpdate,
+    _: User = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
     service = SessionService(db)
@@ -179,6 +194,7 @@ def update_session_task(
 def delete_session_task(
     session_id: UUID,
     task_id: UUID,
+    _: User = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
     service = SessionService(db)
@@ -195,9 +211,12 @@ def delete_session_task(
 )
 def get_session_resources(
     session_id: UUID,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     service = SessionService(db)
+    if not service.get_for_user(current_user, session_id):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
     return service.get_resources(session_id)
 
 
@@ -209,6 +228,7 @@ def get_session_resources(
 def create_session_resource(
     session_id: UUID,
     data: SessionResourceCreate,
+    _: User = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
     service = SessionService(db)
@@ -223,6 +243,7 @@ def update_session_resource(
     session_id: UUID,
     resource_id: UUID,
     data: SessionResourceUpdate,
+    _: User = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
     service = SessionService(db)
@@ -236,6 +257,7 @@ def update_session_resource(
 def delete_session_resource(
     session_id: UUID,
     resource_id: UUID,
+    _: User = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
     service = SessionService(db)

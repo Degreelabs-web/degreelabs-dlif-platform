@@ -12,6 +12,8 @@ from app.schemas.team_project_assignment import (
     TeamProjectAssignmentCreate,
     TeamProjectAssignmentDetailResponse,
 )
+from app.schemas.project import ProjectDetailResponse
+from app.schemas.project_mentor_assignment import ProjectMentorAssignmentCreate
 from app.services.team_assignment import TeamAssignmentService
 
 router = APIRouter(
@@ -82,6 +84,39 @@ def unassign_mentor_from_team(
 
 
 # ==================== Team Project Assignments ====================
+
+
+@router.post(
+    "/projects/{project_id}/mentor",
+    response_model=ProjectDetailResponse,
+)
+def assign_mentor_to_project(
+    project_id: UUID,
+    data: ProjectMentorAssignmentCreate,
+    db: Session = Depends(get_db),
+):
+    service = TeamAssignmentService(db)
+    try:
+        return service.assign_mentor_to_project(project_id, data)
+    except LookupError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+
+
+@router.delete(
+    "/projects/{project_id}/mentor",
+    response_model=ProjectDetailResponse,
+)
+def unassign_mentor_from_project(
+    project_id: UUID,
+    db: Session = Depends(get_db),
+):
+    service = TeamAssignmentService(db)
+    try:
+        return service.unassign_mentor_from_project(project_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
 
 
 @router.get(

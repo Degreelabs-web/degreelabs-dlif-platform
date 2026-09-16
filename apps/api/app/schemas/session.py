@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 # ---------------------------------------------------------------------------
@@ -76,10 +76,22 @@ class SessionBase(BaseModel):
     session_number: int = Field(..., ge=1, le=100)
     title: str = Field(..., min_length=2, max_length=255)
     description: str | None = None
+    agenda: str | None = None
+    session_type: str = Field(default="workshop", max_length=50)
+    facilitator_name: str | None = Field(default=None, max_length=255)
     scheduled_at: datetime | None = None
     duration_minutes: int | None = Field(default=None, ge=1, le=1440)
     status: str = Field(default="draft", max_length=50)
     meeting_url: str | None = Field(default=None, max_length=2048)
+    join_available_from: datetime | None = None
+    join_available_until: datetime | None = None
+    recording_url: str | None = Field(default=None, max_length=2048)
+
+    @model_validator(mode="after")
+    def validate_join_window(self):
+        if self.join_available_from and self.join_available_until and self.join_available_from >= self.join_available_until:
+            raise ValueError("join_available_until must be later than join_available_from")
+        return self
 
 
 class SessionCreate(SessionBase):
@@ -91,16 +103,29 @@ class SessionUpdate(BaseModel):
     session_number: int | None = Field(default=None, ge=1, le=100)
     title: str | None = Field(default=None, min_length=2, max_length=255)
     description: str | None = None
+    agenda: str | None = None
+    session_type: str | None = Field(default=None, max_length=50)
+    facilitator_name: str | None = Field(default=None, max_length=255)
     scheduled_at: datetime | None = None
     duration_minutes: int | None = Field(default=None, ge=1, le=1440)
     status: str | None = Field(default=None, max_length=50)
     meeting_url: str | None = Field(default=None, max_length=2048)
+    join_available_from: datetime | None = None
+    join_available_until: datetime | None = None
+    recording_url: str | None = Field(default=None, max_length=2048)
+
+    @model_validator(mode="after")
+    def validate_join_window(self):
+        if self.join_available_from and self.join_available_until and self.join_available_from >= self.join_available_until:
+            raise ValueError("join_available_until must be later than join_available_from")
+        return self
 
 
 class SessionResponse(SessionBase):
     id: UUID
     created_at: datetime
     updated_at: datetime
+    published_at: datetime | None = None
 
     model_config = ConfigDict(from_attributes=True)
 

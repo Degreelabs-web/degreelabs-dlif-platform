@@ -191,6 +191,7 @@ export async function fetchProjectById(id: string): Promise<Project> {
 
 export async function createProject(data: {
   company_id: string;
+  mentor_id?: string;
   title: string;
   description: string;
   objectives: string;
@@ -265,6 +266,22 @@ export async function unassignMentorFromTeam(assignmentId: string): Promise<void
   });
 }
 
+export async function assignMentorToProject(
+  projectId: string,
+  mentorId: string
+): Promise<Project> {
+  return apiClient<Project>(`/team-assignments/projects/${projectId}/mentor`, {
+    method: "POST",
+    body: JSON.stringify({ mentor_id: mentorId }),
+  });
+}
+
+export async function unassignMentorFromProject(projectId: string): Promise<Project> {
+  return apiClient<Project>(`/team-assignments/projects/${projectId}/mentor`, {
+    method: "DELETE",
+  });
+}
+
 export async function fetchProjectAssignments(params?: {
   team_id?: string;
   project_id?: string;
@@ -309,8 +326,9 @@ export async function assignStudentToCohort(data: {
 
 // ==================== Portal Context ====================
 
-export async function fetchStudentPortalContext(): Promise<StudentPortalContext> {
-  return apiClient<StudentPortalContext>("/portal/student-context");
+export async function fetchStudentPortalContext(userId?: string): Promise<StudentPortalContext> {
+  const query = userId && userId !== "undefined" ? `?user_id=${userId}` : "";
+  return apiClient<StudentPortalContext>(`/portal/student-context${query}`);
 }
 
 export async function fetchMentorPortalContext(userId?: string): Promise<MentorPortalContext> {

@@ -52,12 +52,13 @@ export async function deleteSession(id: string): Promise<void> {
 export async function generateDiscoverCurriculum(
   cohortId: string,
   requestData?: {
-    total_weeks?: number;
     start_date?: string;
+    session_duration_minutes?: number;
+    default_meeting_url?: string;
   }
 ): Promise<{
   cohort_id: string;
-  generated_sessions_count: number;
+  sessions_count: number;
   sessions: Session[];
 }> {
   return apiClient(`/sessions/cohorts/${cohortId}/generate-discover`, {

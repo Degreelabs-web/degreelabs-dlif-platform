@@ -29,6 +29,8 @@ from app.schemas.team_project_assignment import (
     TeamProjectAssignmentResponse,
     TeamProjectAssignmentUpdate,
 )
+from app.schemas.project_mentor_assignment import ProjectMentorAssignmentCreate
+from app.schemas.project import ProjectDetailResponse
 
 
 class TeamAssignmentService:
@@ -109,6 +111,70 @@ class TeamAssignmentService:
         self.assignment_repo.update_mentor_assignment(assignment)
         return True
 
+    def _sync_project_mentor_to_team(
+        self,
+        project_assignment: TeamProjectAssignment,
+        mentor: Mentor | None,
+    ) -> None:
+        """Maintain the team mentor record consumed by portal and session views."""
+        self.assignment_repo.deactivate_active_mentor_assignments(project_assignment.team_id)
+        if not mentor:
+            return
+
+        self.assignment_repo.create_mentor_assignment(
+            TeamMentorAssignment(
+                team_id=project_assignment.team_id,
+                mentor_id=mentor.id,
+                status="active",
+                notes=f"Automatically assigned from project {project_assignment.project_id}",
+            )
+        )
+
+    def assign_mentor_to_project(
+        self,
+        project_id: UUID,
+        data: ProjectMentorAssignmentCreate,
+    ) -> ProjectDetailResponse:
+        project = self.project_repo.get_by_id(project_id)
+        if not project:
+            raise LookupError(f"Project with id '{project_id}' not found.")
+
+        mentor = self.mentor_repo.get_by_id(data.mentor_id)
+        if not mentor:
+            raise LookupError(f"Mentor with id '{data.mentor_id}' not found.")
+        if mentor.status != "active":
+            raise ValueError(f"Mentor is '{mentor.status}' and cannot be assigned to a project.")
+
+        project.mentor_id = mentor.id
+        self.project_repo.update(project)
+
+        for assignment in self.assignment_repo.get_project_assignments(project_id=project_id, status="active"):
+            self._sync_project_mentor_to_team(assignment, mentor)
+
+        from app.services.project import ProjectService
+
+        return ProjectService(self.db)._build_detail_response(project)
+
+    def unassign_mentor_from_project(self, project_id: UUID) -> ProjectDetailResponse:
+        project = self.project_repo.get_by_id(project_id)
+        if not project:
+            raise LookupError(f"Project with id '{project_id}' not found.")
+
+        project.mentor_id = None
+        self.project_repo.update(project)
+
+        marker = f"Automatically assigned from project {project_id}"
+        for assignment in self.assignment_repo.get_project_assignments(project_id=project_id, status="active"):
+            active_mentor_assignment = self.assignment_repo.get_active_mentor_assignment(assignment.team_id)
+            if active_mentor_assignment and active_mentor_assignment.notes == marker:
+                active_mentor_assignment.status = "completed"
+                active_mentor_assignment.unassigned_at = datetime.now(timezone.utc)
+                self.assignment_repo.update_mentor_assignment(active_mentor_assignment)
+
+        from app.services.project import ProjectService
+
+        return ProjectService(self.db)._build_detail_response(project)
+
     # ==================== Project Assignment ====================
 
     def _build_project_assignment_detail(self, assignment: TeamProjectAssignment) -> TeamProjectAssignmentDetailResponse:
@@ -175,6 +241,10 @@ class TeamAssignmentService:
 
         try:
             created = self.assignment_repo.create_project_assignment(assignment)
+            if project.mentor_id:
+                mentor = self.mentor_repo.get_by_id(project.mentor_id)
+                if mentor and mentor.status == "active":
+                    self._sync_project_mentor_to_team(created, mentor)
             return self._build_project_assignment_detail(created)
         except IntegrityError as exc:
             self.assignment_repo.rollback()
@@ -188,4 +258,11 @@ class TeamAssignmentService:
         assignment.status = "completed"
         assignment.completed_at = datetime.now(timezone.utc)
         self.assignment_repo.update_project_assignment(assignment)
+
+        marker = f"Automatically assigned from project {assignment.project_id}"
+        active_mentor_assignment = self.assignment_repo.get_active_mentor_assignment(assignment.team_id)
+        if active_mentor_assignment and active_mentor_assignment.notes == marker:
+            active_mentor_assignment.status = "completed"
+            active_mentor_assignment.unassigned_at = datetime.now(timezone.utc)
+            self.assignment_repo.update_mentor_assignment(active_mentor_assignment)
         return True

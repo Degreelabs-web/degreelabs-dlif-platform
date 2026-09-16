@@ -53,6 +53,9 @@ export interface Company {
 export interface Project {
   id: string;
   company_id: string;
+  mentor_id?: string | null;
+  mentor_name?: string | null;
+  mentor_email?: string | null;
   company_name?: string | null;
   company_logo_url?: string | null;
   company_industry?: string | null;
@@ -279,8 +282,21 @@ export interface StudentProfile {
   course?: string | null;
   branch?: string | null;
   graduation_year?: number | null;
+  gender?: string | null;
+  current_year_semester?: string | null;
+  aadhaar_number?: string | null;
+  pan_number?: string | null;
+  photo_url?: string | null;
+  document_url?: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface StudentBatchInfo {
+  id: string;
+  cohort_id: string;
+  name: string;
+  status: string;
 }
 
 export interface Student {
@@ -292,6 +308,7 @@ export interface Student {
   created_at: string;
   updated_at: string;
   profile?: StudentProfile | null;
+  batch?: StudentBatchInfo | null;
 }
 
 export interface StudentProvisionRequest {
@@ -416,48 +433,56 @@ export interface SessionTask {
   id: string;
   session_id: string;
   title: string;
-  description: string;
+  description?: string | null;
   task_type: string;
-  is_required: boolean;
-  order_index: number;
+  required: boolean;
+  due_at?: string | null;
   created_at: string;
 }
 
 export interface SessionTaskCreate {
   title: string;
-  description: string;
+  description?: string | null;
   task_type?: string;
-  is_required?: boolean;
-  order_index?: number;
+  required?: boolean;
+  due_at?: string;
 }
 
 export interface SessionResource {
   id: string;
   session_id: string;
   title: string;
-  resource_type: string;
-  url: string;
-  description?: string | null;
+  type: string;
+  storage_path?: string | null;
+  external_url?: string | null;
   created_at: string;
 }
 
 export interface SessionResourceCreate {
   title: string;
-  resource_type: string;
-  url: string;
-  description?: string;
+  type?: string;
+  storage_path?: string;
+  external_url?: string;
 }
 
 export interface Session {
   id: string;
   cohort_id: string;
   week_number: number;
+  session_number: number;
   title: string;
-  description: string;
-  scheduled_at: string;
+  description?: string | null;
+  agenda?: string | null;
+  session_type: string;
+  facilitator_name?: string | null;
+  scheduled_at?: string | null;
   duration_minutes: number;
   meeting_url?: string | null;
+  join_available_from?: string | null;
+  join_available_until?: string | null;
+  recording_url?: string | null;
   status: string;
+  published_at?: string | null;
   created_at: string;
   updated_at: string;
   tasks?: SessionTask[];
@@ -467,21 +492,35 @@ export interface Session {
 export interface SessionCreate {
   cohort_id: string;
   week_number: number;
+  session_number: number;
   title: string;
-  description: string;
-  scheduled_at: string;
+  description?: string;
+  agenda?: string;
+  session_type?: string;
+  facilitator_name?: string;
+  scheduled_at?: string;
   duration_minutes?: number;
   meeting_url?: string;
+  join_available_from?: string;
+  join_available_until?: string;
+  recording_url?: string;
   status?: string;
 }
 
 export interface SessionUpdate {
   week_number?: number;
+  session_number?: number;
   title?: string;
   description?: string;
+  agenda?: string;
+  session_type?: string;
+  facilitator_name?: string;
   scheduled_at?: string;
   duration_minutes?: number;
   meeting_url?: string;
+  join_available_from?: string;
+  join_available_until?: string;
+  recording_url?: string;
   status?: string;
 }
 

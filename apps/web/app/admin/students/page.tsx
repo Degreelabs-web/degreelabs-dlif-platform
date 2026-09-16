@@ -9,6 +9,15 @@ import {
   X,
   CheckCircle2,
   AlertCircle,
+  GraduationCap,
+  Building2,
+  Mail,
+  Phone,
+  ExternalLink,
+  ShieldCheck,
+  CreditCard,
+  User as UserIcon,
+  FolderOpen,
 } from "lucide-react";
 import { EntityActionsMenu } from "@/components/admin/EntityActionsMenu";
 import { DeleteConfirmationDialog } from "@/components/admin/DeleteConfirmationDialog";
@@ -22,6 +31,39 @@ import {
 import { fetchInstitutions } from "@/lib/api/institutions";
 import { Institution, Student } from "@/types/fellowship";
 
+
+function studentInitials(name?: string | null): string {
+  return (name || "Student")
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join("");
+}
+
+function studentPhotoUrl(value?: string | null): string | null {
+  const source = value?.trim();
+  if (!source) return null;
+
+  try {
+    const url = new URL(source);
+    const isGoogleDrive =
+      url.hostname === "drive.google.com" ||
+      url.hostname === "docs.google.com";
+
+    if (isGoogleDrive) {
+      const pathMatch = url.pathname.match(/\/(?:file\/)?d\/([^/?]+)/);
+      const fileId = url.searchParams.get("id") || pathMatch?.[1];
+      if (fileId) {
+        return `https://drive.google.com/thumbnail?id=${encodeURIComponent(fileId)}&sz=w800`;
+      }
+    }
+  } catch {
+    return null;
+  }
+
+  return source;
+}
+
 export default function AdminStudentsPage() {
   const [students, setStudents] = useState<Student[]>([]);
   const [institutions, setInstitutions] = useState<Institution[]>([]);
@@ -29,6 +71,9 @@ export default function AdminStudentsPage() {
   const [search, setSearch] = useState("");
   const [selectedInstitution, setSelectedInstitution] = useState<string>("");
   const [selectedStatus, setSelectedStatus] = useState<string>("");
+
+  // Selected Student Profile Modal
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -231,11 +276,13 @@ export default function AdminStudentsPage() {
   }
 
   const filteredStudents = students.filter((s) => {
+    const query = search.toLowerCase();
     const matchSearch =
-      s.full_name.toLowerCase().includes(search.toLowerCase()) ||
-      s.email.toLowerCase().includes(search.toLowerCase()) ||
+      s.full_name.toLowerCase().includes(query) ||
+      s.email.toLowerCase().includes(query) ||
       (s.profile?.student_id &&
-        s.profile.student_id.toLowerCase().includes(search.toLowerCase()));
+        s.profile.student_id.toLowerCase().includes(query)) ||
+      (s.batch?.name && s.batch.name.toLowerCase().includes(query));
     return matchSearch;
   });
 
@@ -343,6 +390,7 @@ export default function AdminStudentsPage() {
                   <th className="px-6 py-3.5">Student</th>
                   <th className="px-6 py-3.5">Roll No / ID</th>
                   <th className="px-6 py-3.5">Institution</th>
+                  <th className="px-6 py-3.5">Batch</th>
                   <th className="px-6 py-3.5">Course & Branch</th>
                   <th className="px-6 py-3.5">Grad Year</th>
                   <th className="px-6 py-3.5">Status</th>
@@ -357,9 +405,13 @@ export default function AdminStudentsPage() {
                   return (
                     <tr key={student.id} className="transition hover:bg-slate-50/75">
                       <td className="px-6 py-4">
-                        <div className="font-semibold text-slate-900">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedStudent(student)}
+                          className="text-left font-semibold text-slate-900 transition hover:text-indigo-600 hover:underline"
+                        >
                           {student.full_name}
-                        </div>
+                        </button>
                         <div className="text-xs text-slate-400">{student.email}</div>
                       </td>
                       <td className="px-6 py-4 font-mono text-xs text-slate-600">
@@ -367,6 +419,15 @@ export default function AdminStudentsPage() {
                       </td>
                       <td className="px-6 py-4 text-slate-700">
                         {institution ? institution.name : "—"}
+                      </td>
+                      <td className="px-6 py-4">
+                        {student.batch ? (
+                          <span className="inline-flex items-center rounded-lg bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700 ring-1 ring-inset ring-indigo-600/20">
+                            {student.batch.name}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-slate-400">Unassigned</span>
+                        )}
                       </td>
                       <td className="px-6 py-4">
                         <div className="text-slate-900">
@@ -403,6 +464,7 @@ export default function AdminStudentsPage() {
                       <td className="px-6 py-4 text-right">
                         <EntityActionsMenu
                           label={student.full_name}
+                          onView={() => setSelectedStudent(student)}
                           onEdit={() => openEditModal(student)}
                           onDelete={() => requestDeleteStudent(student)}
                           deleteLabel={deletingId === student.id ? "Deleting..." : "Delete"}
@@ -429,6 +491,269 @@ export default function AdminStudentsPage() {
         }}
         onConfirm={confirmDeleteStudent}
       />
+
+
+      {/* Student Profile Modal */}
+      {selectedStudent && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="student-profile-title"
+        >
+          <div className="max-h-[calc(100dvh-2rem)] w-full max-w-3xl overflow-y-auto rounded-3xl border border-slate-200 bg-white shadow-2xl shadow-slate-950/20">
+            {/* Modal Header */}
+            <div className="relative overflow-hidden border-b border-indigo-100 bg-gradient-to-br from-indigo-50 via-white to-blue-50 p-6 sm:p-8">
+              <div className="absolute -right-12 -top-16 h-48 w-48 rounded-full bg-indigo-200/30 blur-3xl" />
+              <button
+                type="button"
+                onClick={() => setSelectedStudent(null)}
+                className="absolute right-4 top-4 z-10 inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white/90 text-slate-500 shadow-sm transition hover:bg-white hover:text-slate-900"
+                aria-label="Close profile"
+              >
+                <X className="h-5 w-5" />
+              </button>
+
+              <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center">
+                <div className="relative flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-500 to-indigo-700 text-2xl font-bold text-white shadow-lg ring-4 ring-white">
+                  <span>{studentInitials(selectedStudent.full_name)}</span>
+                  {studentPhotoUrl(selectedStudent.profile?.photo_url) && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={studentPhotoUrl(selectedStudent.profile?.photo_url) || undefined}
+                      alt={`${selectedStudent.full_name} photo`}
+                      referrerPolicy="no-referrer"
+                      onError={(event) => {
+                        event.currentTarget.style.display = "none";
+                      }}
+                      className="absolute inset-0 h-full w-full object-cover"
+                    />
+                  )}
+                </div>
+
+                <div className="min-w-0 pr-10">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h2 id="student-profile-title" className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+                      {selectedStudent.full_name}
+                    </h2>
+                    <span
+                      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ring-1 ring-inset ${
+                        selectedStudent.status === "active"
+                          ? "bg-emerald-50 text-emerald-700 ring-emerald-600/20"
+                          : "bg-slate-100 text-slate-700 ring-slate-600/20"
+                      }`}
+                    >
+                      <span className="h-1.5 w-1.5 rounded-full bg-current" />
+                      {selectedStudent.status}
+                    </span>
+                    {selectedStudent.batch && (
+                      <span className="inline-flex items-center rounded-lg bg-indigo-50 px-2.5 py-0.5 text-xs font-semibold text-indigo-700 ring-1 ring-inset ring-indigo-600/20">
+                        {selectedStudent.batch.name}
+                      </span>
+                    )}
+                  </div>
+
+                  <p className="mt-1 font-mono text-xs font-semibold text-indigo-700">
+                    Roll No: {selectedStudent.profile?.student_id || "—"}
+                  </p>
+
+                  <p className="mt-1 text-sm font-medium text-slate-600">
+                    {institutions.find((i) => i.id === selectedStudent.profile?.institution_id)?.name || "Partner Institution"}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Body */}
+            <div className="space-y-6 p-6 sm:p-8">
+              {/* Academic & Batch Overview */}
+              <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-5">
+                <h3 className="flex items-center gap-2 text-sm font-bold text-slate-900">
+                  <GraduationCap className="h-4 w-4 text-indigo-600" />
+                  Academic & Enrollment Information
+                </h3>
+                <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  <div>
+                    <span className="text-xs font-medium text-slate-500">Institution</span>
+                    <p className="mt-0.5 text-sm font-semibold text-slate-800">
+                      {institutions.find((i) => i.id === selectedStudent.profile?.institution_id)?.name || "—"}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-xs font-medium text-slate-500">Course</span>
+                    <p className="mt-0.5 text-sm font-semibold text-slate-800">
+                      {selectedStudent.profile?.course || "—"}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-xs font-medium text-slate-500">Branch</span>
+                    <p className="mt-0.5 text-sm font-semibold text-slate-800">
+                      {selectedStudent.profile?.branch || "—"}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-xs font-medium text-slate-500">Current Year / Semester</span>
+                    <p className="mt-0.5 text-sm font-semibold text-slate-800">
+                      {selectedStudent.profile?.current_year_semester || "—"}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-xs font-medium text-slate-500">Batch Assigned</span>
+                    <p className="mt-0.5 text-sm font-semibold text-indigo-700">
+                      {selectedStudent.batch?.name || "Unassigned"}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-xs font-medium text-slate-500">Graduation Year</span>
+                    <p className="mt-0.5 text-sm font-semibold text-slate-800">
+                      {selectedStudent.profile?.graduation_year || "—"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Personal & Contact Details */}
+              <div className="grid gap-6 sm:grid-cols-2">
+                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                  <h3 className="flex items-center gap-2 text-sm font-bold text-slate-900">
+                    <UserIcon className="h-4 w-4 text-indigo-600" />
+                    Personal & Contact Info
+                  </h3>
+                  <div className="mt-4 space-y-3">
+                    <div className="flex items-start gap-3 text-sm">
+                      <Mail className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
+                      <div>
+                        <span className="block text-xs font-medium text-slate-500">Email Address</span>
+                        <a href={`mailto:${selectedStudent.email}`} className="font-semibold text-indigo-600 hover:underline">
+                          {selectedStudent.email}
+                        </a>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-3 text-sm">
+                      <Phone className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
+                      <div>
+                        <span className="block text-xs font-medium text-slate-500">WhatsApp / Phone</span>
+                        <span className="font-semibold text-slate-800">
+                          {selectedStudent.profile?.phone || "Not provided"}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-3 text-sm">
+                      <UserIcon className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
+                      <div>
+                        <span className="block text-xs font-medium text-slate-500">Gender</span>
+                        <span className="font-semibold text-slate-800">
+                          {selectedStudent.profile?.gender || "Not specified"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Government & Identity Verification */}
+                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                  <h3 className="flex items-center gap-2 text-sm font-bold text-slate-900">
+                    <ShieldCheck className="h-4 w-4 text-indigo-600" />
+                    Identity & Verification
+                  </h3>
+                  <div className="mt-4 space-y-3">
+                    <div className="flex items-start gap-3 text-sm">
+                      <CreditCard className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
+                      <div>
+                        <span className="block text-xs font-medium text-slate-500">Aadhaar Number</span>
+                        <span className="font-mono font-semibold tracking-wider text-slate-900">
+                          {selectedStudent.profile?.aadhaar_number || "Not provided"}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-3 text-sm">
+                      <CreditCard className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
+                      <div>
+                        <span className="block text-xs font-medium text-slate-500">PAN Number</span>
+                        <span className="font-mono font-semibold tracking-wider text-slate-900 uppercase">
+                          {selectedStudent.profile?.pan_number || "Not provided"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Document & External Links */}
+              <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-5">
+                <h3 className="flex items-center gap-2 text-sm font-bold text-slate-900">
+                  <FolderOpen className="h-4 w-4 text-indigo-600" />
+                  Documents & Verification Files
+                </h3>
+                <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                  {selectedStudent.profile?.document_url ? (
+                    <a
+                      href={selectedStudent.profile.document_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-between rounded-xl border border-slate-200 bg-white p-3.5 shadow-sm transition hover:border-indigo-300 hover:bg-indigo-50/50"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <FolderOpen className="h-4 w-4 text-indigo-600" />
+                        <span className="text-xs font-semibold text-slate-800">Student Document Folder</span>
+                      </div>
+                      <ExternalLink className="h-3.5 w-3.5 text-slate-400" />
+                    </a>
+                  ) : (
+                    <div className="rounded-xl border border-dashed border-slate-200 p-3.5 text-xs text-slate-400">
+                      No document folder link provided
+                    </div>
+                  )}
+
+                  {selectedStudent.profile?.photo_url ? (
+                    <a
+                      href={selectedStudent.profile.photo_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-between rounded-xl border border-slate-200 bg-white p-3.5 shadow-sm transition hover:border-indigo-300 hover:bg-indigo-50/50"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <ExternalLink className="h-4 w-4 text-indigo-600" />
+                        <span className="text-xs font-semibold text-slate-800">Original Photo Link</span>
+                      </div>
+                      <ExternalLink className="h-3.5 w-3.5 text-slate-400" />
+                    </a>
+                  ) : (
+                    <div className="rounded-xl border border-dashed border-slate-200 p-3.5 text-xs text-slate-400">
+                      No photo link provided
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Modal Actions */}
+              <div className="flex items-center justify-end gap-3 border-t border-slate-100 pt-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const st = selectedStudent;
+                    setSelectedStudent(null);
+                    openEditModal(st);
+                  }}
+                  className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
+                >
+                  Edit Student
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedStudent(null)}
+                  className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Manual Add/Edit Student Modal */}
       {isModalOpen && (

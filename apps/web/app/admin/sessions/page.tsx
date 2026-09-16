@@ -40,12 +40,19 @@ export default function AdminSessionsPage() {
   const [sessionData, setSessionData] = useState({
     cohort_id: "",
     week_number: 1,
+    session_number: 1,
     title: "",
     description: "",
-    scheduled_at: new Date(Date.now() + 86400000).toISOString().slice(0, 16),
+    agenda: "",
+    session_type: "workshop",
+    facilitator_name: "",
+    scheduled_at: "",
     duration_minutes: 90,
-    meeting_url: "https://meet.google.com/dlif-fellowship",
-    status: "scheduled",
+    meeting_url: "",
+    join_available_from: "",
+    join_available_until: "",
+    recording_url: "",
+    status: "draft",
   });
 
   // Discover Curriculum Modal
@@ -55,8 +62,9 @@ export default function AdminSessionsPage() {
   const [curriculumError, setCurriculumError] = useState<string | null>(null);
   const [curriculumParams, setCurriculumParams] = useState({
     cohort_id: "",
-    total_weeks: 8,
-    start_date: new Date().toISOString().slice(0, 10),
+    start_date: "",
+    session_duration_minutes: 90,
+    default_meeting_url: "",
   });
 
   async function loadData() {
@@ -90,7 +98,14 @@ export default function AdminSessionsPage() {
       ...prev,
       title: "",
       description: "",
-      status: "scheduled",
+      agenda: "",
+      facilitator_name: "",
+      scheduled_at: "",
+      meeting_url: "",
+      join_available_from: "",
+      join_available_until: "",
+      recording_url: "",
+      status: "draft",
     }));
     setIsCreateModalOpen(true);
   }
@@ -101,11 +116,24 @@ export default function AdminSessionsPage() {
     setSessionData({
       cohort_id: session.cohort_id,
       week_number: session.week_number,
+      session_number: session.session_number,
       title: session.title,
       description: session.description || "",
-      scheduled_at: new Date(session.scheduled_at).toISOString().slice(0, 16),
+      agenda: session.agenda || "",
+      session_type: session.session_type || "workshop",
+      facilitator_name: session.facilitator_name || "",
+      scheduled_at: session.scheduled_at
+        ? new Date(session.scheduled_at).toISOString().slice(0, 16)
+        : "",
       duration_minutes: session.duration_minutes,
       meeting_url: session.meeting_url || "",
+      join_available_from: session.join_available_from
+        ? new Date(session.join_available_from).toISOString().slice(0, 16)
+        : "",
+      join_available_until: session.join_available_until
+        ? new Date(session.join_available_until).toISOString().slice(0, 16)
+        : "",
+      recording_url: session.recording_url || "",
       status: session.status,
     });
     setIsCreateModalOpen(true);
@@ -120,13 +148,21 @@ export default function AdminSessionsPage() {
       if (!sessionData.cohort_id) {
         throw new Error("Please select a cohort.");
       }
+      const cleanOptional = (value: string) => value.trim() || undefined;
       const payload = {
         week_number: Number(sessionData.week_number),
-        title: sessionData.title,
-        description: sessionData.description,
-        scheduled_at: sessionData.scheduled_at,
+        session_number: Number(sessionData.session_number),
+        title: sessionData.title.trim(),
+        description: cleanOptional(sessionData.description),
+        agenda: cleanOptional(sessionData.agenda),
+        session_type: sessionData.session_type,
+        facilitator_name: cleanOptional(sessionData.facilitator_name),
+        scheduled_at: sessionData.scheduled_at || undefined,
         duration_minutes: Number(sessionData.duration_minutes),
-        meeting_url: sessionData.meeting_url,
+        meeting_url: cleanOptional(sessionData.meeting_url),
+        join_available_from: sessionData.join_available_from || undefined,
+        join_available_until: sessionData.join_available_until || undefined,
+        recording_url: cleanOptional(sessionData.recording_url),
         status: sessionData.status,
       };
 
@@ -143,6 +179,7 @@ export default function AdminSessionsPage() {
         title: "",
         description: "",
         week_number: prev.week_number + 1,
+        session_number: prev.session_number + 1,
       }));
       loadData();
     } catch (err: any) {
@@ -182,12 +219,13 @@ export default function AdminSessionsPage() {
       }
 
       const result = await generateDiscoverCurriculum(curriculumParams.cohort_id, {
-        total_weeks: Number(curriculumParams.total_weeks),
-        start_date: curriculumParams.start_date,
+        start_date: curriculumParams.start_date || undefined,
+        session_duration_minutes: Number(curriculumParams.session_duration_minutes),
+        default_meeting_url: curriculumParams.default_meeting_url.trim() || undefined,
       });
 
       setCurriculumSuccess(
-        `Generated ${result.generated_sessions_count} Discover curriculum sessions!`
+        `Generated ${result.sessions_count} Discover curriculum sessions.`
       );
       setTimeout(() => {
         setIsDiscoverModalOpen(false);
@@ -269,7 +307,7 @@ export default function AdminSessionsPage() {
             No scheduled sessions
           </h3>
           <p className="mt-1 text-sm text-slate-500">
-            Generate an 8-week Discover track or schedule standalone workshop sessions.
+            Generate the standard 4-week Discover track or schedule a standalone session.
           </p>
           <div className="mt-4 flex justify-center gap-3">
             <button
@@ -321,7 +359,11 @@ export default function AdminSessionsPage() {
                   <div className="flex flex-wrap items-center gap-4 pt-1 text-xs text-slate-500">
                     <div className="flex items-center gap-1.5">
                       <CalendarDays className="h-3.5 w-3.5" />
-                      <span>{new Date(sess.scheduled_at).toLocaleString()}</span>
+                      <span>
+                        {sess.scheduled_at
+                          ? new Date(sess.scheduled_at).toLocaleString()
+                          : "Schedule to be confirmed"}
+                      </span>
                     </div>
 
                     <div className="flex items-center gap-1.5">
@@ -398,7 +440,7 @@ export default function AdminSessionsPage() {
             )}
 
             <form onSubmit={handleSubmitSession} className="mt-4 space-y-4">
-              <div className="grid gap-3 sm:grid-cols-3">
+              <div className="grid gap-3 sm:grid-cols-4">
                 <div className="sm:col-span-2">
                   <label className="block text-xs font-semibold text-slate-700">
                     Cohort *
@@ -442,6 +484,25 @@ export default function AdminSessionsPage() {
                     className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900"
                   />
                 </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700">
+                    Session # *
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={100}
+                    required
+                    value={sessionData.session_number}
+                    onChange={(e) =>
+                      setSessionData({
+                        ...sessionData,
+                        session_number: Number(e.target.value),
+                      })
+                    }
+                    className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900"
+                  />
+                </div>
               </div>
 
               <div>
@@ -462,12 +523,11 @@ export default function AdminSessionsPage() {
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700">
-                  Description / Agenda *
+                  Description
                 </label>
                 <textarea
                   rows={2}
-                  required
-                  placeholder="Key topics, preparation materials, and expected outcomes..."
+                  placeholder="What this session covers and its expected outcomes..."
                   value={sessionData.description}
                   onChange={(e) =>
                     setSessionData({ ...sessionData, description: e.target.value })
@@ -530,10 +590,103 @@ export default function AdminSessionsPage() {
                 />
               </div>
 
-              {editingSession && (
+              <div>
+                <label className="block text-xs font-semibold text-slate-700">
+                  Agenda
+                </label>
+                <textarea
+                  rows={2}
+                  placeholder="Preparation, activities, and follow-up actions..."
+                  value={sessionData.agenda}
+                  onChange={(e) =>
+                    setSessionData({ ...sessionData, agenda: e.target.value })
+                  }
+                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900"
+                />
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700">
-                    Status
+                    Session Type
+                  </label>
+                  <select
+                    value={sessionData.session_type}
+                    onChange={(e) =>
+                      setSessionData({ ...sessionData, session_type: e.target.value })
+                    }
+                    className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm capitalize text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900"
+                  >
+                    <option value="workshop">Workshop</option>
+                    <option value="masterclass">Masterclass</option>
+                    <option value="review">Review</option>
+                    <option value="office_hours">Office hours</option>
+                    <option value="demo">Demo</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700">
+                    Facilitator
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Name of the session lead"
+                    value={sessionData.facilitator_name}
+                    onChange={(e) =>
+                      setSessionData({ ...sessionData, facilitator_name: e.target.value })
+                    }
+                    className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900"
+                  />
+                </div>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700">
+                    Allow joining from
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={sessionData.join_available_from}
+                    onChange={(e) =>
+                      setSessionData({ ...sessionData, join_available_from: e.target.value })
+                    }
+                    className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700">
+                    Allow joining until
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={sessionData.join_available_until}
+                    onChange={(e) =>
+                      setSessionData({ ...sessionData, join_available_until: e.target.value })
+                    }
+                    className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900"
+                  />
+                </div>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700">
+                    Recording URL
+                  </label>
+                  <input
+                    type="url"
+                    placeholder="https://…"
+                    value={sessionData.recording_url}
+                    onChange={(e) =>
+                      setSessionData({ ...sessionData, recording_url: e.target.value })
+                    }
+                    className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700">
+                    Visibility status
                   </label>
                   <select
                     value={sessionData.status}
@@ -542,12 +695,14 @@ export default function AdminSessionsPage() {
                     }
                     className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm capitalize text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900"
                   >
+                    <option value="draft">Draft — admin only</option>
+                    <option value="published">Published</option>
                     <option value="scheduled">Scheduled</option>
                     <option value="completed">Completed</option>
                     <option value="cancelled">Cancelled</option>
                   </select>
                 </div>
-              )}
+              </div>
 
               <div className="mt-6 flex justify-end gap-3 pt-2">
                 <button
@@ -588,7 +743,7 @@ export default function AdminSessionsPage() {
                     Generate Discover Curriculum
                   </h2>
                   <p className="text-xs text-slate-500">
-                    Populates standard multi-week fellowship modules.
+                    Creates the standard 4-week, 12-session Discover curriculum.
                   </p>
                 </div>
               </div>
@@ -644,40 +799,57 @@ export default function AdminSessionsPage() {
               <div className="grid gap-3 sm:grid-cols-2">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700">
-                    Total Weeks
-                  </label>
-                  <input
-                    type="number"
-                    min={4}
-                    max={24}
-                    value={curriculumParams.total_weeks}
-                    onChange={(e) =>
-                      setCurriculumParams({
-                        ...curriculumParams,
-                        total_weeks: Number(e.target.value),
-                      })
-                    }
-                    className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700">
-                    Start Date
+                    First session date
                   </label>
                   <input
                     type="date"
-                    required
                     value={curriculumParams.start_date}
+                    onChange={(e) =>
+                      setCurriculumParams({ ...curriculumParams, start_date: e.target.value })
+                    }
+                    className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700">
+                    Session duration (minutes)
+                  </label>
+                  <input
+                    type="number"
+                    min={15}
+                    max={480}
+                    step={15}
+                    value={curriculumParams.session_duration_minutes}
                     onChange={(e) =>
                       setCurriculumParams({
                         ...curriculumParams,
-                        start_date: e.target.value,
+                        session_duration_minutes: Number(e.target.value),
                       })
                     }
                     className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900"
                   />
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700">
+                  Default meeting URL (optional)
+                </label>
+                <input
+                  type="url"
+                  placeholder="https://meet.google.com/..."
+                  value={curriculumParams.default_meeting_url}
+                  onChange={(e) =>
+                    setCurriculumParams({
+                      ...curriculumParams,
+                      default_meeting_url: e.target.value,
+                    })
+                  }
+                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900"
+                />
+                <p className="mt-1 text-xs text-slate-500">
+                  When supplied with a start date, the link opens for participants 15 minutes before each session.
+                </p>
               </div>
 
               <div className="mt-6 flex justify-end gap-3 pt-2">

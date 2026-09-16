@@ -3,11 +3,13 @@ from uuid import UUID
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.db.models.batch import Batch
 from app.db.models.student_profile import StudentProfile
 from app.db.models.user import User
 from app.db.repositories.institution import InstitutionRepository
 from app.db.repositories.student import StudentRepository
 from app.schemas.student import (
+    StudentBatchInfo,
     StudentCreate,
     StudentProfileResponse,
     StudentResponse,
@@ -24,9 +26,13 @@ class StudentService:
         self,
         user: User,
         profile: StudentProfile | None,
+        batch: Batch | None = None,
     ) -> StudentResponse:
         profile_res = (
             StudentProfileResponse.model_validate(profile) if profile else None
+        )
+        batch_res = (
+            StudentBatchInfo.model_validate(batch) if batch else None
         )
         return StudentResponse(
             id=user.id,
@@ -37,6 +43,7 @@ class StudentService:
             created_at=user.created_at,
             updated_at=user.updated_at,
             profile=profile_res,
+            batch=batch_res,
         )
 
     def get_all(
@@ -48,14 +55,14 @@ class StudentService:
             institution_id=institution_id,
             status=status,
         )
-        return [self._to_response(user, profile) for user, profile in records]
+        return [self._to_response(user, profile, batch) for user, profile, batch in records]
 
     def get_by_id(self, user_id: UUID) -> StudentResponse | None:
         record = self.student_repo.get_by_id(user_id)
         if not record:
             return None
-        user, profile = record
-        return self._to_response(user, profile)
+        user, profile, batch = record
+        return self._to_response(user, profile, batch)
 
     def create(self, data: StudentCreate) -> StudentResponse:
         institution = self.institution_repo.get_by_id(data.institution_id)
@@ -84,6 +91,12 @@ class StudentService:
             course=data.course,
             branch=data.branch,
             graduation_year=data.graduation_year,
+            gender=data.gender,
+            current_year_semester=data.current_year_semester,
+            aadhaar_number=data.aadhaar_number,
+            pan_number=data.pan_number,
+            photo_url=data.photo_url,
+            document_url=data.document_url,
         )
 
         try:
@@ -104,7 +117,7 @@ class StudentService:
         if not record:
             return None
 
-        user, profile = record
+        user, profile, batch = record
 
         if data.full_name is not None:
             user.full_name = data.full_name
@@ -121,10 +134,22 @@ class StudentService:
             profile.branch = data.branch
         if data.graduation_year is not None:
             profile.graduation_year = data.graduation_year
+        if data.gender is not None:
+            profile.gender = data.gender
+        if data.current_year_semester is not None:
+            profile.current_year_semester = data.current_year_semester
+        if data.aadhaar_number is not None:
+            profile.aadhaar_number = data.aadhaar_number
+        if data.pan_number is not None:
+            profile.pan_number = data.pan_number
+        if data.photo_url is not None:
+            profile.photo_url = data.photo_url
+        if data.document_url is not None:
+            profile.document_url = data.document_url
 
         try:
             user, profile = self.student_repo.update_student(user, profile)
-            return self._to_response(user, profile)
+            return self._to_response(user, profile, batch)
         except IntegrityError as exc:
             self.student_repo.rollback()
             raise ValueError(

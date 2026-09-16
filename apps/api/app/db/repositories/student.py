@@ -3,6 +3,8 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.db.models.batch import Batch
+from app.db.models.student_batch_assignment import StudentBatchAssignment
 from app.db.models.student_profile import StudentProfile
 from app.db.models.user import User
 
@@ -15,10 +17,16 @@ class StudentRepository:
         self,
         institution_id: UUID | None = None,
         status: str | None = None,
-    ) -> list[tuple[User, StudentProfile]]:
+    ) -> list[tuple[User, StudentProfile, Batch | None]]:
         statement = (
-            select(User, StudentProfile)
+            select(User, StudentProfile, Batch)
             .join(StudentProfile, User.id == StudentProfile.user_id)
+            .outerjoin(
+                StudentBatchAssignment,
+                (StudentBatchAssignment.student_id == StudentProfile.id)
+                & (StudentBatchAssignment.status == "active"),
+            )
+            .outerjoin(Batch, StudentBatchAssignment.batch_id == Batch.id)
             .where(User.role == "student")
             .order_by(User.full_name)
         )
@@ -31,16 +39,22 @@ class StudentRepository:
             statement = statement.where(User.status == status)
 
         results = self.db.execute(statement).all()
-        return [(row[0], row[1]) for row in results]
+        return [(row[0], row[1], row[2]) for row in results]
 
-    def get_by_id(self, user_id: UUID) -> tuple[User, StudentProfile] | None:
+    def get_by_id(self, user_id: UUID) -> tuple[User, StudentProfile, Batch | None] | None:
         statement = (
-            select(User, StudentProfile)
+            select(User, StudentProfile, Batch)
             .join(StudentProfile, User.id == StudentProfile.user_id)
+            .outerjoin(
+                StudentBatchAssignment,
+                (StudentBatchAssignment.student_id == StudentProfile.id)
+                & (StudentBatchAssignment.status == "active"),
+            )
+            .outerjoin(Batch, StudentBatchAssignment.batch_id == Batch.id)
             .where(User.id == user_id, User.role == "student")
         )
         row = self.db.execute(statement).first()
-        return (row[0], row[1]) if row else None
+        return (row[0], row[1], row[2]) if row else None
 
     def get_user_by_email(self, email: str) -> User | None:
         statement = select(User).where(User.email == email)

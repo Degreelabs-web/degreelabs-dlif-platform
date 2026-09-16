@@ -6,6 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 class ProjectBase(BaseModel):
     company_id: UUID
+    mentor_id: UUID | None = None
     title: str = Field(..., min_length=2, max_length=255)
     description: str = Field(..., min_length=10)
     objectives: str = Field(..., min_length=10)
@@ -59,5 +60,7 @@ class ProjectDetailResponse(ProjectResponse):
     company_logo_url: str | None = None
     company_industry: str | None = None
     assigned_teams_count: int = 0
+    mentor_name: str | None = None
+    mentor_email: str | None = None
 
     model_config = ConfigDict(from_attributes=True)

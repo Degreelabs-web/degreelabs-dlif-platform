@@ -2,515 +2,216 @@
 
 import { useEffect, useState } from "react";
 import {
-  fetchMentors,
-  fetchProjects,
-  fetchMentorAssignments,
-  fetchProjectAssignments,
-  assignMentorToTeam,
-  unassignMentorFromTeam,
+  assignMentorToProject,
   assignProjectToTeam,
+  fetchMentors,
+  fetchProjectAssignments,
+  fetchProjects,
+  unassignMentorFromProject,
   unassignProjectFromTeam,
-  assignStudentToCohort,
 } from "@/lib/api/fellowship";
 import { apiClient } from "@/lib/api/client";
-import {
-  Mentor,
-  Project,
-  TeamMentorAssignment,
-  TeamProjectAssignment,
-} from "@/types/fellowship";
-import {
-  GitPullRequest,
-  UsersRound,
-  UserRound,
-  FolderGit2,
-  CheckCircle2,
-  Trash2,
-  Plus,
-} from "lucide-react";
+import { Mentor, Project, TeamProjectAssignment } from "@/types/fellowship";
+import { FolderGit2, Link2, Trash2, UserRound } from "lucide-react";
 
 interface SimpleTeam {
   id: string;
   name: string;
-  cohort_id: string;
 }
 
-interface SimpleCohort {
-  id: string;
-  name: string;
-}
-
-interface SimpleStudent {
-  id: string;
-  student_id: string;
-  course?: string | null;
-}
+type AssignmentTab = "projects" | "mentors";
 
 export default function AssignmentsPage() {
-  const [activeTab, setActiveTab] = useState<"mentors" | "projects" | "cohorts">("mentors");
+  const [activeTab, setActiveTab] = useState<AssignmentTab>("projects");
   const [loading, setLoading] = useState(true);
-
-  // Data
   const [teams, setTeams] = useState<SimpleTeam[]>([]);
-  const [cohorts, setCohorts] = useState<SimpleCohort[]>([]);
-  const [students, setStudents] = useState<SimpleStudent[]>([]);
   const [mentors, setMentors] = useState<Mentor[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
-  const [mentorAssignments, setMentorAssignments] = useState<TeamMentorAssignment[]>([]);
   const [projectAssignments, setProjectAssignments] = useState<TeamProjectAssignment[]>([]);
-
-  // Forms
-  const [mentorForm, setMentorForm] = useState({ team_id: "", mentor_id: "", notes: "" });
   const [projectForm, setProjectForm] = useState({ team_id: "", project_id: "", notes: "" });
-  const [cohortForm, setCohortForm] = useState({ student_id: "", cohort_id: "" });
+  const [mentorForm, setMentorForm] = useState({ project_id: "", mentor_id: "" });
+  const [error, setError] = useState("");
 
   const loadData = async () => {
     try {
       setLoading(true);
-      const [
-        teamsData,
-        cohortsData,
-        studentsData,
-        mentorsData,
-        projectsData,
-        mAssignData,
-        pAssignData,
-      ] = await Promise.all([
+      setError("");
+      const [teamsData, mentorsData, projectsData, assignmentsData] = await Promise.all([
         apiClient<SimpleTeam[]>("/teams"),
-        apiClient<SimpleCohort[]>("/cohorts"),
-        apiClient<SimpleStudent[]>("/students"),
         fetchMentors(),
         fetchProjects(),
-        fetchMentorAssignments(),
         fetchProjectAssignments(),
       ]);
-
       setTeams(teamsData);
-      setCohorts(cohortsData);
-      setStudents(studentsData);
       setMentors(mentorsData);
       setProjects(projectsData);
-      setMentorAssignments(mAssignData);
-      setProjectAssignments(pAssignData);
+      setProjectAssignments(assignmentsData);
     } catch (err) {
-      console.error("Failed to load assignment data", err);
+      setError(err instanceof Error ? err.message : "Could not load assignment data.");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadData();
+    const timeoutId = window.setTimeout(() => {
+      void loadData();
+    }, 0);
+    return () => window.clearTimeout(timeoutId);
   }, []);
 
-  const handleAssignMentor = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleAssignProject = async (event: React.FormEvent) => {
+    event.preventDefault();
     try {
-      await assignMentorToTeam({
-        team_id: mentorForm.team_id,
-        mentor_id: mentorForm.mentor_id,
-        notes: mentorForm.notes || undefined,
-      });
-      setMentorForm({ team_id: "", mentor_id: "", notes: "" });
-      loadData();
-    } catch (err) {
-      alert("Assignment failed: " + (err as Error).message);
-    }
-  };
-
-  const handleAssignProject = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
+      setError("");
       await assignProjectToTeam({
         team_id: projectForm.team_id,
         project_id: projectForm.project_id,
         notes: projectForm.notes || undefined,
       });
       setProjectForm({ team_id: "", project_id: "", notes: "" });
-      loadData();
+      await loadData();
     } catch (err) {
-      alert("Assignment failed: " + (err as Error).message);
+      setError(err instanceof Error ? err.message : "Could not assign the project.");
     }
   };
 
-  const handleAssignCohort = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleAssignMentor = async (event: React.FormEvent) => {
+    event.preventDefault();
     try {
-      await assignStudentToCohort({
-        student_id: cohortForm.student_id,
-        cohort_id: cohortForm.cohort_id,
-      });
-      setCohortForm({ student_id: "", cohort_id: "" });
-      alert("Student assigned to cohort successfully!");
+      setError("");
+      await assignMentorToProject(mentorForm.project_id, mentorForm.mentor_id);
+      setMentorForm({ project_id: "", mentor_id: "" });
+      await loadData();
     } catch (err) {
-      alert("Assignment failed: " + (err as Error).message);
+      setError(err instanceof Error ? err.message : "Could not assign the mentor.");
     }
   };
 
-  const handleUnassignMentor = async (id: string) => {
-    if (!confirm("Are you sure you want to retire this mentor assignment?")) return;
+  const handleUnassignProject = async (assignmentId: string) => {
+    if (!window.confirm("Remove this project from the team? The project-derived mentor assignment will also be removed.")) return;
     try {
-      await unassignMentorFromTeam(id);
-      loadData();
+      setError("");
+      await unassignProjectFromTeam(assignmentId);
+      await loadData();
     } catch (err) {
-      alert("Failed to unassign: " + (err as Error).message);
+      setError(err instanceof Error ? err.message : "Could not remove the project assignment.");
     }
   };
 
-  const handleUnassignProject = async (id: string) => {
-    if (!confirm("Are you sure you want to drop this project assignment?")) return;
+  const handleUnassignMentor = async (project: Project) => {
+    if (!window.confirm(`Remove ${project.mentor_name || "the mentor"} from ${project.title}?`)) return;
     try {
-      await unassignProjectFromTeam(id);
-      loadData();
+      setError("");
+      await unassignMentorFromProject(project.id);
+      await loadData();
     } catch (err) {
-      alert("Failed to unassign: " + (err as Error).message);
+      setError(err instanceof Error ? err.message : "Could not remove the project mentor.");
     }
   };
+
+  const projectFor = (projectId: string) => projects.find((project) => project.id === projectId);
+  const teamFor = (teamId: string) => teams.find((team) => team.id === teamId);
 
   return (
     <div className="space-y-6">
       <div>
         <p className="text-sm font-medium text-slate-500">Admin Portal</p>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-          Assignments Command Center
-        </h1>
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900">Assignments Command Center</h1>
         <p className="text-sm text-slate-600">
-          Configure multi-way pairings between Students, Cohorts, Teams, Mentors, and Company Projects.
+          Assign a team to a project first, then assign the project mentor. The mentor is automatically linked to every active team on that project.
         </p>
       </div>
 
-      {/* Tabs */}
       <div className="flex max-w-full overflow-x-auto border-b border-slate-200">
-        <button
-          onClick={() => setActiveTab("mentors")}
-          className={`shrink-0 border-b-2 px-4 py-2.5 text-sm font-medium transition ${
-            activeTab === "mentors"
-              ? "border-slate-900 text-slate-900"
-              : "border-transparent text-slate-500 hover:text-slate-700"
-          }`}
-        >
-          Team &rarr; Mentor Assignments
-        </button>
         <button
           onClick={() => setActiveTab("projects")}
           className={`shrink-0 border-b-2 px-4 py-2.5 text-sm font-medium transition ${
-            activeTab === "projects"
-              ? "border-slate-900 text-slate-900"
-              : "border-transparent text-slate-500 hover:text-slate-700"
+            activeTab === "projects" ? "border-slate-900 text-slate-900" : "border-transparent text-slate-500 hover:text-slate-700"
           }`}
         >
-          Team &rarr; Project & Company Assignments
+          Team &rarr; Project Assignments
         </button>
         <button
-          onClick={() => setActiveTab("cohorts")}
+          onClick={() => setActiveTab("mentors")}
           className={`shrink-0 border-b-2 px-4 py-2.5 text-sm font-medium transition ${
-            activeTab === "cohorts"
-              ? "border-slate-900 text-slate-900"
-              : "border-transparent text-slate-500 hover:text-slate-700"
+            activeTab === "mentors" ? "border-slate-900 text-slate-900" : "border-transparent text-slate-500 hover:text-slate-700"
           }`}
         >
-          Student &rarr; Cohort Assignments
+          Mentor &rarr; Project Assignments
         </button>
       </div>
 
+      {error && <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
+
       {loading ? (
-        <div className="p-8 text-center text-slate-500 text-sm">Loading assignments...</div>
-      ) : activeTab === "mentors" ? (
-        <div className="grid gap-6 lg:grid-cols-3">
-          {/* Assignment Form */}
-          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
-            <h2 className="text-base font-semibold text-slate-900 flex items-center gap-2">
-              <UserRound className="h-4 w-4" />
-              Assign Mentor to Team
-            </h2>
-            <p className="text-xs text-slate-500">
-              Rule: A team has exactly 1 active mentor. Any previous active assignment will be reassigned.
-            </p>
-            <form onSubmit={handleAssignMentor} className="space-y-3 text-sm">
-              <div>
-                <label className="block text-xs font-medium text-slate-700">Select Team</label>
-                <select
-                  required
-                  value={mentorForm.team_id}
-                  onChange={(e) => setMentorForm({ ...mentorForm, team_id: e.target.value })}
-                  className="mt-1 w-full rounded-lg border border-slate-300 p-2 text-sm focus:border-slate-900 focus:outline-none"
-                >
-                  <option value="">Choose Team...</option>
-                  {teams.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-slate-700">Select Mentor</label>
-                <select
-                  required
-                  value={mentorForm.mentor_id}
-                  onChange={(e) => setMentorForm({ ...mentorForm, mentor_id: e.target.value })}
-                  className="mt-1 w-full rounded-lg border border-slate-300 p-2 text-sm focus:border-slate-900 focus:outline-none"
-                >
-                  <option value="">Choose Mentor...</option>
-                  {mentors.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.full_name} ({m.company_name || "Industry Expert"})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-slate-700">Notes (optional)</label>
-                <input
-                  type="text"
-                  placeholder="e.g. AI Domain guidance"
-                  value={mentorForm.notes}
-                  onChange={(e) => setMentorForm({ ...mentorForm, notes: e.target.value })}
-                  className="mt-1 w-full rounded-lg border border-slate-300 p-2 text-sm focus:border-slate-900 focus:outline-none"
-                />
-              </div>
-
-              <button
-                type="submit"
-                className="w-full rounded-lg bg-slate-900 py-2 text-sm font-semibold text-white hover:bg-slate-700"
-              >
-                Assign Mentor
-              </button>
-            </form>
-          </div>
-
-          {/* Active Assignments Table */}
-          <div className="lg:col-span-2 rounded-xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
-            <h2 className="text-base font-semibold text-slate-900">Active Mentor Pairings</h2>
-            {mentorAssignments.length === 0 ? (
-              <p className="text-xs text-slate-500">No mentor assignments recorded yet.</p>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead className="border-b border-slate-100 text-slate-500">
-                    <tr>
-                      <th className="pb-2">Team</th>
-                      <th className="pb-2">Mentor</th>
-                      <th className="pb-2">Status</th>
-                      <th className="pb-2">Assigned Date</th>
-                      <th className="pb-2 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {mentorAssignments.map((a) => (
-                      <tr key={a.id} className="hover:bg-slate-50">
-                        <td className="py-2.5 font-medium text-slate-900">{a.team_name || "Team"}</td>
-                        <td className="py-2.5 text-slate-700">
-                          {a.mentor_name || "Mentor"}
-                          {a.mentor_company && (
-                            <span className="text-slate-400 block text-[11px]">{a.mentor_company}</span>
-                          )}
-                        </td>
-                        <td className="py-2.5">
-                          <span
-                            className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
-                              a.status === "active"
-                                ? "bg-emerald-50 text-emerald-700"
-                                : "bg-slate-100 text-slate-600"
-                            }`}
-                          >
-                            {a.status}
-                          </span>
-                        </td>
-                        <td className="py-2.5 text-slate-500">
-                          {new Date(a.assigned_at).toLocaleDateString()}
-                        </td>
-                        <td className="py-2.5 text-right">
-                          {a.status === "active" && (
-                            <button
-                              onClick={() => handleUnassignMentor(a.id)}
-                              className="text-red-500 hover:text-red-700 inline-flex items-center gap-1"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                              Retire
-                            </button>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        </div>
+        <div className="p-8 text-center text-sm text-slate-500">Loading assignments...</div>
       ) : activeTab === "projects" ? (
         <div className="grid gap-6 lg:grid-cols-3">
-          {/* Assignment Form */}
-          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
-            <h2 className="text-base font-semibold text-slate-900 flex items-center gap-2">
-              <FolderGit2 className="h-4 w-4" />
-              Assign Project to Team
-            </h2>
-            <p className="text-xs text-slate-500">
-              Rule: A team can tackle 1 active company project. Multiple teams can tackle the same project.
-            </p>
+          <section className="space-y-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+            <h2 className="flex items-center gap-2 text-base font-semibold text-slate-900"><FolderGit2 className="h-4 w-4" />Assign Project to Team</h2>
+            <p className="text-xs text-slate-500">A project mentor, if already selected, is automatically assigned to this team.</p>
             <form onSubmit={handleAssignProject} className="space-y-3 text-sm">
-              <div>
-                <label className="block text-xs font-medium text-slate-700">Select Team</label>
-                <select
-                  required
-                  value={projectForm.team_id}
-                  onChange={(e) => setProjectForm({ ...projectForm, team_id: e.target.value })}
-                  className="mt-1 w-full rounded-lg border border-slate-300 p-2 text-sm focus:border-slate-900 focus:outline-none"
-                >
+              <label className="block text-xs font-medium text-slate-700">Select Team
+                <select required value={projectForm.team_id} onChange={(e) => setProjectForm({ ...projectForm, team_id: e.target.value })} className="mt-1 w-full rounded-lg border border-slate-300 p-2 focus:border-slate-900 focus:outline-none">
                   <option value="">Choose Team...</option>
-                  {teams.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.name}
-                    </option>
-                  ))}
+                  {teams.map((team) => <option key={team.id} value={team.id}>{team.name}</option>)}
                 </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-slate-700">Select Company Project</label>
-                <select
-                  required
-                  value={projectForm.project_id}
-                  onChange={(e) => setProjectForm({ ...projectForm, project_id: e.target.value })}
-                  className="mt-1 w-full rounded-lg border border-slate-300 p-2 text-sm focus:border-slate-900 focus:outline-none"
-                >
+              </label>
+              <label className="block text-xs font-medium text-slate-700">Select Project
+                <select required value={projectForm.project_id} onChange={(e) => setProjectForm({ ...projectForm, project_id: e.target.value })} className="mt-1 w-full rounded-lg border border-slate-300 p-2 focus:border-slate-900 focus:outline-none">
                   <option value="">Choose Project...</option>
-                  {projects.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.title} ({p.company_name}) - Cap: {p.assigned_teams_count}/{p.max_teams}
-                    </option>
-                  ))}
+                  {projects.map((project) => <option key={project.id} value={project.id}>{project.title}{project.mentor_name ? ` — ${project.mentor_name}` : " — no mentor"}</option>)}
                 </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-slate-700">Notes (optional)</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Primary capstone allocation"
-                  value={projectForm.notes}
-                  onChange={(e) => setProjectForm({ ...projectForm, notes: e.target.value })}
-                  className="mt-1 w-full rounded-lg border border-slate-300 p-2 text-sm focus:border-slate-900 focus:outline-none"
-                />
-              </div>
-
-              <button
-                type="submit"
-                className="w-full rounded-lg bg-slate-900 py-2 text-sm font-semibold text-white hover:bg-slate-700"
-              >
-                Assign Project
-              </button>
+              </label>
+              <label className="block text-xs font-medium text-slate-700">Notes (optional)
+                <textarea value={projectForm.notes} onChange={(e) => setProjectForm({ ...projectForm, notes: e.target.value })} className="mt-1 min-h-20 w-full rounded-lg border border-slate-300 p-2 focus:border-slate-900 focus:outline-none" />
+              </label>
+              <button className="w-full rounded-lg bg-slate-900 px-3 py-2.5 font-semibold text-white hover:bg-slate-800">Assign Project</button>
             </form>
-          </div>
+          </section>
 
-          {/* Active Assignments Table */}
-          <div className="lg:col-span-2 rounded-xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
-            <h2 className="text-base font-semibold text-slate-900">Active Project Allocations</h2>
-            {projectAssignments.length === 0 ? (
-              <p className="text-xs text-slate-500">No project assignments recorded yet.</p>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead className="border-b border-slate-100 text-slate-500">
-                    <tr>
-                      <th className="pb-2">Team</th>
-                      <th className="pb-2">Project</th>
-                      <th className="pb-2">Sponsoring Company</th>
-                      <th className="pb-2">Status</th>
-                      <th className="pb-2 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {projectAssignments.map((a) => (
-                      <tr key={a.id} className="hover:bg-slate-50">
-                        <td className="py-2.5 font-medium text-slate-900">{a.team_name || "Team"}</td>
-                        <td className="py-2.5 text-slate-800">{a.project_title || "Project"}</td>
-                        <td className="py-2.5 text-slate-600">{a.company_name || "Company"}</td>
-                        <td className="py-2.5">
-                          <span
-                            className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
-                              a.status === "active"
-                                ? "bg-emerald-50 text-emerald-700"
-                                : "bg-slate-100 text-slate-600"
-                            }`}
-                          >
-                            {a.status}
-                          </span>
-                        </td>
-                        <td className="py-2.5 text-right">
-                          {a.status === "active" && (
-                            <button
-                              onClick={() => handleUnassignProject(a.id)}
-                              className="text-red-500 hover:text-red-700 inline-flex items-center gap-1"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                              Drop
-                            </button>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
+          <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm lg:col-span-2">
+            <div className="border-b border-slate-200 px-5 py-4"><h2 className="text-base font-semibold text-slate-900">Active Team Projects</h2></div>
+            <div className="overflow-x-auto"><table className="min-w-full text-left text-sm"><thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500"><tr><th className="px-4 py-3">Team</th><th className="px-4 py-3">Project</th><th className="px-4 py-3">Company</th><th className="px-4 py-3">Project mentor</th><th className="px-4 py-3 text-right">Action</th></tr></thead><tbody className="divide-y divide-slate-100">
+              {projectAssignments.length === 0 ? <tr><td colSpan={5} className="px-4 py-8 text-center text-slate-500">No active project assignments.</td></tr> : projectAssignments.map((assignment) => {
+                const project = projectFor(assignment.project_id); const team = teamFor(assignment.team_id);
+                return <tr key={assignment.id}><td className="px-4 py-3 font-medium text-slate-900">{team?.name || "Unknown team"}</td><td className="px-4 py-3">{project?.title || "Unknown project"}</td><td className="px-4 py-3">{project?.company_name || "—"}</td><td className="px-4 py-3">{project?.mentor_name || <span className="text-slate-400">Not assigned</span>}</td><td className="px-4 py-3 text-right"><button onClick={() => void handleUnassignProject(assignment.id)} className="inline-flex items-center gap-1 text-sm font-medium text-red-600 hover:text-red-700"><Trash2 className="h-4 w-4" />Remove</button></td></tr>;
+              })}
+            </tbody></table></div>
+          </section>
         </div>
       ) : (
-        <div className="max-w-xl rounded-xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">
-          <h2 className="text-base font-semibold text-slate-900 flex items-center gap-2">
-            <UsersRound className="h-4 w-4" />
-            Assign Student to Cohort
-          </h2>
-          <p className="text-xs text-slate-500">
-            Enrolls an onboarded student into an active academic cohort.
-          </p>
-          <form onSubmit={handleAssignCohort} className="space-y-3 text-sm">
-            <div>
-              <label className="block text-xs font-medium text-slate-700">Select Student</label>
-              <select
-                required
-                value={cohortForm.student_id}
-                onChange={(e) => setCohortForm({ ...cohortForm, student_id: e.target.value })}
-                className="mt-1 w-full rounded-lg border border-slate-300 p-2 text-sm focus:border-slate-900 focus:outline-none"
-              >
-                <option value="">Choose Student...</option>
-                {students.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.student_id} ({s.course || "Fellow"})
-                  </option>
-                ))}
-              </select>
-            </div>
+        <div className="grid gap-6 lg:grid-cols-3">
+          <section className="space-y-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+            <h2 className="flex items-center gap-2 text-base font-semibold text-slate-900"><UserRound className="h-4 w-4" />Assign Mentor to Project</h2>
+            <p className="text-xs text-slate-500">Saving updates the mentor for every active team on the selected project.</p>
+            <form onSubmit={handleAssignMentor} className="space-y-3 text-sm">
+              <label className="block text-xs font-medium text-slate-700">Select Project
+                <select required value={mentorForm.project_id} onChange={(e) => setMentorForm({ ...mentorForm, project_id: e.target.value })} className="mt-1 w-full rounded-lg border border-slate-300 p-2 focus:border-slate-900 focus:outline-none">
+                  <option value="">Choose Project...</option>
+                  {projects.map((project) => <option key={project.id} value={project.id}>{project.title}{project.mentor_name ? ` — currently ${project.mentor_name}` : ""}</option>)}
+                </select>
+              </label>
+              <label className="block text-xs font-medium text-slate-700">Select Mentor
+                <select required value={mentorForm.mentor_id} onChange={(e) => setMentorForm({ ...mentorForm, mentor_id: e.target.value })} className="mt-1 w-full rounded-lg border border-slate-300 p-2 focus:border-slate-900 focus:outline-none">
+                  <option value="">Choose Mentor...</option>
+                  {mentors.filter((mentor) => mentor.status === "active").map((mentor) => <option key={mentor.id} value={mentor.id}>{mentor.full_name} ({mentor.company_name || "Industry expert"})</option>)}
+                </select>
+              </label>
+              <button className="w-full rounded-lg bg-slate-900 px-3 py-2.5 font-semibold text-white hover:bg-slate-800">Assign Mentor to Project</button>
+            </form>
+          </section>
 
-            <div>
-              <label className="block text-xs font-medium text-slate-700">Select Cohort</label>
-              <select
-                required
-                value={cohortForm.cohort_id}
-                onChange={(e) => setCohortForm({ ...cohortForm, cohort_id: e.target.value })}
-                className="mt-1 w-full rounded-lg border border-slate-300 p-2 text-sm focus:border-slate-900 focus:outline-none"
-              >
-                <option value="">Choose Cohort...</option>
-                {cohorts.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <button
-              type="submit"
-              className="w-full rounded-lg bg-slate-900 py-2 text-sm font-semibold text-white hover:bg-slate-700"
-            >
-              Assign to Cohort
-            </button>
-          </form>
+          <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm lg:col-span-2">
+            <div className="border-b border-slate-200 px-5 py-4"><h2 className="text-base font-semibold text-slate-900">Project Mentor Directory</h2></div>
+            <div className="overflow-x-auto"><table className="min-w-full text-left text-sm"><thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500"><tr><th className="px-4 py-3">Project</th><th className="px-4 py-3">Company</th><th className="px-4 py-3">Mentor</th><th className="px-4 py-3">Linked teams</th><th className="px-4 py-3 text-right">Action</th></tr></thead><tbody className="divide-y divide-slate-100">
+              {projects.length === 0 ? <tr><td colSpan={5} className="px-4 py-8 text-center text-slate-500">No projects available.</td></tr> : projects.map((project) => {
+                const linkedTeamCount = projectAssignments.filter((assignment) => assignment.project_id === project.id).length;
+                return <tr key={project.id}><td className="px-4 py-3 font-medium text-slate-900">{project.title}</td><td className="px-4 py-3">{project.company_name || "—"}</td><td className="px-4 py-3">{project.mentor_name || <span className="text-slate-400">Not assigned</span>}</td><td className="px-4 py-3"><span className="inline-flex items-center gap-1"><Link2 className="h-4 w-4 text-slate-400" />{linkedTeamCount}</span></td><td className="px-4 py-3 text-right">{project.mentor_id && <button onClick={() => void handleUnassignMentor(project)} className="inline-flex items-center gap-1 text-sm font-medium text-red-600 hover:text-red-700"><Trash2 className="h-4 w-4" />Remove</button>}</td></tr>;
+              })}
+            </tbody></table></div>
+          </section>
         </div>
       )}
     </div>

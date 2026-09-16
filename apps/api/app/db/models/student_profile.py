@@ -58,6 +58,36 @@ class StudentProfile(Base):
         nullable=True,
     )
 
+    gender: Mapped[str | None] = mapped_column(
+        String(20),
+        nullable=True,
+    )
+
+    current_year_semester: Mapped[str | None] = mapped_column(
+        String(50),
+        nullable=True,
+    )
+
+    aadhaar_number: Mapped[str | None] = mapped_column(
+        String(20),
+        nullable=True,
+    )
+
+    pan_number: Mapped[str | None] = mapped_column(
+        String(20),
+        nullable=True,
+    )
+
+    photo_url: Mapped[str | None] = mapped_column(
+        String(1024),
+        nullable=True,
+    )
+
+    document_url: Mapped[str | None] = mapped_column(
+        String(1024),
+        nullable=True,
+    )
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),

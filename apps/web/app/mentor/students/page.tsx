@@ -1,102 +1,65 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { fetchMentors, fetchMentorAssignments } from "@/lib/api/fellowship";
-import { apiClient } from "@/lib/api/client";
-import { Mentor, TeamMentorAssignment } from "@/types/fellowship";
-import { Users, Mail, Award, CheckCircle2 } from "lucide-react";
-
-interface TeamDetail {
-  id: string;
-  name: string;
-  members: Array<{
-    id: string;
-    student_id: string;
-    role: string;
-  }>;
-}
+import { fetchMentorPortalContext } from "@/lib/api/fellowship";
+import { MentorPortalContext } from "@/types/fellowship";
+import { Users } from "lucide-react";
 
 export default function MentorStudentsPage() {
-  const [mentors, setMentors] = useState<Mentor[]>([]);
-  const [selectedMentor, setSelectedMentor] = useState<Mentor | null>(null);
-  const [teamsWithMembers, setTeamsWithMembers] = useState<TeamDetail[]>([]);
+  const [context, setContext] = useState<MentorPortalContext | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const loadData = async () => {
-    try {
-      setLoading(true);
-      const mList = await fetchMentors({ status: "active" });
-      setMentors(mList);
-      if (mList.length > 0) {
-        setSelectedMentor(mList[0]);
-        const mAssignments = await fetchMentorAssignments({ mentor_id: mList[0].id, status: "active" });
-        const teamDetails = await Promise.all(
-          mAssignments.map((a) => apiClient<TeamDetail>(`/teams/${a.team_id}`))
-        );
-        setTeamsWithMembers(teamDetails);
-      }
-    } catch (err) {
-      console.error("Failed to load students", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    loadData();
+    async function loadStudents() {
+      try {
+        setContext(await fetchMentorPortalContext());
+      } catch (error) {
+        console.error("Failed to load assigned student roster", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    void loadStudents();
   }, []);
 
   return (
     <div className="space-y-6">
       <div>
         <p className="text-sm font-medium text-slate-500">Mentor Portal</p>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-          Assigned Students Roster
-        </h1>
-        <p className="text-sm text-slate-600">
-          Individual fellows across your advised fellowship teams.
-        </p>
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900">Assigned Students Roster</h1>
+        <p className="text-sm text-slate-600">Fellows across the teams assigned to your guidance.</p>
       </div>
 
       {loading ? (
-        <div className="p-8 text-center text-slate-500 text-sm">Loading students...</div>
-      ) : teamsWithMembers.length === 0 ? (
+        <div className="p-8 text-center text-sm text-slate-500">Loading your roster...</div>
+      ) : !context || context.teams.length === 0 ? (
         <div className="rounded-xl border border-dashed border-slate-300 bg-white p-12 text-center">
           <Users className="mx-auto h-12 w-12 text-slate-400" />
-          <h3 className="mt-3 text-sm font-semibold text-slate-900">No students under guidance</h3>
-          <p className="mt-1 text-xs text-slate-500">Students will appear once teams are assigned.</p>
+          <h2 className="mt-3 text-sm font-semibold text-slate-900">No students under guidance</h2>
+          <p className="mt-1 text-xs text-slate-500">Students will appear once a team is assigned to you.</p>
         </div>
       ) : (
-        <div className="space-y-6">
-          {teamsWithMembers.map((t) => (
-            <div key={t.id} className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                <h2 className="font-bold text-slate-900">{t.name}</h2>
-                <span className="text-xs text-slate-500">{t.members.length} members</span>
-              </div>
-
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {t.members.map((m) => (
-                  <div
-                    key={m.id}
-                    className="flex items-center gap-3 rounded-lg border border-slate-100 bg-slate-50 p-3"
-                  >
-                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-200 text-xs font-bold text-slate-700">
-                      S
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs font-semibold text-slate-900 truncate">
-                        Student Fellow ({m.student_id.slice(0, 8)}...)
-                      </p>
-                      <span className="inline-block rounded bg-white px-2 py-0.5 text-[10px] font-medium text-slate-600 border border-slate-200 mt-1 capitalize">
-                        {m.role}
-                      </span>
-                    </div>
+        <div className="space-y-4">
+          <div className="rounded-xl border border-blue-100 bg-blue-50 p-4 text-sm text-slate-700">
+            You currently guide <strong>{context.stats.students_count}</strong> fellow{context.stats.students_count === 1 ? "" : "s"} across your assigned teams.
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {context.teams.map((team) => (
+              <article key={team.id} className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h2 className="font-bold text-slate-900">{team.name}</h2>
+                    <p className="mt-1 text-xs text-slate-500">{team.cohort_name || "Fellowship cohort"}</p>
                   </div>
-                ))}
-              </div>
-            </div>
-          ))}
+                  <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">
+                    {team.members_count} member{team.members_count === 1 ? "" : "s"}
+                  </span>
+                </div>
+                <p className="mt-4 text-xs text-slate-600">Individual fellow contact details are available only within authorized team workspaces.</p>
+              </article>
+            ))}
+          </div>
         </div>
       )}
     </div>

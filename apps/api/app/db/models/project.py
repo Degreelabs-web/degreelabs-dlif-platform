@@ -27,6 +27,15 @@ class Project(Base):
         index=True,
     )
 
+    # A project owns its mentor relationship. Teams inherit this mentor when
+    # they are assigned to the project.
+    mentor_id: Mapped[UUID | None] = mapped_column(
+        PostgreSQLUUID(as_uuid=True),
+        ForeignKey("mentors.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+
     title: Mapped[str] = mapped_column(
         String(255),
         nullable=False,

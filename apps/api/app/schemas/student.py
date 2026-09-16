@@ -2,7 +2,6 @@ from datetime import datetime
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
-from pydantic import field_validator
 
 
 class StudentProfileBase(BaseModel):
@@ -12,6 +11,12 @@ class StudentProfileBase(BaseModel):
     course: str | None = Field(default=None, max_length=255)
     branch: str | None = Field(default=None, max_length=255)
     graduation_year: int | None = Field(default=None, ge=2000, le=2100)
+    gender: str | None = Field(default=None, max_length=20)
+    current_year_semester: str | None = Field(default=None, max_length=50)
+    aadhaar_number: str | None = Field(default=None, max_length=20)
+    pan_number: str | None = Field(default=None, max_length=20)
+    photo_url: str | None = Field(default=None, max_length=1024)
+    document_url: str | None = Field(default=None, max_length=1024)
 
 
 class StudentProfileResponse(StudentProfileBase):
@@ -36,6 +41,21 @@ class StudentUpdate(BaseModel):
     course: str | None = Field(default=None, max_length=255)
     branch: str | None = Field(default=None, max_length=255)
     graduation_year: int | None = Field(default=None, ge=2000, le=2100)
+    gender: str | None = Field(default=None, max_length=20)
+    current_year_semester: str | None = Field(default=None, max_length=50)
+    aadhaar_number: str | None = Field(default=None, max_length=20)
+    pan_number: str | None = Field(default=None, max_length=20)
+    photo_url: str | None = Field(default=None, max_length=1024)
+    document_url: str | None = Field(default=None, max_length=1024)
+
+
+class StudentBatchInfo(BaseModel):
+    id: UUID
+    cohort_id: UUID
+    name: str
+    status: str
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class StudentResponse(BaseModel):
@@ -47,8 +67,10 @@ class StudentResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
     profile: StudentProfileResponse | None = None
+    batch: StudentBatchInfo | None = None
 
     model_config = ConfigDict(from_attributes=True)
+
 
 class StudentProvisionRequest(StudentProfileBase):
     email: EmailStr

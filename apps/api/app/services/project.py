@@ -4,6 +4,9 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.db.models.project import Project
+from app.db.repositories.mentor import MentorRepository
+from app.db.models.user import User
+from sqlalchemy import select
 from app.db.repositories.company import CompanyRepository
 from app.db.repositories.project import ProjectRepository
 from app.schemas.project import (
@@ -19,14 +22,18 @@ class ProjectService:
         self.db = db
         self.project_repo = ProjectRepository(db)
         self.company_repo = CompanyRepository(db)
+        self.mentor_repo = MentorRepository(db)
 
     def _build_detail_response(self, project: Project) -> ProjectDetailResponse:
         company = self.company_repo.get_by_id(project.company_id)
+        mentor = self.mentor_repo.get_by_id(project.mentor_id) if project.mentor_id else None
+        mentor_user = self.db.scalar(select(User).where(User.id == mentor.user_id)) if mentor else None
         assigned_teams_count = self.project_repo.get_assigned_teams_count(project.id)
 
         return ProjectDetailResponse(
             id=project.id,
             company_id=project.company_id,
+            mentor_id=project.mentor_id,
             title=project.title,
             description=project.description,
             objectives=project.objectives,
@@ -42,6 +49,8 @@ class ProjectService:
             company_logo_url=company.logo_url if company else None,
             company_industry=company.industry if company else None,
             assigned_teams_count=assigned_teams_count,
+            mentor_name=mentor_user.full_name if mentor_user else None,
+            mentor_email=mentor_user.email if mentor_user else None,
         )
 
     def get_all(
@@ -72,8 +81,16 @@ class ProjectService:
         if not company:
             raise LookupError(f"Company with id '{data.company_id}' not found.")
 
+        if data.mentor_id:
+            mentor = self.mentor_repo.get_by_id(data.mentor_id)
+            if not mentor:
+                raise LookupError(f"Mentor with id '{data.mentor_id}' not found.")
+            if mentor.status != "active":
+                raise ValueError(f"Mentor is '{mentor.status}' and cannot be assigned to a project.")
+
         project = Project(
             company_id=data.company_id,
+            mentor_id=data.mentor_id,
             title=data.title,
             description=data.description,
             objectives=data.objectives,

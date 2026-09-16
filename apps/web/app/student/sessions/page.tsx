@@ -7,19 +7,17 @@ import {
   Video,
   ListTodo,
   CheckCircle2,
-  AlertCircle,
   ExternalLink,
   Loader2,
   BookOpen,
 } from "lucide-react";
-import { getStoredUser } from "@/lib/api/auth";
-import { fetchStudentPortalContext } from "@/lib/api/fellowship";
 import { fetchSessions } from "@/lib/api/sessions";
 import { fetchAttendance } from "@/lib/api/attendance";
-import { AttendanceRecord, Session, StudentPortalContext } from "@/types/fellowship";
+import { getStoredUser } from "@/lib/api/auth";
+import { fetchStudentPortalContext } from "@/lib/api/fellowship";
+import { AttendanceRecord, Session } from "@/types/fellowship";
 
 export default function StudentSessionsPage() {
-  const [context, setContext] = useState<StudentPortalContext | null>(null);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -29,21 +27,18 @@ export default function StudentSessionsPage() {
       try {
         setLoading(true);
         const user = getStoredUser();
-        if (user) {
-          const ctx = await fetchStudentPortalContext(user.id);
-          setContext(ctx);
+        const sessionsData = await fetchSessions();
+        setSessions(sessionsData);
 
-          if (ctx.cohort?.id) {
-            const [sessionsData, attendanceData] = await Promise.all([
-              fetchSessions({ cohort_id: ctx.cohort.id }),
-              fetchAttendance({ student_id: ctx.student.profile_id }),
-            ]);
-            setSessions(sessionsData);
+        if (user) {
+          try {
+            const context = await fetchStudentPortalContext(user.id);
+            const attendanceData = await fetchAttendance({ student_id: context.student.profile_id });
             setAttendance(attendanceData);
-          } else {
-            // fallback: fetch all sessions
-            const sessionsData = await fetchSessions();
-            setSessions(sessionsData);
+          } catch (attendanceError) {
+            // The session schedule remains usable even if attendance data is unavailable.
+            console.warn("Failed to load student attendance", attendanceError);
+            setAttendance([]);
           }
         }
       } catch (err) {
@@ -121,19 +116,30 @@ export default function StudentSessionsPage() {
                   </h3>
 
                   <p className="max-w-2xl text-xs text-slate-600 leading-relaxed">
-                    {sess.description}
+                    {sess.description || sess.agenda || "Session details will be shared shortly."}
                   </p>
 
                   <div className="flex flex-wrap items-center gap-4 pt-1 text-xs text-slate-500">
                     <div className="flex items-center gap-1.5">
                       <CalendarDays className="h-3.5 w-3.5 text-slate-400" />
-                      <span>{new Date(sess.scheduled_at).toLocaleString()}</span>
+                      <span>
+                        {sess.scheduled_at
+                          ? new Date(sess.scheduled_at).toLocaleString()
+                          : "Schedule to be confirmed"}
+                      </span>
                     </div>
 
                     <div className="flex items-center gap-1.5">
                       <Clock className="h-3.5 w-3.5 text-slate-400" />
                       <span>{sess.duration_minutes} mins</span>
                     </div>
+
+                    {sess.facilitator_name && (
+                      <div className="flex items-center gap-1.5">
+                        <BookOpen className="h-3.5 w-3.5 text-slate-400" />
+                        <span>Facilitated by {sess.facilitator_name}</span>
+                      </div>
+                    )}
 
                     {sess.tasks && (
                       <div className="flex items-center gap-1.5">
@@ -158,7 +164,7 @@ export default function StudentSessionsPage() {
                     </a>
                   ) : (
                     <span className="rounded-xl bg-slate-50 px-3 py-2 text-xs font-medium text-slate-400">
-                      Link pending
+                      Join link will appear when the session opens
                     </span>
                   )}
                 </div>

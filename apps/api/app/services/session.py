@@ -1,13 +1,20 @@
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
 from fastapi import HTTPException, status
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session as DBSession
 
+from app.db.models.mentor import Mentor
 from app.db.models.session import Session
 from app.db.models.session_resource import SessionResource
 from app.db.models.session_task import SessionTask
+from app.db.models.student_cohort_assignment import StudentCohortAssignment
+from app.db.models.student_profile import StudentProfile
+from app.db.models.team import Team
+from app.db.models.team_mentor_assignment import TeamMentorAssignment
+from app.db.models.user import User
 from app.db.repositories.cohort import CohortRepository
 from app.db.repositories.session import SessionRepository
 from app.schemas.session import (
@@ -239,30 +246,153 @@ DISCOVER_CURRICULUM_TEMPLATE = [
 
 
 class SessionService:
+    PORTAL_VISIBLE_STATUSES = {"published", "scheduled", "completed"}
+
     def __init__(self, db: DBSession):
         self.db = db
         self.session_repo = SessionRepository(db)
         self.cohort_repo = CohortRepository(db)
 
-    def _build_detail_response(self, session: Session) -> SessionDetailResponse:
+    def _can_reveal_meeting_url(self, session: Session) -> bool:
+        if not session.meeting_url:
+            return False
+        if not session.join_available_from or not session.join_available_until:
+            return False
+        now = datetime.now(timezone.utc)
+        return session.join_available_from <= now <= session.join_available_until
+
+    def _build_response(
+        self, session: Session, *, reveal_meeting_url: bool = True
+    ) -> SessionResponse:
+        response = SessionResponse.model_validate(session)
+        if not reveal_meeting_url:
+            return response.model_copy(update={"meeting_url": None})
+        return response
+
+    def _build_detail_response(
+        self, session: Session, *, reveal_meeting_url: bool = True
+    ) -> SessionDetailResponse:
         tasks = self.session_repo.get_tasks(session.id)
         resources = self.session_repo.get_resources(session.id)
-        return SessionDetailResponse(
+        response = SessionDetailResponse(
             id=session.id,
             cohort_id=session.cohort_id,
             week_number=session.week_number,
             session_number=session.session_number,
             title=session.title,
             description=session.description,
+            agenda=session.agenda,
+            session_type=session.session_type,
+            facilitator_name=session.facilitator_name,
             scheduled_at=session.scheduled_at,
             duration_minutes=session.duration_minutes,
             status=session.status,
             meeting_url=session.meeting_url,
+            join_available_from=session.join_available_from,
+            join_available_until=session.join_available_until,
+            recording_url=session.recording_url,
+            published_at=session.published_at,
             created_at=session.created_at,
             updated_at=session.updated_at,
             tasks=[SessionTaskResponse.model_validate(t) for t in tasks],
             resources=[SessionResourceResponse.model_validate(r) for r in resources],
         )
+        if not reveal_meeting_url:
+            return response.model_copy(update={"meeting_url": None})
+        return response
+
+    def _accessible_cohort_ids(self, user: User) -> set[UUID] | None:
+        """Return None for administrators, otherwise the caller's active cohorts."""
+        if user.role == "admin":
+            return None
+
+        if user.role == "student":
+            return set(
+                self.db.scalars(
+                    select(StudentCohortAssignment.cohort_id)
+                    .join(
+                        StudentProfile,
+                        StudentProfile.id == StudentCohortAssignment.student_id,
+                    )
+                    .where(
+                        StudentProfile.user_id == user.id,
+                        StudentCohortAssignment.status == "active",
+                    )
+                ).all()
+            )
+
+        if user.role == "mentor":
+            return set(
+                self.db.scalars(
+                    select(Team.cohort_id)
+                    .join(
+                        TeamMentorAssignment,
+                        TeamMentorAssignment.team_id == Team.id,
+                    )
+                    .join(Mentor, Mentor.id == TeamMentorAssignment.mentor_id)
+                    .where(
+                        Mentor.user_id == user.id,
+                        Mentor.status == "active",
+                        Team.status == "active",
+                        TeamMentorAssignment.status == "active",
+                    )
+                ).all()
+            )
+
+        return set()
+
+    def get_for_user(
+        self, user: User, session_id: UUID
+    ) -> SessionDetailResponse | None:
+        session = self.session_repo.get_by_id(session_id)
+        if not session:
+            return None
+
+        allowed_cohort_ids = self._accessible_cohort_ids(user)
+        if allowed_cohort_ids is not None:
+            if (
+                session.cohort_id not in allowed_cohort_ids
+                or session.status not in self.PORTAL_VISIBLE_STATUSES
+            ):
+                return None
+            return self._build_detail_response(
+                session,
+                reveal_meeting_url=self._can_reveal_meeting_url(session),
+            )
+
+        return self._build_detail_response(session)
+
+    def get_all_for_user(
+        self,
+        user: User,
+        cohort_id: UUID | None = None,
+        week_number: int | None = None,
+        status: str | None = None,
+    ) -> list[SessionResponse]:
+        allowed_cohort_ids = self._accessible_cohort_ids(user)
+        if allowed_cohort_ids is None:
+            return self.get_all(cohort_id, week_number, status)
+
+        if cohort_id is not None:
+            if cohort_id not in allowed_cohort_ids:
+                return []
+            allowed_cohort_ids = {cohort_id}
+        if status is not None and status not in self.PORTAL_VISIBLE_STATUSES:
+            return []
+
+        sessions = self.session_repo.get_all(
+            cohort_ids=allowed_cohort_ids,
+            week_number=week_number,
+            status=status,
+        )
+        return [
+            self._build_response(
+                session,
+                reveal_meeting_url=self._can_reveal_meeting_url(session),
+            )
+            for session in sessions
+            if session.status in self.PORTAL_VISIBLE_STATUSES
+        ]
 
     # -----------------------------------------------------------------------
     # Session operations
@@ -279,7 +409,7 @@ class SessionService:
             week_number=week_number,
             status=status,
         )
-        return [SessionResponse.model_validate(s) for s in sessions]
+        return [self._build_response(s) for s in sessions]
 
     def get_by_id(self, session_id: UUID) -> SessionDetailResponse | None:
         session = self.session_repo.get_by_id(session_id)
@@ -310,10 +440,17 @@ class SessionService:
             session_number=data.session_number,
             title=data.title,
             description=data.description,
+            agenda=data.agenda,
+            session_type=data.session_type,
+            facilitator_name=data.facilitator_name,
             scheduled_at=data.scheduled_at,
             duration_minutes=data.duration_minutes,
             status=data.status,
             meeting_url=data.meeting_url,
+            join_available_from=data.join_available_from,
+            join_available_until=data.join_available_until,
+            recording_url=data.recording_url,
+            published_at=datetime.now(timezone.utc) if data.status == "published" else None,
         )
         try:
             created = self.session_repo.create(session)
@@ -344,6 +481,15 @@ class SessionService:
                 )
 
         update_data = data.model_dump(exclude_unset=True)
+        next_join_from = update_data.get("join_available_from", session.join_available_from)
+        next_join_until = update_data.get("join_available_until", session.join_available_until)
+        if next_join_from and next_join_until and next_join_from >= next_join_until:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail="join_available_until must be later than join_available_from",
+            )
+        if update_data.get("status") == "published" and session.published_at is None:
+            update_data["published_at"] = datetime.now(timezone.utc)
         for key, value in update_data.items():
             setattr(session, key, value)
 
@@ -523,12 +669,21 @@ class SessionService:
         for idx, template in enumerate(DISCOVER_CURRICULUM_TEMPLATE):
             scheduled_at = None
             task_due_at = None
+            join_available_from = None
+            join_available_until = None
 
             if req.start_date is not None:
                 offset_days = schedule_day_offsets[idx]
                 scheduled_at = req.start_date + timedelta(days=offset_days)
                 # Task due 2 days after session
                 task_due_at = scheduled_at + timedelta(days=2)
+                if req.default_meeting_url:
+                    # Links are only exposed to enrolled participants during this
+                    # bounded window by the portal read policy.
+                    join_available_from = scheduled_at - timedelta(minutes=15)
+                    join_available_until = scheduled_at + timedelta(
+                        minutes=req.session_duration_minutes
+                    )
 
             session = Session(
                 cohort_id=cohort_id,
@@ -536,10 +691,15 @@ class SessionService:
                 session_number=template["session"],
                 title=template["title"],
                 description=template["description"],
+                agenda=template["description"],
+                session_type="workshop",
                 scheduled_at=scheduled_at,
                 duration_minutes=req.session_duration_minutes,
                 status="published",
                 meeting_url=req.default_meeting_url,
+                join_available_from=join_available_from,
+                join_available_until=join_available_until,
+                published_at=datetime.now(timezone.utc),
             )
 
             task_cfg = template["task"]

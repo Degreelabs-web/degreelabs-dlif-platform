@@ -38,6 +38,7 @@ class SessionRepository:
     def get_all(
         self,
         cohort_id: UUID | None = None,
+        cohort_ids: set[UUID] | None = None,
         week_number: int | None = None,
         status: str | None = None,
     ) -> list[Session]:
@@ -47,6 +48,10 @@ class SessionRepository:
 
         if cohort_id is not None:
             statement = statement.where(Session.cohort_id == cohort_id)
+        if cohort_ids is not None:
+            if not cohort_ids:
+                return []
+            statement = statement.where(Session.cohort_id.in_(cohort_ids))
         if week_number is not None:
             statement = statement.where(Session.week_number == week_number)
         if status is not None:

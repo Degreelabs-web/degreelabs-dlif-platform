@@ -47,6 +47,14 @@ class Session(Base):
         nullable=True,
     )
 
+    agenda: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    session_type: Mapped[str] = mapped_column(
+        String(50), nullable=False, default="workshop", server_default="workshop"
+    )
+
+    facilitator_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+
     scheduled_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),
         nullable=True,
@@ -66,6 +74,20 @@ class Session(Base):
     meeting_url: Mapped[str | None] = mapped_column(
         String(2048),
         nullable=True,
+    )
+
+    join_available_from: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+    join_available_until: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+    recording_url: Mapped[str | None] = mapped_column(String(2048), nullable=True)
+
+    published_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
     )
 
     created_at: Mapped[datetime] = mapped_column(

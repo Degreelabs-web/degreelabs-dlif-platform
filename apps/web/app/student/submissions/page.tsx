@@ -17,9 +17,8 @@ import {
 import { getStoredUser } from "@/lib/api/auth";
 import { fetchStudentPortalContext } from "@/lib/api/fellowship";
 import { fetchSubmissions, submitTask } from "@/lib/api/submissions";
-import { fetchSessions } from "@/lib/api/sessions";
+import { fetchSessions, fetchSessionTasks } from "@/lib/api/sessions";
 import {
-  Session,
   SessionTask,
   Submission,
   StudentPortalContext,
@@ -56,11 +55,13 @@ export default function StudentSubmissionsPage() {
         }
 
         if (ctx.cohort?.id) {
-          const sessionsData = await fetchSessions({ cohort_id: ctx.cohort.id });
-          const allTasks: SessionTask[] = [];
-          sessionsData.forEach((s) => {
-            if (s.tasks) allTasks.push(...s.tasks);
-          });
+          // The API derives the accessible cohort from the signed-in user. Do not
+          // trust a client-provided cohort id when loading a student's task list.
+          const sessionsData = await fetchSessions();
+          const taskGroups = await Promise.all(
+            sessionsData.map((session) => fetchSessionTasks(session.id))
+          );
+          const allTasks = taskGroups.flat();
           setTasks(allTasks);
           if (allTasks.length > 0 && !formData.task_id) {
             setFormData((prev) => ({ ...prev, task_id: allTasks[0].id }));

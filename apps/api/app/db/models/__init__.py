@@ -1,4 +1,5 @@
 from app.db.models.attendance import Attendance
+from app.db.models.batch import Batch
 from app.db.models.challenge import Challenge
 from app.db.models.challenge_assignment import ChallengeAssignment
 from app.db.models.cohort import Cohort
@@ -21,6 +22,7 @@ from app.db.models.recording import Recording
 from app.db.models.session import Session
 from app.db.models.session_resource import SessionResource
 from app.db.models.session_task import SessionTask
+from app.db.models.student_batch_assignment import StudentBatchAssignment
 from app.db.models.student_cohort_assignment import StudentCohortAssignment
 from app.db.models.student_profile import StudentProfile
 from app.db.models.submission import Submission
@@ -66,4 +68,6 @@ __all__ = [
     "SubmissionVersion",
     "SubmissionFile",
     "Feedback",
+    "Batch",
+    "StudentBatchAssignment",
 ]
