@@ -365,7 +365,7 @@ def test_sync_removes_sheet_managed_mentor_absent_from_complete_source(db: Sessi
     service.run(use_lock=False)
     assert {
         mentor.enrollment_source_key for mentor in db.scalars(select(Mentor)).all()
-    } == {"test:dlif"}
+    } == {"test:external_specialist"}
     source.mentors = [mentor_row(email="keep@example.com", full_name="Keep Mentor")]
     service.run(use_lock=False)
 

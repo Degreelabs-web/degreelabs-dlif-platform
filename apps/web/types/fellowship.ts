@@ -148,11 +148,33 @@ export interface StudentPortalContext {
   mentor: {
     id: string;
     full_name: string;
+    email?: string | null;
+
+    phone?: string | null;
+    bio?: string | null;
+
     designation?: string | null;
     company_name?: string | null;
-    email?: string | null;
+    professional_headline?: string | null;
+
+    years_of_experience?: number | null;
+
+    location?: string | null;
+    city?: string | null;
+    country?: string | null;
+
     linkedin_url?: string | null;
+    github_url?: string | null;
+    headshot_url?: string | null;
+
     expertise?: string[];
+    industries?: string[];
+    support_preferences?: string[];
+
+    mentor_statement?: string | null;
+
+    status?: string | null;
+    mentor_category?: string | null;
   } | null;
   company: {
     id: string;

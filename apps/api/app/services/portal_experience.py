@@ -17,6 +17,7 @@ from app.db.models.team_member import TeamMember
 from app.db.models.team_mentor_assignment import TeamMentorAssignment
 from app.db.models.team_project_assignment import TeamProjectAssignment
 from app.db.models.user import User
+from app.services.mentor_headshot_storage import MentorHeadshotStorageService
 
 
 class PortalExperienceService:
@@ -90,14 +91,40 @@ class PortalExperienceService:
                 if mentor:
                     mentor_user = self.db.scalar(select(User).where(User.id == mentor.user_id))
                     mentor_data = {
-                        "id": str(mentor.id),
-                        "full_name": mentor_user.full_name if mentor_user else "Mentor",
-                        "designation": mentor.designation,
-                        "company_name": mentor.company_name,
-                        "email": mentor_user.email if mentor_user else None,
-                        "linkedin_url": mentor.linkedin_url,
-                        "expertise": mentor.expertise,
-                    }
+            "id": str(mentor.id),
+            "full_name": mentor_user.full_name if mentor_user else "Mentor",
+            "email": mentor_user.email if mentor_user else None,
+
+            "phone": mentor.phone,
+            "bio": mentor.bio,
+
+            "designation": mentor.designation,
+            "company_name": mentor.company_name,
+            "professional_headline": mentor.professional_headline,
+
+            "years_of_experience": mentor.years_of_experience,
+
+            "location": mentor.location,
+            "city": mentor.city,
+            "country": mentor.country,
+
+            "linkedin_url": mentor.linkedin_url,
+            "github_url": mentor.github_url,
+            "headshot_url": (
+                MentorHeadshotStorageService().signed_url(mentor.headshot_url)
+                if MentorHeadshotStorageService.is_storage_path(mentor.headshot_url)
+                else mentor.headshot_url
+            ),
+
+            "expertise": mentor.expertise or [],
+            "industries": mentor.industries or [],
+            "support_preferences": mentor.support_preferences or [],
+
+            "mentor_statement": mentor.mentor_statement,
+
+            "status": mentor.status,
+            "mentor_category": mentor.mentor_category,
+        }
 
         # 4. Company & Project
         company_data = None

@@ -7,7 +7,6 @@ import {
   Briefcase,
   FolderGit2,
   GitPullRequest,
-  Target,
   CalendarDays,
   FileText,
   MessageSquare,
@@ -56,11 +55,6 @@ export const studentNavigation: NavigationItem[] = [
     label: "Assigned Project",
     href: "/student/project",
     icon: FolderGit2,
-  },
-  {
-    label: "Challenge",
-    href: "/student/challenge",
-    icon: Target,
   },
   {
     label: "Sessions",
@@ -140,7 +134,7 @@ export const adminNavigation: NavigationItem[] = [
     children: [
       { label: "DLIF Mentors", href: "/admin/mentors" },
       {
-        label: "External Specialist Mentors",
+        label: "DLIF Specialist Mentors",
         href: "/admin/mentors/external-specialists",
       },
     ],
@@ -169,11 +163,6 @@ export const adminNavigation: NavigationItem[] = [
     label: "Assignments Center",
     href: "/admin/assignments",
     icon: GitPullRequest,
-  },
-  {
-    label: "Challenges",
-    href: "/admin/challenges",
-    icon: Target,
   },
   {
     label: "Sessions",

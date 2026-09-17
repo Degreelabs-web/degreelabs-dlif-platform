@@ -1,3 +1,4 @@
+
 "use client";
 
 import { FormEvent, useState, useSyncExternalStore } from "react";
@@ -55,8 +56,8 @@ export default function Topbar({
     role === "student"
       ? "Student Workspace"
       : role === "mentor"
-      ? "Mentor Workspace"
-      : "Admin Workspace";
+        ? "Mentor Workspace"
+        : "Admin Workspace";
 
   const initial = user?.full_name ? user.full_name.charAt(0).toUpperCase() : "U";
 

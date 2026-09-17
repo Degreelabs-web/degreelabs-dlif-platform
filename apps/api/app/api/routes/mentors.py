@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 from sqlalchemy.orm import Session
 
 from app.core.rbac import require_admin
@@ -17,6 +17,7 @@ from app.schemas.mentor import (
 from app.services.mentor import MentorService
 from app.services.supabase_admin import SupabaseAdminError, SupabaseAdminService
 from app.services.email_delivery import EmailDeliveryError, EmailDeliveryService
+from app.services.mentor_headshot_storage import MentorHeadshotStorageService
 from app.core.config import settings
 from datetime import datetime, timezone
 
@@ -122,6 +123,29 @@ def update_mentor(
             detail="Mentor not found",
         )
     return mentor
+
+
+@router.post(
+    "/{mentor_id}/headshot",
+    response_model=MentorDetailResponse,
+)
+async def upload_mentor_headshot(
+    mentor_id: UUID,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+):
+    """Replace a mentor photo with a privately stored upload."""
+    mentor = db.get(Mentor, mentor_id)
+    if mentor is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Mentor not found")
+
+    storage = MentorHeadshotStorageService()
+    previous_path = mentor.headshot_url
+    storage_path = await storage.upload(mentor.id, file)
+    mentor.headshot_url = storage_path
+    db.commit()
+    storage.delete_quietly(previous_path or "")
+    return MentorService(db).get_by_id(mentor_id)
 
 
 @router.post("/{mentor_id}/resend-password-setup", response_model=MentorDetailResponse)

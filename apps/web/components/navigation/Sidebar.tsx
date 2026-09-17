@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -78,14 +79,12 @@ export default function Sidebar({
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-72 flex-col overflow-hidden border-r border-slate-100 bg-white shadow-2xl shadow-blue-950/10 transition-[transform,width,border-color] duration-300 lg:sticky lg:top-0 lg:h-screen lg:translate-x-0 lg:shadow-none ${
-          open ? "translate-x-0" : "-translate-x-full"
-        } ${desktopCollapsed ? "lg:w-24" : "lg:w-72"}`}
+        className={`fixed inset-y-0 left-0 z-50 flex w-72 flex-col overflow-hidden border-r border-slate-100 bg-white shadow-2xl shadow-blue-950/10 transition-[transform,width,border-color] duration-300 lg:sticky lg:top-0 lg:h-screen lg:translate-x-0 lg:shadow-none ${open ? "translate-x-0" : "-translate-x-full"
+          } ${desktopCollapsed ? "lg:w-24" : "lg:w-72"}`}
       >
         <div
-          className={`flex h-20 items-center border-b border-slate-100 ${
-            desktopCollapsed ? "justify-center gap-1 px-2" : "justify-between px-5"
-          }`}
+          className={`flex h-20 items-center border-b border-slate-100 ${desktopCollapsed ? "justify-center gap-1 px-2" : "justify-between px-5"
+            }`}
         >
           {desktopCollapsed ? (
             <Link
@@ -139,9 +138,8 @@ export default function Sidebar({
         </div>
 
         <nav
-          className={`flex-1 space-y-1.5 overflow-y-auto ${
-            desktopCollapsed ? "p-2" : "p-4"
-          }`}
+          className={`flex-1 space-y-1.5 overflow-y-auto ${desktopCollapsed ? "p-2" : "p-4"
+            }`}
         >
           {navigation.map((item) => {
             const Icon = item.icon;
@@ -160,18 +158,16 @@ export default function Sidebar({
                     aria-current={isActive ? "page" : undefined}
                     title={item.label}
                     aria-label={item.label}
-                    className={`group flex h-11 w-full items-center justify-center rounded-xl transition ${
-                      isActive
-                        ? "bg-gradient-to-r from-brand-500 to-brand-600 text-white shadow-md shadow-blue-500/20"
-                        : "text-slate-600 hover:bg-brand-50 hover:text-brand-700"
-                    }`}
+                    className={`group flex h-11 w-full items-center justify-center rounded-xl transition ${isActive
+                      ? "bg-gradient-to-r from-brand-500 to-brand-600 text-white shadow-md shadow-blue-500/20"
+                      : "text-slate-600 hover:bg-brand-50 hover:text-brand-700"
+                      }`}
                   >
                     <Icon
-                      className={`h-[19px] w-[19px] ${
-                        isActive
-                          ? "text-white"
-                          : "text-slate-400 group-hover:text-brand-500"
-                      }`}
+                      className={`h-[19px] w-[19px] ${isActive
+                        ? "text-white"
+                        : "text-slate-400 group-hover:text-brand-500"
+                        }`}
                     />
                   </Link>
                 );
@@ -188,18 +184,16 @@ export default function Sidebar({
                       }))
                     }
                     aria-expanded={isExpanded}
-                    className={`group flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-left text-sm font-semibold transition ${
-                      isActive
-                        ? "bg-brand-50 text-brand-700"
-                        : "text-slate-600 hover:bg-brand-50 hover:text-brand-700"
-                    }`}
+                    className={`group flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-left text-sm font-semibold transition ${isActive
+                      ? "bg-brand-50 text-brand-700"
+                      : "text-slate-600 hover:bg-brand-50 hover:text-brand-700"
+                      }`}
                   >
                     <Icon className="h-[18px] w-[18px] shrink-0 text-brand-500" />
                     <span className="flex-1">{item.label}</span>
                     <ChevronDown
-                      className={`h-4 w-4 transition-transform ${
-                        isExpanded ? "rotate-180" : ""
-                      }`}
+                      className={`h-4 w-4 transition-transform ${isExpanded ? "rotate-180" : ""
+                        }`}
                     />
                   </button>
                   {isExpanded && (
@@ -212,11 +206,10 @@ export default function Sidebar({
                             href={child.href}
                             onClick={onClose}
                             aria-current={isChildActive ? "page" : undefined}
-                            className={`block rounded-lg px-3 py-2 text-sm font-semibold transition ${
-                              isChildActive
-                                ? "bg-gradient-to-r from-brand-500 to-brand-600 text-white shadow-sm"
-                                : "text-slate-600 hover:bg-brand-50 hover:text-brand-700"
-                            }`}
+                            className={`block rounded-lg px-3 py-2 text-sm font-semibold transition ${isChildActive
+                              ? "bg-gradient-to-r from-brand-500 to-brand-600 text-white shadow-sm"
+                              : "text-slate-600 hover:bg-brand-50 hover:text-brand-700"
+                              }`}
                           >
                             {child.label}
                           </Link>
@@ -235,22 +228,19 @@ export default function Sidebar({
                 onClick={onClose}
                 aria-current={isActive ? "page" : undefined}
                 title={desktopCollapsed ? item.label : undefined}
-                className={`group flex items-center rounded-xl text-sm font-semibold transition ${
-                  isActive
-                    ? "bg-gradient-to-r from-brand-500 to-brand-600 text-white shadow-md shadow-blue-500/20"
-                    : "text-slate-600 hover:bg-brand-50 hover:text-brand-700"
-                } ${
-                  desktopCollapsed
+                className={`group flex items-center rounded-xl text-sm font-semibold transition ${isActive
+                  ? "bg-gradient-to-r from-brand-500 to-brand-600 text-white shadow-md shadow-blue-500/20"
+                  : "text-slate-600 hover:bg-brand-50 hover:text-brand-700"
+                  } ${desktopCollapsed
                     ? "h-11 w-full justify-center"
                     : "gap-3 px-3.5 py-2.5"
-                }`}
+                  }`}
               >
                 <Icon
-                  className={`h-[18px] w-[18px] shrink-0 ${
-                    isActive
-                      ? "text-white"
-                      : "text-slate-400 group-hover:text-brand-500"
-                  }`}
+                  className={`h-[18px] w-[18px] shrink-0 ${isActive
+                    ? "text-white"
+                    : "text-slate-400 group-hover:text-brand-500"
+                    }`}
                 />
                 {!desktopCollapsed && <span>{item.label}</span>}
               </Link>
@@ -259,9 +249,8 @@ export default function Sidebar({
         </nav>
 
         <div
-          className={`border-t border-slate-100 p-4 ${
-            desktopCollapsed ? "lg:hidden" : ""
-          }`}
+          className={`border-t border-slate-100 p-4 ${desktopCollapsed ? "lg:hidden" : ""
+            }`}
         >
           <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 to-slate-800 p-4 shadow-lg shadow-blue-950/10">
             <div className="absolute -right-5 -top-6 h-20 w-20 rounded-full bg-brand-400/20 blur-xl" />

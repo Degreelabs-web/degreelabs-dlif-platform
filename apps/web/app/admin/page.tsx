@@ -5,7 +5,6 @@ import Link from "next/link";
 import {
   Users,
   UsersRound,
-  Target,
   FileText,
   UserRound,
   Briefcase,
@@ -18,7 +17,6 @@ import {
 } from "lucide-react";
 import { fetchStudents } from "@/lib/api/students";
 import { fetchTeams } from "@/lib/api/teams";
-import { fetchChallenges } from "@/lib/api/challenges";
 import { fetchSubmissions } from "@/lib/api/submissions";
 import { fetchCohorts } from "@/lib/api/cohorts";
 import { fetchMentors, fetchCompanies, fetchProjects } from "@/lib/api/fellowship";
@@ -29,7 +27,6 @@ export default function AdminDashboard() {
   const [stats, setStats] = useState({
     students: 0,
     teams: 0,
-    challenges: 0,
     submissions: 0,
     mentors: 0,
     companies: 0,
@@ -46,7 +43,6 @@ export default function AdminDashboard() {
         const [
           studentsRes,
           teamsRes,
-          challengesRes,
           submissionsRes,
           cohortsRes,
           mentorsRes,
@@ -55,7 +51,6 @@ export default function AdminDashboard() {
         ] = await Promise.allSettled([
           fetchStudents(),
           fetchTeams(),
-          fetchChallenges(),
           fetchSubmissions(),
           fetchCohorts(),
           fetchMentors(),
@@ -65,7 +60,6 @@ export default function AdminDashboard() {
 
         const students = studentsRes.status === "fulfilled" ? studentsRes.value : [];
         const teams = teamsRes.status === "fulfilled" ? teamsRes.value : [];
-        const challenges = challengesRes.status === "fulfilled" ? challengesRes.value : [];
         const submissions = submissionsRes.status === "fulfilled" ? submissionsRes.value : [];
         const cohorts = cohortsRes.status === "fulfilled" ? cohortsRes.value : [];
         const mentors = mentorsRes.status === "fulfilled" ? mentorsRes.value : [];
@@ -75,7 +69,6 @@ export default function AdminDashboard() {
         setStats({
           students: students.length,
           teams: teams.length,
-          challenges: challenges.length,
           submissions: submissions.length,
           mentors: mentors.length,
           companies: companies.length,
@@ -133,7 +126,7 @@ export default function AdminDashboard() {
       ) : (
         <>
           {/* Primary Statistics */}
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <StatCard
               icon={Users}
               label="Total Students"
@@ -147,13 +140,6 @@ export default function AdminDashboard() {
               value={stats.teams}
               description="Formed project squads"
               href="/admin/teams"
-            />
-            <StatCard
-              icon={Target}
-              label="Challenges"
-              value={stats.challenges}
-              description="Industry problem tracks"
-              href="/admin/challenges"
             />
             <StatCard
               icon={FileText}
@@ -261,12 +247,6 @@ export default function AdminDashboard() {
                 description="Generate AI discover curriculum, schedule weekly workshops and tasks."
                 href="/admin/sessions"
                 badge="Education"
-              />
-              <ActionCard
-                title="Industry Challenges"
-                description="Curate company problem statements, expected deliverables, and rubrics."
-                href="/admin/challenges"
-                badge="Tracks"
               />
               <ActionCard
                 title="Executive Reports"

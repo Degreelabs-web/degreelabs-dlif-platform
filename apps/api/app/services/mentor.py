@@ -14,6 +14,7 @@ from app.schemas.mentor import (
     MentorUpdate,
 )
 from app.services.supabase_admin import SupabaseAdminService
+from app.services.mentor_headshot_storage import MentorHeadshotStorageService
 
 
 class MentorService:
@@ -26,6 +27,12 @@ class MentorService:
         self.db = db
         self.mentor_repo = MentorRepository(db)
         self.supabase = supabase
+
+    @staticmethod
+    def _category_for_organisation(organisation: str | None) -> str:
+        """Classify mentors from their employer, rather than a user-supplied flag."""
+        normalized = "".join((organisation or "").casefold().split())
+        return "dlif" if normalized.startswith("degreelabs") else "external_specialist"
 
     def _build_detail_response(
         self,
@@ -40,6 +47,10 @@ class MentorService:
         location = mentor.location or ", ".join(
             part for part in (mentor.city, mentor.country) if part
         ) or None
+
+        headshot_url = mentor.headshot_url
+        if MentorHeadshotStorageService.is_storage_path(headshot_url):
+            headshot_url = MentorHeadshotStorageService().signed_url(headshot_url)
 
         return MentorDetailResponse(
             id=mentor.id,
@@ -58,8 +69,8 @@ class MentorService:
             professional_headline=mentor.professional_headline,
             linkedin_url=mentor.linkedin_url,
             github_url=mentor.github_url,
-            headshot_url=mentor.headshot_url,
-            professional_headshot_url=mentor.headshot_url,
+            headshot_url=headshot_url,
+            professional_headshot_url=headshot_url,
             industries=mentor.industries or [],
             support_preferences=mentor.support_preferences or [],
             mentor_statement=mentor.mentor_statement,
@@ -216,6 +227,9 @@ class MentorService:
             if data.status is not None:
                 existing_mentor.status = data.status
                 user.status = data.status
+            existing_mentor.mentor_category = self._category_for_organisation(
+                existing_mentor.company_name
+            )
             self.mentor_repo.update(existing_mentor)
             return self._build_detail_response(existing_mentor)
 
@@ -238,7 +252,9 @@ class MentorService:
             support_preferences=data.support_preferences or [],
             mentor_statement=data.mentoring_statement or data.mentor_statement,
             status=data.status,
-            mentor_category=data.mentor_category,
+            mentor_category=self._category_for_organisation(
+                data.organisation or data.company_name
+            ),
             enrollment_source_key="manual",
         )
 
@@ -299,8 +315,10 @@ class MentorService:
             user = self.db.scalar(select(User).where(User.id == mentor.user_id))
             if user is not None:
                 user.status = data.status
-        if data.mentor_category is not None:
-            mentor.mentor_category = data.mentor_category
+        # The directory is derived from the mentor's employer. Do not allow a
+        # client request to place a DegreeLabs employee in the specialist list,
+        # or vice versa.
+        mentor.mentor_category = self._category_for_organisation(mentor.company_name)
 
         try:
             updated = self.mentor_repo.update(mentor)

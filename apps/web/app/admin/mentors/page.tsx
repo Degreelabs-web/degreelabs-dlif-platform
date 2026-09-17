@@ -9,6 +9,7 @@ import {
   createMentor,
   deleteMentor,
   fetchMentors,
+  uploadMentorHeadshot,
   updateMentor,
 } from "@/lib/api/fellowship";
 import { Mentor, MentorCategory, MentorStatus } from "@/types/fellowship";
@@ -39,30 +40,6 @@ function mentorInitials(name?: string | null): string {
     .join("");
 }
 
-function mentorHeadshotUrl(value?: string | null): string | null {
-  const source = value?.trim();
-  if (!source) return null;
-
-  try {
-    const url = new URL(source);
-    const isGoogleDrive =
-      url.hostname === "drive.google.com" ||
-      url.hostname === "docs.google.com";
-
-    if (isGoogleDrive) {
-      const pathMatch = url.pathname.match(/\/(?:file\/)?d\/([^/?]+)/);
-      const fileId = url.searchParams.get("id") || pathMatch?.[1];
-      if (fileId) {
-        return `https://drive.google.com/thumbnail?id=${encodeURIComponent(fileId)}&sz=w800`;
-      }
-    }
-  } catch {
-    return null;
-  }
-
-  return source;
-}
-
 function mentorRole(mentor: Mentor): string {
   return mentor.current_role || mentor.designation || "Industry Expert";
 }
@@ -76,10 +53,7 @@ function mentorLocation(mentor: Mentor): string {
 }
 
 function mentorPhoto(mentor: Mentor): string | null {
-  return (
-    mentorHeadshotUrl(mentor.professional_headshot_url) ||
-    mentorHeadshotUrl(mentor.headshot_url)
-  );
+  return mentor.professional_headshot_url || mentor.headshot_url || null;
 }
 
 function mentorStatusClasses(status: string): string {
@@ -99,7 +73,7 @@ export default function MentorsPage() {
     : "dlif";
   const isExternalSpecialists = mentorCategory === "external_specialist";
   const directoryTitle = isExternalSpecialists
-    ? "External Specialist Mentors"
+    ? "DLIF Specialist Mentors"
     : "DLIF Mentors";
   const [mentors, setMentors] = useState<Mentor[]>([]);
   const [loading, setLoading] = useState(true);
@@ -118,6 +92,7 @@ export default function MentorsPage() {
   const [mentorPendingDelete, setMentorPendingDelete] = useState<Mentor | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [directoryRefreshKey, setDirectoryRefreshKey] = useState(0);
+  const [headshotFile, setHeadshotFile] = useState<File | null>(null);
 
   const [formData, setFormData] = useState({
     full_name: "",
@@ -134,7 +109,6 @@ export default function MentorsPage() {
     industries: "",
     linkedin_url: "",
     bio: "",
-    headshot_url: "",
     support_preferences: "",
     mentor_statement: "",
   });
@@ -180,15 +154,14 @@ export default function MentorsPage() {
         industries: splitList(formData.industries),
         linkedin_url: formData.linkedin_url || undefined,
         bio: formData.bio || undefined,
-        professional_headshot_url: formData.headshot_url || undefined,
         support_preferences: splitList(formData.support_preferences),
         mentoring_statement: formData.mentor_statement || undefined,
-        mentor_category: mentorCategory,
       };
+      let savedMentor: Mentor;
       if (editingMentor) {
-        await updateMentor(editingMentor.id, profileData);
+        savedMentor = await updateMentor(editingMentor.id, profileData);
       } else {
-        await createMentor({
+        savedMentor = await createMentor({
           full_name: formData.full_name,
           email: formData.email,
           password: formData.password || undefined,
@@ -196,8 +169,12 @@ export default function MentorsPage() {
         });
         setDirectoryRefreshKey((value) => value + 1);
       }
+      if (headshotFile) {
+        await uploadMentorHeadshot(savedMentor.id, headshotFile);
+      }
       setShowModal(false);
       setEditingMentor(null);
+      setHeadshotFile(null);
       setFormData({
         full_name: "",
         email: "",
@@ -213,7 +190,6 @@ export default function MentorsPage() {
         industries: "",
         linkedin_url: "",
         bio: "",
-        headshot_url: "",
         support_preferences: "",
         mentor_statement: "",
       });
@@ -231,9 +207,10 @@ export default function MentorsPage() {
       full_name: "", email: "", password: "", phone: "", company_name: "",
       designation: "", city: "", country: "", professional_headline: "",
       years_of_experience: 5, expertise: "", industries: "",
-      linkedin_url: "", bio: "", headshot_url: "",
+      linkedin_url: "", bio: "",
       support_preferences: "", mentor_statement: "",
     });
+    setHeadshotFile(null);
     setShowModal(true);
   };
 
@@ -254,10 +231,10 @@ export default function MentorsPage() {
       industries: mentor.industries?.join(", ") || "",
       linkedin_url: mentor.linkedin_url || "",
       bio: mentor.bio || "",
-      headshot_url: mentor.professional_headshot_url || mentor.headshot_url || "",
       support_preferences: mentor.support_preferences?.join(", ") || "",
       mentor_statement: mentor.mentoring_statement || mentor.mentor_statement || "",
     });
+    setHeadshotFile(null);
     setShowModal(true);
   };
 
@@ -350,7 +327,7 @@ export default function MentorsPage() {
           className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-700 transition"
         >
           <Plus className="h-4 w-4" />
-          Add {isExternalSpecialists ? "Specialist Mentor" : "DLIF Mentor"}
+          Add {isExternalSpecialists ? "DLIF Specialist Mentor" : "DLIF Mentor"}
         </button>
       </div>
 
@@ -852,14 +829,17 @@ export default function MentorsPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-slate-700">Professional Headshot URL</label>
+                <label className="block text-xs font-medium text-slate-700">Professional Headshot</label>
                 <input
-                  type="url"
-                  placeholder="https://..."
-                  value={formData.headshot_url}
-                  onChange={(e) => setFormData({ ...formData, headshot_url: e.target.value })}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={(e) => setHeadshotFile(e.target.files?.[0] || null)}
                   className="mt-1 w-full rounded-lg border border-slate-300 p-2 text-sm focus:border-slate-900 focus:outline-none"
                 />
+                <p className="mt-1 text-xs text-slate-500">
+                  JPG, PNG, or WebP up to 5 MB. Photos are stored privately in the platform.
+                  {headshotFile ? ` Selected: ${headshotFile.name}` : editingMentor && mentorPhoto(editingMentor) ? " Leave blank to keep the current photo." : ""}
+                </p>
               </div>
 
               <div className="grid gap-3 sm:grid-cols-2">

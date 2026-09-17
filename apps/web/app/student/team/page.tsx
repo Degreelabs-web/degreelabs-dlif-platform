@@ -7,19 +7,23 @@ import {
   ShieldCheck,
   UserRound,
   Briefcase,
-  FolderGit2,
   ExternalLink,
   Loader2,
   Mail,
   ArrowRight,
+  Crown,
+  X,
 } from "lucide-react";
 import { getStoredUser } from "@/lib/api/auth";
 import { fetchStudentPortalContext } from "@/lib/api/fellowship";
 import { StudentPortalContext } from "@/types/fellowship";
 
+type TeamMemberSummary = NonNullable<StudentPortalContext["team"]>["members"][number];
+
 export default function StudentTeamPage() {
   const [context, setContext] = useState<StudentPortalContext | null>(null);
   const [loading, setLoading] = useState(true);
+  const [selectedMember, setSelectedMember] = useState<TeamMemberSummary | null>(null);
 
   useEffect(() => {
     async function loadTeamData() {
@@ -95,40 +99,51 @@ export default function StudentTeamPage() {
         </div>
       </div>
 
-      {/* Squad Members Roster */}
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="text-base font-bold text-slate-900">Squad Teammates</h2>
-        <p className="text-xs text-slate-500">
-          Collaborators working on your shared company project
-        </p>
+      {/* Privacy-safe teammate profiles: no contact, ID, or verification data. */}
+      <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+        <div className="border-b border-slate-200 bg-gradient-to-r from-sky-50 via-white to-blue-50 px-6 py-5 sm:px-8 sm:py-6">
+          <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
+            Collaboration space
+          </p>
+          <h2 className="mt-1 text-xl font-bold tracking-tight text-slate-950">
+            Squad Teammates
+          </h2>
+          <p className="mt-1 text-sm text-slate-600">
+            Meet the fellows collaborating with you on this shared company project.
+          </p>
+        </div>
 
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 p-6 sm:grid-cols-2 sm:p-8 lg:grid-cols-3">
           {context.team.members.map((member) => (
-            <div
+            <button
               key={member.student_id}
-              className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50/50 p-4"
+              type="button"
+              onClick={() => setSelectedMember(member)}
+              className="group rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
             >
-              <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-200 text-xs font-bold text-slate-700">
-                  {member.name.charAt(0)}
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-200 to-blue-500 text-lg font-bold text-white shadow-sm ring-4 ring-sky-50">
+                  {member.name.charAt(0).toUpperCase()}
                 </div>
-                <div>
-                  <p className="text-sm font-semibold text-slate-900">
-                    {member.name}
-                  </p>
-                  <p className="text-xs text-slate-500 capitalize">
-                    {member.role}
-                  </p>
-                </div>
+                {member.role === "leader" && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700 ring-1 ring-amber-200">
+                    <Crown className="h-3.5 w-3.5" />
+                    Team lead
+                  </span>
+                )}
               </div>
-
-              {member.role === "leader" && (
-                <span className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-700 ring-1 ring-inset ring-amber-600/20">
-                  <ShieldCheck className="h-3 w-3" />
-                  Lead
-                </span>
-              )}
-            </div>
+              <div className="mt-5">
+                <p className="text-base font-bold text-slate-950">
+                    {member.name}
+                </p>
+                <p className="mt-1 text-sm capitalize text-slate-600">
+                  {member.role}
+                </p>
+              </div>
+              <p className="mt-4 text-xs font-semibold text-blue-700 group-hover:underline">
+                View collaboration profile
+              </p>
+            </button>
           ))}
         </div>
       </section>
@@ -299,6 +314,111 @@ export default function StudentTeamPage() {
           </div>
         </section>
       )}
+
+      {selectedMember && (
+        <TeammateProfileDialog
+          member={selectedMember}
+          teamName={context.team.name}
+          cohortName={context.cohort?.name}
+          projectTitle={context.project?.title}
+          onClose={() => setSelectedMember(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+function TeammateProfileDialog({
+  member,
+  teamName,
+  cohortName,
+  projectTitle,
+  onClose,
+}: {
+  member: TeamMemberSummary;
+  teamName: string;
+  cohortName?: string;
+  projectTitle?: string;
+  onClose: () => void;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="teammate-profile-title"
+      onMouseDown={onClose}
+    >
+      <section
+        className="w-full max-w-xl overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <div className="bg-gradient-to-r from-sky-50 via-white to-blue-50 p-6 sm:p-8">
+          <div className="flex items-start justify-between gap-5">
+            <div className="flex min-w-0 items-center gap-4">
+              <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-3xl bg-gradient-to-br from-sky-200 to-blue-500 text-2xl font-bold text-white shadow-md ring-4 ring-white">
+                {member.name.charAt(0).toUpperCase()}
+              </div>
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h2 id="teammate-profile-title" className="text-xl font-bold text-slate-950 sm:text-2xl">
+                    {member.name}
+                  </h2>
+                  {member.role === "leader" && (
+                    <span className="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700 ring-1 ring-amber-200">
+                      Team lead
+                    </span>
+                  )}
+                </div>
+                <p className="mt-1 text-sm font-medium capitalize text-blue-700">
+                  {member.role} of {teamName}
+                </p>
+                <p className="mt-3 text-sm leading-6 text-slate-600">
+                  Collaborating with you on the team’s fellowship project.
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-xl border border-slate-200 bg-white p-2 text-slate-500 shadow-sm transition hover:bg-slate-50 hover:text-slate-800"
+              aria-label="Close teammate profile"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
+
+        <div className="grid gap-4 p-6 sm:grid-cols-2 sm:p-8">
+          <CollaborationDetail label="Team" value={teamName} />
+          {cohortName && <CollaborationDetail label="Cohort" value={cohortName} />}
+          {projectTitle && <CollaborationDetail label="Shared project" value={projectTitle} fullWidth />}
+        </div>
+
+        <div className="border-t border-slate-100 bg-slate-50 px-6 py-4 sm:px-8">
+          <p className="text-xs leading-5 text-slate-500">
+            This profile intentionally shows collaboration information only. Contact details,
+            identification data, and documents are kept private.
+          </p>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function CollaborationDetail({
+  label,
+  value,
+  fullWidth = false,
+}: {
+  label: string;
+  value: string;
+  fullWidth?: boolean;
+}) {
+  return (
+    <div className={`rounded-2xl border border-slate-200 bg-slate-50 p-4 ${fullWidth ? "sm:col-span-2" : ""}`}>
+      <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">{label}</p>
+      <p className="mt-2 text-sm font-semibold text-slate-900">{value}</p>
     </div>
   );
 }

@@ -266,6 +266,15 @@ export async function unassignMentorFromTeam(assignmentId: string): Promise<void
   });
 }
 
+export async function uploadMentorHeadshot(id: string, file: File): Promise<Mentor> {
+  const formData = new FormData();
+  formData.append("file", file);
+  return apiClient<Mentor>(`/mentors/${id}/headshot`, {
+    method: "POST",
+    body: formData,
+  });
+}
+
 export async function assignMentorToProject(
   projectId: string,
   mentorId: string

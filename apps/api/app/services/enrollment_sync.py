@@ -651,14 +651,13 @@ class EnrollmentSyncService:
 
     def _parse_mentor(self, row: dict[str, object]) -> MentorEnrollmentRow:
         self._validate_role(row, "mentor")
+        organisation = self._optional_text(self._pick_mapped(row, "organisation"))
         return MentorEnrollmentRow.model_validate(
             {
                 "full_name": self._pick_mapped(row, "full_name"),
                 "email": self._pick_mapped(row, "email"),
                 "phone": self._optional_text(self._pick_mapped(row, "phone")),
-                "company_name": self._optional_text(
-                    self._pick_mapped(row, "organisation")
-                ),
+                "company_name": organisation,
                 "designation": self._optional_text(self._pick_mapped(row, "current_role")),
                 "city": self._optional_text(self._pick_mapped(row, "city")),
                 "country": self._optional_text(self._pick_mapped(row, "country")),
@@ -699,12 +698,16 @@ class EnrollmentSyncService:
                 "status": self._normalize_mentor_status(
                     self._pick_mapped(row, "status")
                 ),
-                "mentor_category": self._optional_text(
-                    self._pick(row, "mentor_category")
-                )
-                or "dlif",
+                "mentor_category": self._mentor_category_for_organisation(organisation),
             }
         )
+
+    @staticmethod
+    def _mentor_category_for_organisation(organisation: str | None) -> str:
+        # Organisation values such as "Degree Labs" and "DegreeLabs Pvt Ltd"
+        # are treated as internal DLIF mentors. Everyone else is a specialist.
+        normalized = "".join((organisation or "").casefold().split())
+        return "dlif" if normalized.startswith("degreelabs") else "external_specialist"
 
     @staticmethod
     def _format_location(city: str | None, country: str | None) -> str | None:
