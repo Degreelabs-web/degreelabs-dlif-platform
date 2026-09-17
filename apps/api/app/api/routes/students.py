@@ -1,11 +1,12 @@
 from uuid import UUID
 
 # pyrefly: ignore [missing-import]
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 # pyrefly: ignore [missing-import]
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
+from app.db.models.student_profile import StudentProfile
 from app.schemas.student import (
     StudentCreate,
     StudentProvisionRequest,
@@ -19,6 +20,7 @@ from app.services.student_provisioning import (
     StudentProvisioningError,
     StudentProvisioningService,
 )
+from app.services.student_photo_storage import StudentPhotoStorageService
 
 
 router = APIRouter(
@@ -71,6 +73,12 @@ def provision_student(
             course=data.course,
             branch=data.branch,
             graduation_year=data.graduation_year,
+            gender=data.gender,
+            current_year_semester=data.current_year_semester,
+            aadhaar_number=data.aadhaar_number,
+            pan_number=data.pan_number,
+            photo_url=data.photo_url,
+            document_url=data.document_url,
             password=data.password,
         )
 
@@ -84,6 +92,44 @@ def provision_student(
             status_code=status.HTTP_409_CONFLICT,
             detail=str(exc),
         ) from exc
+
+
+@router.post(
+    "/{user_id}/photo",
+    response_model=StudentResponse,
+)
+async def upload_student_photo(
+    user_id: UUID,
+    file: UploadFile = File(...),
+    _current_admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    profile = (
+        db.query(StudentProfile)
+        .filter(StudentProfile.user_id == user_id)
+        .first()
+    )
+    if profile is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Student not found",
+        )
+
+    storage = StudentPhotoStorageService()
+    previous_path = profile.photo_url
+    profile.photo_url = await storage.upload(user_id, file)
+    db.commit()
+
+    if previous_path:
+        storage.delete_quietly(previous_path)
+
+    student = StudentService(db).get_by_id(user_id)
+    if student is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Student not found",
+        )
+    return student
 
 @router.get(
     "/{user_id}",

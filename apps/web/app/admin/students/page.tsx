@@ -18,6 +18,7 @@ import {
   CreditCard,
   User as UserIcon,
   FolderOpen,
+  ImagePlus,
 } from "lucide-react";
 import { EntityActionsMenu } from "@/components/admin/EntityActionsMenu";
 import { DeleteConfirmationDialog } from "@/components/admin/DeleteConfirmationDialog";
@@ -26,6 +27,7 @@ import {
   deleteStudent,
   fetchStudents,
   provisionStudent,
+  uploadStudentPhoto,
   updateStudent,
 } from "@/lib/api/students";
 import { fetchInstitutions } from "@/lib/api/institutions";
@@ -86,6 +88,7 @@ export default function AdminStudentsPage() {
   const [studentPendingDelete, setStudentPendingDelete] = useState<Student | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [directoryRefreshKey, setDirectoryRefreshKey] = useState(0);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
 
   const [formData, setFormData] = useState({
     institution_id: "",
@@ -94,6 +97,11 @@ export default function AdminStudentsPage() {
     student_id: "",
     password: "",
     phone: "",
+    gender: "",
+    current_year_semester: "",
+    aadhaar_number: "",
+    pan_number: "",
+    document_url: "",
     course: "Computer Science & Engineering",
     branch: "Information Technology",
     graduation_year: 2026,
@@ -141,28 +149,48 @@ export default function AdminStudentsPage() {
       if (!formData.institution_id) {
         throw new Error("Please select an institution.");
       }
-      if (editingStudent) {
-        await updateStudent(editingStudent.id, {
-          full_name: formData.full_name,
-          status: formData.status,
-          student_id: formData.student_id,
-          phone: formData.phone || undefined,
-          course: formData.course || undefined,
-          branch: formData.branch || undefined,
-          graduation_year: Number(formData.graduation_year),
-        });
-      } else {
-        await provisionStudent({
-          institution_id: formData.institution_id,
-          full_name: formData.full_name,
-          email: formData.email,
-          student_id: formData.student_id,
-          password: formData.password || undefined,
-          phone: formData.phone || undefined,
-          course: formData.course || undefined,
-          branch: formData.branch || undefined,
-          graduation_year: Number(formData.graduation_year),
-        });
+      const profileFields = {
+        phone: formData.phone || undefined,
+        gender: formData.gender || undefined,
+        current_year_semester: formData.current_year_semester || undefined,
+        aadhaar_number: formData.aadhaar_number || undefined,
+        pan_number: formData.pan_number || undefined,
+        document_url: formData.document_url || undefined,
+        course: formData.course || undefined,
+        branch: formData.branch || undefined,
+        graduation_year: Number(formData.graduation_year),
+      };
+
+      const savedStudent = editingStudent
+        ? await updateStudent(editingStudent.id, {
+            full_name: formData.full_name,
+            status: formData.status,
+            student_id: formData.student_id,
+            ...profileFields,
+          })
+        : await provisionStudent({
+            institution_id: formData.institution_id,
+            full_name: formData.full_name,
+            email: formData.email,
+            student_id: formData.student_id,
+            password: formData.password || undefined,
+            ...profileFields,
+          });
+
+      if (photoFile) {
+        try {
+          await uploadStudentPhoto(savedStudent.id, photoFile);
+        } catch (photoError) {
+          console.error("Failed to upload student profile photo", photoError);
+          setFormError(
+            `Student details were saved, but the profile photo failed to upload: ${
+              photoError instanceof Error ? photoError.message : "Upload error"
+            }`
+          );
+          setSubmitting(false);
+          await loadData();
+          return;
+        }
       }
 
       setFormSuccess(
@@ -176,6 +204,7 @@ export default function AdminStudentsPage() {
       setTimeout(() => {
         setIsModalOpen(false);
         setEditingStudent(null);
+        setPhotoFile(null);
         setFormSuccess(null);
         loadData();
       }, 1200);
@@ -192,19 +221,32 @@ export default function AdminStudentsPage() {
 
   function openCreateModal() {
     setEditingStudent(null);
+    setPhotoFile(null);
     setFormError(null);
     setFormSuccess(null);
     setFormData({
-      institution_id: institutions[0]?.id || "", full_name: "", email: "",
-      student_id: "", password: "", phone: "",
-      course: "Computer Science & Engineering", branch: "Information Technology",
-      graduation_year: 2026, status: "active",
+      institution_id: institutions[0]?.id || "",
+      full_name: "",
+      email: "",
+      student_id: "",
+      password: "",
+      phone: "",
+      gender: "",
+      current_year_semester: "",
+      aadhaar_number: "",
+      pan_number: "",
+      document_url: "",
+      course: "Computer Science & Engineering",
+      branch: "Information Technology",
+      graduation_year: 2026,
+      status: "active",
     });
     setIsModalOpen(true);
   }
 
   function openEditModal(student: Student) {
     setEditingStudent(student);
+    setPhotoFile(null);
     setFormError(null);
     setFormSuccess(null);
     setFormData({
@@ -214,6 +256,11 @@ export default function AdminStudentsPage() {
       student_id: student.profile?.student_id || "",
       password: "",
       phone: student.profile?.phone || "",
+      gender: student.profile?.gender || "",
+      current_year_semester: student.profile?.current_year_semester || "",
+      aadhaar_number: student.profile?.aadhaar_number || "",
+      pan_number: student.profile?.pan_number || "",
+      document_url: student.profile?.document_url || "",
       course: student.profile?.course || "",
       branch: student.profile?.branch || "",
       graduation_year: student.profile?.graduation_year || 2026,
@@ -405,14 +452,34 @@ export default function AdminStudentsPage() {
                   return (
                     <tr key={student.id} className="transition hover:bg-slate-50/75">
                       <td className="px-6 py-4">
-                        <button
-                          type="button"
-                          onClick={() => setSelectedStudent(student)}
-                          className="text-left font-semibold text-slate-900 transition hover:text-indigo-600 hover:underline"
-                        >
-                          {student.full_name}
-                        </button>
-                        <div className="text-xs text-slate-400">{student.email}</div>
+                        <div className="flex items-center gap-3">
+                          <div className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-indigo-100 to-indigo-200 text-xs font-bold text-indigo-800 ring-1 ring-indigo-200">
+                            <span>{studentInitials(student.full_name)}</span>
+                            {studentPhotoUrl(student.profile?.photo_url) && (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={studentPhotoUrl(student.profile?.photo_url) || undefined}
+                                alt={`${student.full_name} photo`}
+                                loading="lazy"
+                                referrerPolicy="no-referrer"
+                                onError={(event) => {
+                                  event.currentTarget.style.display = "none";
+                                }}
+                                className="absolute inset-0 h-full w-full object-cover"
+                              />
+                            )}
+                          </div>
+                          <div>
+                            <button
+                              type="button"
+                              onClick={() => setSelectedStudent(student)}
+                              className="text-left font-semibold text-slate-900 transition hover:text-indigo-600 hover:underline"
+                            >
+                              {student.full_name}
+                            </button>
+                            <div className="text-xs text-slate-400">{student.email}</div>
+                          </div>
+                        </div>
                       </td>
                       <td className="px-6 py-4 font-mono text-xs text-slate-600">
                         {student.profile?.student_id || "—"}
@@ -817,6 +884,75 @@ export default function AdminStudentsPage() {
                 </select>
               </div>
 
+              <div className="rounded-xl border border-dashed border-blue-200 bg-blue-50/50 p-3">
+                <div className="flex items-start gap-3">
+                  <div className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-indigo-100 to-indigo-200 text-xs font-bold text-indigo-800 ring-1 ring-indigo-200">
+                    {photoFile ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={URL.createObjectURL(photoFile)}
+                        alt="Photo preview"
+                        className="h-full w-full object-cover"
+                      />
+                    ) : editingStudent?.profile?.photo_url && studentPhotoUrl(editingStudent.profile.photo_url) ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={studentPhotoUrl(editingStudent.profile.photo_url) || undefined}
+                        alt="Current photo"
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <ImagePlus className="h-6 w-6 text-indigo-400" />
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <label className="block text-xs font-semibold text-slate-700">
+                      Profile Photo
+                    </label>
+                    <p className="mt-0.5 text-xs text-slate-500">
+                      JPG, PNG, or WebP up to 5 MB. The image is stored privately.
+                    </p>
+                    <div className="mt-2 flex items-center gap-2">
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        onChange={(event) => {
+                          const file = event.target.files?.[0] || null;
+                          if (file && file.size > 5 * 1024 * 1024) {
+                            setPhotoFile(null);
+                            event.currentTarget.value = "";
+                            setFormError("Profile photo must be 5 MB or smaller.");
+                            return;
+                          }
+                          setFormError(null);
+                          setPhotoFile(file);
+                        }}
+                        className="block w-full text-xs text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-blue-600 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white hover:file:bg-blue-700"
+                      />
+                      {photoFile && (
+                        <button
+                          type="button"
+                          onClick={() => setPhotoFile(null)}
+                          className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-600 hover:bg-slate-50"
+                        >
+                          Clear
+                        </button>
+                      )}
+                    </div>
+                    {photoFile && (
+                      <p className="mt-1.5 text-xs text-emerald-700">
+                        Selected: {photoFile.name}
+                      </p>
+                    )}
+                    {!photoFile && editingStudent?.profile?.photo_url && (
+                      <p className="mt-1.5 text-xs text-slate-500">
+                        The existing photo remains unless you select a replacement.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
               <div className="grid gap-3 sm:grid-cols-2">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700">
@@ -931,6 +1067,97 @@ export default function AdminStudentsPage() {
                     className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900"
                   />
                 </div>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700">
+                    Current Year / Semester
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 4th Year / 7th Sem"
+                    value={formData.current_year_semester}
+                    onChange={(e) =>
+                      setFormData({ ...formData, current_year_semester: e.target.value })
+                    }
+                    className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700">
+                    Gender
+                  </label>
+                  <select
+                    value={formData.gender}
+                    onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
+                    className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900"
+                  >
+                    <option value="">Not specified</option>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Non-binary">Non-binary</option>
+                    <option value="Prefer not to say">Prefer not to say</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700">
+                    Phone / WhatsApp
+                  </label>
+                  <input
+                    type="tel"
+                    placeholder="e.g. +91 98765 43210"
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700">
+                    Aadhaar Number
+                  </label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="12-digit Aadhaar"
+                    value={formData.aadhaar_number}
+                    onChange={(e) =>
+                      setFormData({ ...formData, aadhaar_number: e.target.value })
+                    }
+                    className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700">
+                    PAN Number
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="10-digit PAN"
+                    value={formData.pan_number}
+                    onChange={(e) => setFormData({ ...formData, pan_number: e.target.value })}
+                    className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm uppercase text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700">
+                  Verification Document URL
+                </label>
+                <input
+                  type="url"
+                  placeholder="https://…"
+                  value={formData.document_url}
+                  onChange={(e) => setFormData({ ...formData, document_url: e.target.value })}
+                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900"
+                />
+                <p className="mt-1 text-xs text-slate-500">
+                  Optional secure URL for an approved enrollment or verification file.
+                </p>
               </div>
 
               {editingStudent && (

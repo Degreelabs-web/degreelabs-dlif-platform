@@ -47,6 +47,18 @@ export async function updateStudent(
   });
 }
 
+export async function uploadStudentPhoto(
+  id: string,
+  photo: File,
+): Promise<Student> {
+  const formData = new FormData();
+  formData.append("file", photo);
+  return apiClient<Student>(`/students/${id}/photo`, {
+    method: "POST",
+    body: formData,
+  });
+}
+
 export async function deleteStudent(id: string): Promise<void> {
   return apiClient<void>(`/students/${id}`, {
     method: "DELETE",

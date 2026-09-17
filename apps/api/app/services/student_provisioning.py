@@ -34,6 +34,12 @@ class StudentProvisioningService:
         course: str | None = None,
         branch: str | None = None,
         graduation_year: int | None = None,
+        gender: str | None = None,
+        current_year_semester: str | None = None,
+        aadhaar_number: str | None = None,
+        pan_number: str | None = None,
+        photo_url: str | None = None,
+        document_url: str | None = None,
         password: str | None = None,
     ) -> tuple[User, StudentProfile]:
 
@@ -84,14 +90,26 @@ class StudentProvisioningService:
                 existing_user.status = "active"
                 existing_profile.institution_id = institution_id
                 existing_profile.student_id = student_id
-                if phone:
+                if phone is not None:
                     existing_profile.phone = phone
-                if course:
+                if course is not None:
                     existing_profile.course = course
-                if branch:
+                if branch is not None:
                     existing_profile.branch = branch
-                if graduation_year:
+                if graduation_year is not None:
                     existing_profile.graduation_year = graduation_year
+                if gender is not None:
+                    existing_profile.gender = gender
+                if current_year_semester is not None:
+                    existing_profile.current_year_semester = current_year_semester
+                if aadhaar_number is not None:
+                    existing_profile.aadhaar_number = aadhaar_number
+                if pan_number is not None:
+                    existing_profile.pan_number = pan_number
+                if photo_url is not None:
+                    existing_profile.photo_url = photo_url
+                if document_url is not None:
+                    existing_profile.document_url = document_url
 
                 self.db.commit()
                 self.db.refresh(existing_user)
@@ -119,6 +137,12 @@ class StudentProvisioningService:
                     course=course,
                     branch=branch,
                     graduation_year=graduation_year,
+                    gender=gender,
+                    current_year_semester=current_year_semester,
+                    aadhaar_number=aadhaar_number,
+                    pan_number=pan_number,
+                    photo_url=photo_url,
+                    document_url=document_url,
                 )
                 self.db.add(profile)
                 self.db.commit()
@@ -175,6 +199,12 @@ class StudentProvisioningService:
                 course=course,
                 branch=branch,
                 graduation_year=graduation_year,
+                gender=gender,
+                current_year_semester=current_year_semester,
+                aadhaar_number=aadhaar_number,
+                pan_number=pan_number,
+                photo_url=photo_url,
+                document_url=document_url,
             )
 
             self.db.add(profile)

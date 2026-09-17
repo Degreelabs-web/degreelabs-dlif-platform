@@ -343,6 +343,12 @@ export interface StudentProvisionRequest {
   course?: string;
   branch?: string;
   graduation_year?: number;
+  gender?: string;
+  current_year_semester?: string;
+  aadhaar_number?: string;
+  pan_number?: string;
+  photo_url?: string;
+  document_url?: string;
 }
 
 export interface StudentCreate {
@@ -354,6 +360,12 @@ export interface StudentCreate {
   course?: string;
   branch?: string;
   graduation_year?: number;
+  gender?: string;
+  current_year_semester?: string;
+  aadhaar_number?: string;
+  pan_number?: string;
+  photo_url?: string;
+  document_url?: string;
 }
 
 export interface StudentUpdate {
@@ -364,6 +376,12 @@ export interface StudentUpdate {
   course?: string;
   branch?: string;
   graduation_year?: number;
+  gender?: string;
+  current_year_semester?: string;
+  aadhaar_number?: string;
+  pan_number?: string;
+  photo_url?: string;
+  document_url?: string;
 }
 
 // ==================== Teams ====================

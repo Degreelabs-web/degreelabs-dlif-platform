@@ -15,6 +15,7 @@ from app.schemas.student import (
     StudentResponse,
     StudentUpdate,
 )
+from app.services.student_photo_storage import StudentPhotoStorageService
 
 
 class StudentService:
@@ -31,6 +32,8 @@ class StudentService:
         profile_res = (
             StudentProfileResponse.model_validate(profile) if profile else None
         )
+        if profile_res and StudentPhotoStorageService.is_storage_path(profile_res.photo_url):
+            profile_res.photo_url = StudentPhotoStorageService().signed_url(profile_res.photo_url)
         batch_res = (
             StudentBatchInfo.model_validate(batch) if batch else None
         )

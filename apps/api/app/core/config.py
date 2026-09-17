@@ -59,6 +59,11 @@ class Settings(BaseSettings):
     mentor_headshot_storage_bucket: str = "dlif-mentor-headshots"
     mentor_headshot_max_upload_mb: int = 5
     mentor_headshot_signed_url_ttl_seconds: int = 600
+
+    # Private bucket for student profile photographs.
+    student_photo_storage_bucket: str = "dlif-student-photos"
+    student_photo_max_upload_mb: int = 5
+    student_photo_signed_url_ttl_seconds: int = 600
     
     model_config = SettingsConfigDict(
         env_file=".env",
