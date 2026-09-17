@@ -8,6 +8,7 @@
 
 apps/api/secrets/
 *.json
+!data/discover_program_curriculum.json
 
 
 # Python
@@ -37,6 +38,7 @@ wheels/
 .pytest_cache/
 .coverage
 htmlcov/
+test_tmp/
 
 # Node / Next.js
 node_modules/

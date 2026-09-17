@@ -6,6 +6,8 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session as DBSession
 
+from app.services import google_meet as gm
+
 from app.db.models.mentor import Mentor
 from app.db.models.session import Session
 from app.db.models.session_resource import SessionResource
@@ -291,6 +293,9 @@ class SessionService:
             join_available_from=session.join_available_from,
             join_available_until=session.join_available_until,
             recording_url=session.recording_url,
+            meet_status=getattr(session, "meet_status", "not_scheduled"),
+            meet_link=getattr(session, "meet_link", None),
+            google_event_id=getattr(session, "google_event_id", None),
             published_at=session.published_at,
             created_at=session.created_at,
             updated_at=session.updated_at,
@@ -450,17 +455,39 @@ class SessionService:
             join_available_from=data.join_available_from,
             join_available_until=data.join_available_until,
             recording_url=data.recording_url,
+            meet_status="not_scheduled",
             published_at=datetime.now(timezone.utc) if data.status == "published" else None,
         )
         try:
             created = self.session_repo.create(session)
-            return self._build_detail_response(created)
         except IntegrityError as exc:
             self.session_repo.rollback()
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="Database integrity violation while creating session",
             ) from exc
+
+        # Auto-generate a Google Meet link when a schedule is provided.
+        if gm.is_enabled() and created.scheduled_at and created.duration_minutes:
+            try:
+                event_id, meet_link = gm.create_meet(
+                    title=created.title,
+                    scheduled_at=created.scheduled_at,
+                    duration_minutes=created.duration_minutes,
+                )
+                created.google_event_id = event_id
+                created.meet_link = meet_link
+                created.meet_status = "scheduled"
+                self.session_repo.update(created)
+            except Exception as exc:  # noqa: BLE001
+                import logging
+                logging.getLogger(__name__).error(
+                    "Google Meet creation failed for session %s: %s", created.id, exc
+                )
+                created.meet_status = "failed"
+                self.session_repo.update(created)
+
+        return self._build_detail_response(created)
 
     def update(self, session_id: UUID, data: SessionUpdate) -> SessionDetailResponse:
         session = self.session_repo.get_by_id(session_id)
@@ -490,18 +517,54 @@ class SessionService:
             )
         if update_data.get("status") == "published" and session.published_at is None:
             update_data["published_at"] = datetime.now(timezone.utc)
+
+        # Detect schedule change before applying updates.
+        schedule_changed = (
+            "scheduled_at" in update_data or "duration_minutes" in update_data
+        )
         for key, value in update_data.items():
             setattr(session, key, value)
 
         try:
             updated = self.session_repo.update(session)
-            return self._build_detail_response(updated)
         except IntegrityError as exc:
             self.session_repo.rollback()
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="Database integrity violation while updating session",
             ) from exc
+
+        # Sync Google Calendar when the schedule changed.
+        if gm.is_enabled() and schedule_changed and updated.scheduled_at and updated.duration_minutes:
+            try:
+                if updated.google_event_id:
+                    # Patch the existing event so the Meet link stays stable.
+                    gm.update_meet(
+                        google_event_id=updated.google_event_id,
+                        title=updated.title,
+                        scheduled_at=updated.scheduled_at,
+                        duration_minutes=updated.duration_minutes,
+                    )
+                else:
+                    # No existing event — create one now.
+                    event_id, meet_link = gm.create_meet(
+                        title=updated.title,
+                        scheduled_at=updated.scheduled_at,
+                        duration_minutes=updated.duration_minutes,
+                    )
+                    updated.google_event_id = event_id
+                    updated.meet_link = meet_link
+                    updated.meet_status = "scheduled"
+                    self.session_repo.update(updated)
+            except Exception as exc:  # noqa: BLE001
+                import logging
+                logging.getLogger(__name__).error(
+                    "Google Meet update failed for session %s: %s", updated.id, exc
+                )
+                updated.meet_status = "failed"
+                self.session_repo.update(updated)
+
+        return self._build_detail_response(updated)
 
     def delete(self, session_id: UUID) -> None:
         session = self.session_repo.get_by_id(session_id)
@@ -510,6 +573,17 @@ class SessionService:
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Session not found",
             )
+
+        # Remove the Calendar event so it doesn't linger on anyone's calendar.
+        if gm.is_enabled() and session.google_event_id:
+            try:
+                gm.cancel_meet(google_event_id=session.google_event_id)
+            except Exception as exc:  # noqa: BLE001
+                import logging
+                logging.getLogger(__name__).warning(
+                    "Google Meet cancel failed for session %s: %s", session_id, exc
+                )
+
         try:
             self.session_repo.delete(session)
         except IntegrityError as exc:
@@ -518,6 +592,48 @@ class SessionService:
                 status_code=status.HTTP_409_CONFLICT,
                 detail="Cannot delete session due to related records",
             ) from exc
+
+    def generate_meet(self, session_id: UUID) -> SessionDetailResponse:
+        """Manual retry: (re-)create a Google Meet for a session.
+
+        Called from POST /sessions/{id}/generate-meet.  Safe to call
+        even if a Meet already exists — will overwrite with a fresh event.
+        """
+        session = self.session_repo.get_by_id(session_id)
+        if not session:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Session not found",
+            )
+        if not session.scheduled_at or not session.duration_minutes:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Session must have a scheduled_at and duration_minutes before generating a Meet link.",
+            )
+        if not gm.is_enabled():
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Google Meet integration is not configured on this server.",
+            )
+        try:
+            event_id, meet_link = gm.create_meet(
+                title=session.title,
+                scheduled_at=session.scheduled_at,
+                duration_minutes=session.duration_minutes,
+            )
+        except Exception as exc:  # noqa: BLE001
+            session.meet_status = "failed"
+            self.session_repo.update(session)
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail=f"Google Meet generation failed: {exc}",
+            ) from exc
+
+        session.google_event_id = event_id
+        session.meet_link = meet_link
+        session.meet_status = "scheduled"
+        updated = self.session_repo.update(session)
+        return self._build_detail_response(updated)
 
     # -----------------------------------------------------------------------
     # Task operations

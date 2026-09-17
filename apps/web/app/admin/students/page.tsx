@@ -439,7 +439,6 @@ export default function AdminStudentsPage() {
                   <th className="px-6 py-3.5">Institution</th>
                   <th className="px-6 py-3.5">Batch</th>
                   <th className="px-6 py-3.5">Course & Branch</th>
-                  <th className="px-6 py-3.5">Grad Year</th>
                   <th className="px-6 py-3.5">Status</th>
                   <th className="px-6 py-3.5 text-right">Actions</th>
                 </tr>
@@ -503,9 +502,6 @@ export default function AdminStudentsPage() {
                         <div className="text-xs text-slate-400">
                           {student.profile?.branch || ""}
                         </div>
-                      </td>
-                      <td className="px-6 py-4 text-slate-700">
-                        {student.profile?.graduation_year || "—"}
                       </td>
                       <td className="px-6 py-4">
                         <select
@@ -670,12 +666,6 @@ export default function AdminStudentsPage() {
                       {selectedStudent.batch?.name || "Unassigned"}
                     </p>
                   </div>
-                  <div>
-                    <span className="text-xs font-medium text-slate-500">Graduation Year</span>
-                    <p className="mt-0.5 text-sm font-semibold text-slate-800">
-                      {selectedStudent.profile?.graduation_year || "—"}
-                    </p>
-                  </div>
                 </div>
               </div>
 
@@ -775,24 +765,7 @@ export default function AdminStudentsPage() {
                     </div>
                   )}
 
-                  {selectedStudent.profile?.photo_url ? (
-                    <a
-                      href={selectedStudent.profile.photo_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center justify-between rounded-xl border border-slate-200 bg-white p-3.5 shadow-sm transition hover:border-indigo-300 hover:bg-indigo-50/50"
-                    >
-                      <div className="flex items-center gap-2.5">
-                        <ExternalLink className="h-4 w-4 text-indigo-600" />
-                        <span className="text-xs font-semibold text-slate-800">Original Photo Link</span>
-                      </div>
-                      <ExternalLink className="h-3.5 w-3.5 text-slate-400" />
-                    </a>
-                  ) : (
-                    <div className="rounded-xl border border-dashed border-slate-200 p-3.5 text-xs text-slate-400">
-                      No photo link provided
-                    </div>
-                  )}
+
                 </div>
               </div>
 
@@ -1022,7 +995,7 @@ export default function AdminStudentsPage() {
                 </div>}
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-3">
+              <div className="grid gap-3 sm:grid-cols-2">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700">
                     Course
@@ -1046,23 +1019,6 @@ export default function AdminStudentsPage() {
                     value={formData.branch}
                     onChange={(e) =>
                       setFormData({ ...formData, branch: e.target.value })
-                    }
-                    className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700">
-                    Grad Year
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.graduation_year}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        graduation_year: Number(e.target.value),
-                      })
                     }
                     className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900"
                   />

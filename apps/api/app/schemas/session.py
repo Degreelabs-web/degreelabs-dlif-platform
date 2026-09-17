@@ -86,6 +86,10 @@ class SessionBase(BaseModel):
     join_available_from: datetime | None = None
     join_available_until: datetime | None = None
     recording_url: str | None = Field(default=None, max_length=2048)
+    # Google Meet
+    meet_status: str = Field(default="not_scheduled", max_length=50)
+    meet_link: str | None = Field(default=None, max_length=2048)
+    google_event_id: str | None = Field(default=None, max_length=255)
 
     @model_validator(mode="after")
     def validate_join_window(self):
@@ -113,6 +117,9 @@ class SessionUpdate(BaseModel):
     join_available_from: datetime | None = None
     join_available_until: datetime | None = None
     recording_url: str | None = Field(default=None, max_length=2048)
+    meet_status: str | None = Field(default=None, max_length=50)
+    meet_link: str | None = Field(default=None, max_length=2048)
+    google_event_id: str | None = Field(default=None, max_length=255)
 
     @model_validator(mode="after")
     def validate_join_window(self):

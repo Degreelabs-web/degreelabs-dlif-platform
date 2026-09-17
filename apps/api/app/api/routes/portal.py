@@ -31,6 +31,23 @@ def get_student_context(
 
 
 @router.get(
+    "/student-dashboard",
+)
+def get_student_dashboard(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    service = PortalExperienceService(db)
+    try:
+        return service.get_student_dashboard(current_user.id)
+    except LookupError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
+
+
+@router.get(
     "/mentor-context",
 )
 def get_mentor_context(

@@ -111,6 +111,7 @@ export default function MentorsPage() {
     bio: "",
     support_preferences: "",
     mentor_statement: "",
+    headshot_url: "",
   });
 
   const loadMentors = useCallback(async () => {
@@ -156,10 +157,15 @@ export default function MentorsPage() {
         bio: formData.bio || undefined,
         support_preferences: splitList(formData.support_preferences),
         mentoring_statement: formData.mentor_statement || undefined,
+        headshot_url: formData.headshot_url || undefined,
       };
       let savedMentor: Mentor;
       if (editingMentor) {
-        savedMentor = await updateMentor(editingMentor.id, profileData);
+        savedMentor = await updateMentor(editingMentor.id, {
+          full_name: formData.full_name || undefined,
+          email: formData.email || undefined,
+          ...profileData,
+        });
       } else {
         savedMentor = await createMentor({
           full_name: formData.full_name,
@@ -192,6 +198,7 @@ export default function MentorsPage() {
         bio: "",
         support_preferences: "",
         mentor_statement: "",
+        headshot_url: "",
       });
       await loadMentors();
     } catch (err) {
@@ -208,7 +215,7 @@ export default function MentorsPage() {
       designation: "", city: "", country: "", professional_headline: "",
       years_of_experience: 5, expertise: "", industries: "",
       linkedin_url: "", bio: "",
-      support_preferences: "", mentor_statement: "",
+      support_preferences: "", mentor_statement: "", headshot_url: "",
     });
     setHeadshotFile(null);
     setShowModal(true);
@@ -233,6 +240,7 @@ export default function MentorsPage() {
       bio: mentor.bio || "",
       support_preferences: mentor.support_preferences?.join(", ") || "",
       mentor_statement: mentor.mentoring_statement || mentor.mentor_statement || "",
+      headshot_url: mentor.headshot_url || mentor.professional_headshot_url || "",
     });
     setHeadshotFile(null);
     setShowModal(true);
@@ -478,12 +486,12 @@ export default function MentorsPage() {
 
       {selectedMentor && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-sm"
+          className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/55 p-4 backdrop-blur-sm"
           role="dialog"
           aria-modal="true"
           aria-labelledby="mentor-profile-title"
         >
-          <div className="max-h-[calc(100dvh-2rem)] w-full max-w-4xl overflow-y-auto rounded-3xl border border-slate-200 bg-white shadow-2xl shadow-slate-950/20">
+          <div className="mx-auto my-4 w-full max-w-4xl rounded-3xl border border-slate-200 bg-white shadow-2xl shadow-slate-950/20">
             <div className="relative overflow-hidden border-b border-brand-100 bg-gradient-to-br from-brand-50 via-white to-blue-50 p-6 sm:p-8">
               <div className="absolute -right-12 -top-16 h-48 w-48 rounded-full bg-brand-300/20 blur-3xl" />
               <button
@@ -697,8 +705,8 @@ export default function MentorsPage() {
       />
 
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="max-h-[90vh] w-full max-w-3xl space-y-4 overflow-y-auto rounded-2xl bg-white p-6 shadow-xl">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 p-4">
+          <div className="mx-auto my-4 w-full max-w-3xl space-y-4 rounded-2xl bg-white p-6 shadow-xl">
             <h2 className="text-lg font-bold text-slate-900">
               {editingMentor ? "Edit Mentor" : "Add Mentor Manually"}
             </h2>
@@ -707,8 +715,7 @@ export default function MentorsPage() {
                 <label className="block text-xs font-medium text-slate-700">Full Name</label>
                 <input
                   type="text"
-                  required
-                  disabled={Boolean(editingMentor)}
+                  required={!editingMentor}
                   value={formData.full_name}
                   onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
                   className="mt-1 w-full rounded-lg border border-slate-300 p-2 text-sm focus:border-slate-900 focus:outline-none"
@@ -717,11 +724,10 @@ export default function MentorsPage() {
 
               <div className="grid gap-3 sm:grid-cols-2">
                 <div>
-                  <label className="block text-xs font-medium text-slate-700">Email Address *</label>
+                  <label className="block text-xs font-medium text-slate-700">Email Address {!editingMentor && "*"}</label>
                   <input
                     type="email"
-                    required
-                    disabled={Boolean(editingMentor)}
+                    required={!editingMentor}
                     placeholder="mentor@company.com"
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
@@ -828,17 +834,28 @@ export default function MentorsPage() {
                 </div>
               </div>
 
-              <div>
+              <div className="space-y-2">
                 <label className="block text-xs font-medium text-slate-700">Professional Headshot</label>
                 <input
                   type="file"
                   accept="image/jpeg,image/png,image/webp"
                   onChange={(e) => setHeadshotFile(e.target.files?.[0] || null)}
-                  className="mt-1 w-full rounded-lg border border-slate-300 p-2 text-sm focus:border-slate-900 focus:outline-none"
+                  className="w-full rounded-lg border border-slate-300 p-2 text-sm focus:border-slate-900 focus:outline-none"
                 />
-                <p className="mt-1 text-xs text-slate-500">
-                  JPG, PNG, or WebP up to 5 MB. Photos are stored privately in the platform.
-                  {headshotFile ? ` Selected: ${headshotFile.name}` : editingMentor && mentorPhoto(editingMentor) ? " Leave blank to keep the current photo." : ""}
+                <p className="text-xs text-slate-400">Upload a file (JPG/PNG/WebP, max 5 MB) — or paste an image URL below.</p>
+                <input
+                  type="url"
+                  placeholder="https://drive.google.com/file/d/... or any image URL"
+                  value={formData.headshot_url}
+                  onChange={(e) => setFormData({ ...formData, headshot_url: e.target.value })}
+                  className="w-full rounded-lg border border-slate-300 p-2 text-sm focus:border-slate-900 focus:outline-none"
+                />
+                <p className="text-xs text-slate-400">
+                  {headshotFile
+                    ? `File selected: ${headshotFile.name} (overrides URL below)`
+                    : editingMentor && (mentorPhoto(editingMentor) || formData.headshot_url)
+                    ? "Current photo will be kept if both fields are left empty."
+                    : ""}
                 </p>
               </div>
 

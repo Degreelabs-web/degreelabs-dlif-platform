@@ -98,3 +98,9 @@ export async function createSessionResource(
     body: JSON.stringify(data),
   });
 }
+
+export async function retryGenerateMeet(sessionId: string): Promise<Session> {
+  return apiClient<Session>(`/sessions/${sessionId}/generate-meet`, {
+    method: "POST",
+  });
+}

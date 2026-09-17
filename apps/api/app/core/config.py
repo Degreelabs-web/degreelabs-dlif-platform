@@ -64,6 +64,18 @@ class Settings(BaseSettings):
     student_photo_storage_bucket: str = "dlif-student-photos"
     student_photo_max_upload_mb: int = 5
     student_photo_signed_url_ttl_seconds: int = 600
+
+    # Google Calendar / Meet integration (OAuth2 with a dedicated scheduling account)
+    # Set GOOGLE_MEET_ENABLED=true once credentials are configured.
+    google_meet_enabled: bool = False
+    google_calendar_client_id: str = ""
+    google_calendar_client_secret: str = ""
+    google_calendar_refresh_token: str = ""
+    # Calendar to create events on. Use 'primary' for the scheduling account's
+    # own calendar, or a specific calendar ID for a shared/resource calendar.
+    google_calendar_id: str = "primary"
+    # Timezone sent to Google Calendar API (e.g. 'Asia/Kolkata', 'UTC').
+    google_calendar_timezone: str = "UTC"
     
     model_config = SettingsConfigDict(
         env_file=".env",

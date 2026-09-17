@@ -143,6 +143,18 @@ export interface StudentPortalContext {
       student_id: string;
       name: string;
       role: string;
+      email?: string | null;
+      status?: string | null;
+      roll_no?: string | null;
+      institution_name?: string | null;
+      course?: string | null;
+      branch?: string | null;
+      current_year_semester?: string | null;
+      graduation_year?: number | null;
+      phone?: string | null;
+      gender?: string | null;
+      photo_url?: string | null;
+      batch_name?: string | null;
     }>;
   } | null;
   mentor: {
@@ -523,6 +535,10 @@ export interface Session {
   recording_url?: string | null;
   status: string;
   published_at?: string | null;
+  // Google Meet
+  meet_status?: string | null;
+  meet_link?: string | null;
+  google_event_id?: string | null;
   created_at: string;
   updated_at: string;
   tasks?: SessionTask[];

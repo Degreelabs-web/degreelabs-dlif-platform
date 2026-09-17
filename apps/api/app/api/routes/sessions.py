@@ -119,6 +119,25 @@ def delete_session(
     service.delete(session_id)
 
 
+@router.post(
+    "/{session_id}/generate-meet",
+    response_model=SessionDetailResponse,
+    summary="(Re)generate Google Meet link for a session",
+)
+def generate_meet(
+    session_id: UUID,
+    _: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """Admin-only: manually trigger or retry Google Meet creation.
+
+    Useful when automatic generation failed (network error, quota, etc.).
+    Safe to call even if a Meet link already exists — creates a fresh event.
+    """
+    service = SessionService(db)
+    return service.generate_meet(session_id)
+
+
 # ---------------------------------------------------------------------------
 # Discover Curriculum Generator
 # ---------------------------------------------------------------------------

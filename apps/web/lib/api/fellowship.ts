@@ -73,6 +73,8 @@ export async function createMentor(data: {
 export async function updateMentor(
   id: string,
   data: {
+    full_name?: string;
+    email?: string;
     phone?: string;
     bio?: string;
     expertise?: string[];

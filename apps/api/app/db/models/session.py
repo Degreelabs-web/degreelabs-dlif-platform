@@ -86,6 +86,16 @@ class Session(Base):
 
     recording_url: Mapped[str | None] = mapped_column(String(2048), nullable=True)
 
+    # Google Meet integration
+    google_event_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    meet_link: Mapped[str | None] = mapped_column(String(2048), nullable=True)
+    meet_status: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
+        default="not_scheduled",
+        server_default="not_scheduled",
+    )
+
     published_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )

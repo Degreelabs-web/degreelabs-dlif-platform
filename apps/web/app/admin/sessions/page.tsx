@@ -13,6 +13,9 @@ import {
   CheckCircle2,
   AlertCircle,
   ExternalLink,
+  RefreshCw,
+  Copy,
+  Check,
 } from "lucide-react";
 import {
   fetchSessions,
@@ -20,16 +23,33 @@ import {
   updateSession,
   deleteSession,
   generateDiscoverCurriculum,
+  retryGenerateMeet,
 } from "@/lib/api/sessions";
 import { fetchCohorts } from "@/lib/api/cohorts";
 import { Cohort, Session } from "@/types/fellowship";
 import { EntityActionsMenu } from "@/components/admin/EntityActionsMenu";
+
+function toISTInputValue(isoString: string): string {
+  if (!isoString) return "";
+  const d = new Date(isoString);
+  if (isNaN(d.getTime())) return "";
+  const istTime = new Date(d.getTime() + 330 * 60 * 1000);
+  return istTime.toISOString().slice(0, 16);
+}
+
+function fromISTInputToUTC(val: string): string {
+  if (!val) return "";
+  const d = new Date(`${val}:00+05:30`);
+  return isNaN(d.getTime()) ? val : d.toISOString();
+}
 
 export default function AdminSessionsPage() {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [cohorts, setCohorts] = useState<Cohort[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCohort, setSelectedCohort] = useState("");
+  const [retryingMeetId, setRetryingMeetId] = useState<string | null>(null);
+  const [copiedMeetId, setCopiedMeetId] = useState<string | null>(null);
 
   // Create Session Modal
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -123,15 +143,15 @@ export default function AdminSessionsPage() {
       session_type: session.session_type || "workshop",
       facilitator_name: session.facilitator_name || "",
       scheduled_at: session.scheduled_at
-        ? new Date(session.scheduled_at).toISOString().slice(0, 16)
+        ? toISTInputValue(session.scheduled_at)
         : "",
       duration_minutes: session.duration_minutes,
       meeting_url: session.meeting_url || "",
       join_available_from: session.join_available_from
-        ? new Date(session.join_available_from).toISOString().slice(0, 16)
+        ? toISTInputValue(session.join_available_from)
         : "",
       join_available_until: session.join_available_until
-        ? new Date(session.join_available_until).toISOString().slice(0, 16)
+        ? toISTInputValue(session.join_available_until)
         : "",
       recording_url: session.recording_url || "",
       status: session.status,
@@ -157,11 +177,11 @@ export default function AdminSessionsPage() {
         agenda: cleanOptional(sessionData.agenda),
         session_type: sessionData.session_type,
         facilitator_name: cleanOptional(sessionData.facilitator_name),
-        scheduled_at: sessionData.scheduled_at || undefined,
+        scheduled_at: sessionData.scheduled_at ? fromISTInputToUTC(sessionData.scheduled_at) : undefined,
         duration_minutes: Number(sessionData.duration_minutes),
         meeting_url: cleanOptional(sessionData.meeting_url),
-        join_available_from: sessionData.join_available_from || undefined,
-        join_available_until: sessionData.join_available_until || undefined,
+        join_available_from: sessionData.join_available_from ? fromISTInputToUTC(sessionData.join_available_from) : undefined,
+        join_available_until: sessionData.join_available_until ? fromISTInputToUTC(sessionData.join_available_until) : undefined,
         recording_url: cleanOptional(sessionData.recording_url),
         status: sessionData.status,
       };
@@ -205,6 +225,29 @@ export default function AdminSessionsPage() {
     } finally {
       setDeletingId(null);
     }
+  }
+
+  async function handleRetryMeet(session: Session) {
+    try {
+      setRetryingMeetId(session.id);
+      const updated = await retryGenerateMeet(session.id);
+      setSessions((prev) =>
+        prev.map((s) => (s.id === updated.id ? updated : s))
+      );
+    } catch (err) {
+      window.alert(
+        err instanceof Error ? err.message : "Failed to generate Meet link."
+      );
+    } finally {
+      setRetryingMeetId(null);
+    }
+  }
+
+  async function handleCopyMeetLink(session: Session) {
+    if (!session.meet_link) return;
+    await navigator.clipboard.writeText(session.meet_link);
+    setCopiedMeetId(session.id);
+    setTimeout(() => setCopiedMeetId(null), 2000);
   }
 
   async function handleGenerateCurriculum(e: React.FormEvent) {
@@ -361,7 +404,7 @@ export default function AdminSessionsPage() {
                       <CalendarDays className="h-3.5 w-3.5" />
                       <span>
                         {sess.scheduled_at
-                          ? new Date(sess.scheduled_at).toLocaleString()
+                          ? new Date(sess.scheduled_at).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })
                           : "Schedule to be confirmed"}
                       </span>
                     </div>
@@ -381,9 +424,56 @@ export default function AdminSessionsPage() {
                 </div>
 
                 <div className="flex items-center gap-2">
-                  {sess.meeting_url && (
+                  {/* Meet Status Chip */}
+                  {sess.meet_status === "scheduled" && sess.meet_link ? (
+                    <div className="flex items-center gap-1">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 border border-emerald-200">
+                        <CheckCircle2 className="h-3 w-3" />
+                        Meet: Scheduled
+                      </span>
+                      <button
+                        onClick={() => handleCopyMeetLink(sess)}
+                        title="Copy Meet link"
+                        className="rounded p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100"
+                      >
+                        {copiedMeetId === sess.id ? (
+                          <Check className="h-3.5 w-3.5 text-emerald-600" />
+                        ) : (
+                          <Copy className="h-3.5 w-3.5" />
+                        )}
+                      </button>
+                    </div>
+                  ) : sess.meet_status === "failed" ? (
+                    <button
+                      onClick={() => handleRetryMeet(sess)}
+                      disabled={retryingMeetId === sess.id}
+                      className="inline-flex items-center gap-1.5 rounded-full bg-rose-50 px-2.5 py-0.5 text-xs font-semibold text-rose-700 border border-rose-200 hover:bg-rose-100 disabled:opacity-60"
+                    >
+                      {retryingMeetId === sess.id ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <RefreshCw className="h-3 w-3" />
+                      )}
+                      Meet: Failed — Retry
+                    </button>
+                  ) : sess.scheduled_at && sess.meet_status === "not_scheduled" ? (
+                    <button
+                      onClick={() => handleRetryMeet(sess)}
+                      disabled={retryingMeetId === sess.id}
+                      className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-500 border border-slate-200 hover:bg-slate-200 disabled:opacity-60"
+                    >
+                      {retryingMeetId === sess.id ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <Video className="h-3 w-3" />
+                      )}
+                      Generate Meet
+                    </button>
+                  ) : null}
+
+                  {sess.meet_link && (
                     <a
-                      href={sess.meeting_url}
+                      href={sess.meet_link}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"

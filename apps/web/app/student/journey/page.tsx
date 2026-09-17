@@ -44,7 +44,7 @@ const JOURNEY_STEPS = [
     step: 4,
     id: "profile",
     title: "Student Profile Created",
-    description: "Academic profile, course, branch, and graduation details recorded.",
+    description: "Academic profile, course, branch, and enrollment details recorded.",
   },
   {
     step: 5,

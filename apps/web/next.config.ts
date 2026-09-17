@@ -1,7 +1,23 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  async redirects() {
+    return [
+      {
+        source: "/admin/mentors/external_specialists",
+        destination: "/admin/mentors/external-specialists",
+        permanent: false,
+      },
+    ];
+  },
+  async rewrites() {
+    return [
+      {
+        source: "/admin/mentors/external_specialists",
+        destination: "/admin/mentors/external-specialists",
+      },
+    ];
+  },
 };
 
 export default nextConfig;

@@ -1,296 +1,187 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
+import { fetchStudentDashboard } from "@/lib/api/student_dashboard";
 import { fetchStudentPortalContext } from "@/lib/api/fellowship";
 import { getStoredUser } from "@/lib/api/auth";
+import { StudentDashboardData } from "@/types/student_dashboard";
 import { StudentPortalContext } from "@/types/fellowship";
-import {
-  UsersRound,
-  UserRound,
-  Building2,
-  FolderGit2,
-  CheckCircle2,
-  School,
-  FileText,
-  Clock,
-  Sparkles,
-} from "lucide-react";
 
-const JOURNEY_STAGES = [
-  { id: "institution", label: "Institution" },
-  { id: "enrolled", label: "Enrolled" },
-  { id: "onboarded", label: "Onboarded" },
-  { id: "profile", label: "Profile Created" },
-  { id: "portal", label: "Portal Access" },
-  { id: "cohort", label: "Cohort Assigned" },
-  { id: "team", label: "Team Assigned" },
-  { id: "mentor", label: "Mentor Assigned" },
-  { id: "company", label: "Company Assigned" },
-  { id: "project", label: "Project Assigned" },
-  { id: "work", label: "Project Active" },
-];
+import { StudentDashboardHeader } from "@/components/student/StudentDashboardHeader";
+import { NextActionBanner } from "@/components/student/NextActionBanner";
+import { FourWeekMilestoneProgressBar } from "@/components/student/FourWeekMilestoneProgressBar";
+import { AssignedChallengeCard } from "@/components/student/AssignedChallengeCard";
+import { UpcomingSessionsCard } from "@/components/student/UpcomingSessionsCard";
+import { CapabilitiesSnapshotCard } from "@/components/student/CapabilitiesSnapshotCard";
+import { DeliverableChecklistCard } from "@/components/student/DeliverableChecklistCard";
 
-export default function StudentDashboard() {
-  const [context, setContext] = useState<StudentPortalContext | null>(null);
+import { UserRound, ChevronDown, ChevronUp, ShieldCheck } from "lucide-react";
+
+export default function StudentDashboardPage() {
+  const [dashboardData, setDashboardData] = useState<StudentDashboardData | null>(null);
+  const [portalContext, setPortalContext] = useState<StudentPortalContext | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [showProfileDetails, setShowProfileDetails] = useState(false);
 
   useEffect(() => {
-    async function loadStudentContext() {
+    async function loadData() {
       try {
         setLoading(true);
-        const data = await fetchStudentPortalContext();
-        setContext(data);
-      } catch (err) {
-        console.error("Failed to load student context", err);
-        setContext(null);
+        setError(null);
+        // Fetch student dashboard from API
+        const data = await fetchStudentDashboard();
+        setDashboardData(data);
+
+        // Also fetch legacy student portal context for profile info if needed
+        try {
+          const ctx = await fetchStudentPortalContext();
+          setPortalContext(ctx);
+        } catch {
+          // Non-blocking
+        }
+      } catch (err: any) {
+        console.error("Failed to load student dashboard data", err);
+        setError(err.message || "Failed to load fellowship dashboard");
       } finally {
         setLoading(false);
       }
     }
-    loadStudentContext();
+
+    loadData();
   }, []);
 
   if (loading) {
     return (
-      <div className="flex h-64 items-center justify-center">
-        <div className="flex flex-col items-center gap-2 text-sm text-slate-500">
-          <div className="h-6 w-6 animate-spin rounded-full border-2 border-slate-900 border-t-transparent" />
-          <span>Loading fellowship dashboard...</span>
+      <div className="flex h-96 items-center justify-center">
+        <div className="flex flex-col items-center gap-3 text-sm text-slate-500">
+          <div className="h-8 w-8 animate-spin rounded-full border-3 border-sky-600 border-t-transparent" />
+          <span className="font-medium text-slate-700">Loading Discover Fellowship Dashboard...</span>
         </div>
       </div>
     );
   }
 
+  if (error || !dashboardData) {
+    return (
+      <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-center space-y-3">
+        <h2 className="text-lg font-bold text-red-900">Dashboard Unavailable</h2>
+        <p className="text-sm text-red-700">
+          {error || "Could not retrieve your team's fellowship progress."}
+        </p>
+        <button
+          onClick={() => window.location.reload()}
+          className="rounded-lg bg-red-600 px-4 py-2 text-xs font-bold text-white hover:bg-red-700"
+        >
+          Retry Loading
+        </button>
+      </div>
+    );
+  }
+
   const storedUser = getStoredUser();
-  const studentName = context?.student?.full_name || storedUser?.full_name || "Fellow";
-  const institutionName = context?.student?.institution_name || "Institution Partner Pending";
+  const student = dashboardData.student;
+  const team = dashboardData.team;
+  const cohort = dashboardData.cohort;
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <p className="text-sm font-medium text-slate-500">Student Portal</p>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-            Welcome back, {studentName} 👋
-          </h1>
-          <p className="text-sm text-slate-600">
-            DegreeLabs Impact Fellowship &bull; {institutionName}
-          </p>
-        </div>
+    <div className="space-y-6 pb-12">
+      {/* 1. Header (Greeting, Week badge, Quick Deliverable & Team actions) */}
+      <StudentDashboardHeader data={dashboardData} />
 
-        <div className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 border border-emerald-200/50">
-          <Sparkles className="h-3.5 w-3.5" />
-          Active Fellow
-        </div>
-      </div>
+      {/* 2. Next Action Banner (Revisions warning / Gate milestone alert / Working evidence CTA) */}
+      {dashboardData.next_action && (
+        <NextActionBanner action={dashboardData.next_action} />
+      )}
 
-      <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="mb-4 flex items-center justify-between gap-3">
-          <div>
-            <h2 className="text-base font-bold text-slate-900">My Profile</h2>
-            <p className="text-xs text-slate-500">Your synchronized enrollment information</p>
-          </div>
-          <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-semibold capitalize text-emerald-700">
-            {context?.student?.status || "active"}
-          </span>
-        </div>
-        <dl className="grid gap-x-6 gap-y-4 text-sm sm:grid-cols-2 lg:grid-cols-3">
-          {[
-            ["Name", context?.student?.full_name],
-            ["Email", context?.student?.email],
-            ["Student ID", context?.student?.student_id],
-            ["Institution", context?.student?.institution_name],
-            ["Course", context?.student?.course],
-            ["Branch", context?.student?.branch],
-            ["Graduation year", context?.student?.graduation_year],
-            ["Phone", context?.student?.phone],
-          ].map(([label, value]) => (
-            <div key={String(label)} className="min-w-0">
-              <dt className="text-xs font-medium text-slate-500">{label}</dt>
-              <dd className="mt-1 break-words font-semibold text-slate-900">{value || "Not provided"}</dd>
-            </div>
-          ))}
-        </dl>
-      </section>
+      {/* 3. 4-Week Milestone Progress Bar (Named weeks, Strategic Questions, Gate status) */}
+      <FourWeekMilestoneProgressBar
+        weeks={dashboardData.weeks}
+        cohortName={cohort?.name}
+      />
 
-      {/* 11-Stage Student Journey Progress Stepper */}
-      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-base font-bold text-slate-900">Fellowship Journey Progression</h2>
-          <span className="text-xs font-semibold text-slate-500">Stage: Project Execution Active</span>
+      {/* 4. Main Two-Column Row (Assigned Challenge Card + Upcoming Sessions & Countdown) */}
+      <div className="grid gap-6 lg:grid-cols-12">
+        <div className="lg:col-span-7">
+          <AssignedChallengeCard
+            challenge={dashboardData.assigned_challenge}
+            metrics={dashboardData.metrics}
+            mentor={dashboardData.mentor}
+          />
         </div>
-
-        <div className="relative overflow-x-auto pb-2">
-          <div className="flex items-center min-w-[700px] justify-between">
-            {JOURNEY_STAGES.map((stage, idx) => (
-              <div key={stage.id} className="flex flex-col items-center text-center relative flex-1">
-                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-900 text-white text-xs font-bold ring-4 ring-slate-100">
-                  <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-                </div>
-                <span className="mt-2 text-[11px] font-semibold text-slate-800 line-clamp-1">
-                  {stage.label}
-                </span>
-                <span className="text-[9px] text-slate-400">Step {idx + 1}</span>
-              </div>
-            ))}
-          </div>
+        <div className="lg:col-span-5">
+          <UpcomingSessionsCard sessions={dashboardData.upcoming_sessions} />
         </div>
       </div>
 
-      {/* 3-Column Fellowship Entity Grid */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {/* 1. My Team & Cohort */}
-        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-            <div className="flex items-center gap-2">
-              <UsersRound className="h-5 w-5 text-slate-700" />
-              <h3 className="font-bold text-slate-900">My Team</h3>
-            </div>
-            <Link href="/student/team" className="text-xs text-blue-600 font-medium hover:underline">
-              View &rarr;
-            </Link>
-          </div>
+      {/* 5. 5 Core Tracked Capabilities Snapshot */}
+      <CapabilitiesSnapshotCard capabilities={dashboardData.capabilities} />
 
-          {context?.team ? (
-            <div className="space-y-3">
+      {/* 6. Current Week Deliverable Templates Checklist (+ Living Masters) */}
+      <DeliverableChecklistCard
+        templates={dashboardData.templates}
+        ongoingDeliverables={dashboardData.ongoing_deliverables}
+        currentWeekNumber={team.current_week}
+      />
+
+      {/* 7. Collapsible Profile & Credential Information */}
+      <div className="rounded-xl border border-slate-200 bg-white shadow-xs overflow-hidden">
+        <button
+          type="button"
+          onClick={() => setShowProfileDetails(!showProfileDetails)}
+          className="w-full flex items-center justify-between p-4 text-left hover:bg-slate-50 transition-colors"
+        >
+          <div className="flex items-center gap-2">
+            <UserRound className="h-4 w-4 text-slate-500" />
+            <span className="text-xs font-bold text-slate-800">
+              Fellow Profile &amp; Credential Pathway
+            </span>
+            <span className="text-[11px] text-slate-400">
+              &bull; {student.institution_name} &bull; {student.student_id || "Active"}
+            </span>
+          </div>
+          <div className="flex items-center gap-1 text-xs text-slate-500 font-medium">
+            <span>{showProfileDetails ? "Hide" : "View"} Details</span>
+            {showProfileDetails ? (
+              <ChevronUp className="h-4 w-4" />
+            ) : (
+              <ChevronDown className="h-4 w-4" />
+            )}
+          </div>
+        </button>
+
+        {showProfileDetails && (
+          <div className="p-5 border-t border-slate-100 bg-slate-50/50 space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 text-xs">
               <div>
-                <p className="text-lg font-extrabold text-slate-900">{context.team.name}</p>
-                <p className="text-xs text-slate-500">
-                  Cohort: <strong>{context.cohort?.name || "Fellowship Cohort"}</strong>
-                </p>
+                <span className="text-slate-500 block">Fellow Name</span>
+                <span className="font-bold text-slate-900">{student.full_name}</span>
               </div>
-
-              <div className="space-y-1.5 pt-1">
-                <p className="text-xs font-medium text-slate-500">Teammates ({context.team.members.length}):</p>
-                {context.team.members.map((m, idx) => (
-                  <div key={idx} className="flex items-center justify-between text-xs py-1 px-2 rounded bg-slate-50">
-                    <span className="font-medium text-slate-800">{m.name}</span>
-                    <span className="text-[10px] uppercase font-bold text-slate-500">{m.role}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <p className="text-xs text-slate-500">You have not been assigned to a team yet.</p>
-          )}
-        </div>
-
-        {/* 2. Assigned Mentor */}
-        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-            <div className="flex items-center gap-2">
-              <UserRound className="h-5 w-5 text-slate-700" />
-              <h3 className="font-bold text-slate-900">Assigned Mentor</h3>
-            </div>
-            <Link href="/student/mentor" className="text-xs text-blue-600 font-medium hover:underline">
-              View &rarr;
-            </Link>
-          </div>
-
-          {context?.mentor ? (
-            <div className="space-y-3">
               <div>
-                <p className="text-lg font-extrabold text-slate-900">{context.mentor.full_name}</p>
-                <p className="text-xs text-slate-600 font-medium">
-                  {context.mentor.designation || "Senior Advisor"} &bull; {context.mentor.company_name}
-                </p>
+                <span className="text-slate-500 block">Email Address</span>
+                <span className="font-bold text-slate-900">{student.email}</span>
               </div>
-
-              {context.mentor.expertise && (
-                <div className="flex flex-wrap gap-1">
-                  {context.mentor.expertise.map((skill, idx) => (
-                    <span key={idx} className="rounded bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-700">
-                      {skill}
-                    </span>
-                  ))}
-                </div>
-              )}
-
-              <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
-                <span className="text-slate-500">{context.mentor.email}</span>
-                <span className="rounded-full bg-emerald-50 text-emerald-700 px-2 py-0.5 text-[10px] font-bold">
-                  Weekly Sync
-                </span>
-              </div>
-            </div>
-          ) : (
-            <p className="text-xs text-slate-500">Your team will be assigned an industry mentor shortly.</p>
-          )}
-        </div>
-
-        {/* 3. Assigned Company & Project */}
-        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-            <div className="flex items-center gap-2">
-              <FolderGit2 className="h-5 w-5 text-slate-700" />
-              <h3 className="font-bold text-slate-900">Assigned Project</h3>
-            </div>
-            <Link href="/student/project" className="text-xs text-blue-600 font-medium hover:underline">
-              View &rarr;
-            </Link>
-          </div>
-
-          {context?.project ? (
-            <div className="space-y-3">
               <div>
-                <p className="text-base font-extrabold text-slate-900 line-clamp-1">{context.project.title}</p>
-                <p className="text-xs text-slate-600 flex items-center gap-1 mt-0.5">
-                  <Building2 className="h-3 w-3 text-slate-400" />
-                  <span>{context.company?.name || "Sponsoring Company"}</span>
-                  <span className="text-slate-400">&bull; {context.company?.industry}</span>
-                </p>
+                <span className="text-slate-500 block">Assigned Institution</span>
+                <span className="font-bold text-slate-900">{student.institution_name}</span>
               </div>
-
-              <p className="text-xs text-slate-600 line-clamp-2">{context.project.description}</p>
-
-              <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-                <span>Timeline: {context.project.start_date} &rarr; {context.project.end_date}</span>
-                <span className="rounded bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-700 capitalize">
-                  {context.project.difficulty}
-                </span>
+              <div>
+                <span className="text-slate-500 block">Fellowship Cohort</span>
+                <span className="font-bold text-slate-900">{cohort.name}</span>
               </div>
             </div>
-          ) : (
-            <p className="text-xs text-slate-500">Company project assignment pending.</p>
-          )}
-        </div>
-      </div>
 
-      {/* Progress & Activity Bar */}
-      <div className="grid gap-4 sm:grid-cols-3">
-        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm flex items-center gap-4">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
-            <Clock className="h-5 w-5" />
+            <div className="pt-3 border-t border-slate-200/60 flex items-center justify-between text-xs">
+              <span className="flex items-center gap-1.5 text-emerald-700 font-semibold">
+                <ShieldCheck className="h-4 w-4" />
+                <span>Credential Pathway: Discover (Certificate in Problem Analysis &amp; Solution Architecture)</span>
+              </span>
+              <span className="text-slate-500 text-[11px]">
+                Enrolled via DegreeLabs National Fellowship Network
+              </span>
+            </div>
           </div>
-          <div>
-            <p className="text-xs font-medium text-slate-500">Sessions Attended</p>
-            <p className="text-xl font-bold text-slate-900">{context?.stats?.sessions_attended || 0} Sessions</p>
-          </div>
-        </div>
-
-        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm flex items-center gap-4">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
-            <FileText className="h-5 w-5" />
-          </div>
-          <div>
-            <p className="text-xs font-medium text-slate-500">Project Submissions</p>
-            <p className="text-xl font-bold text-slate-900">{context?.stats?.submissions_count || 0} Delivered</p>
-          </div>
-        </div>
-
-        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm flex items-center gap-4">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-50 text-purple-600">
-            <School className="h-5 w-5" />
-          </div>
-          <div>
-            <p className="text-xs font-medium text-slate-500">Institution & Graduation</p>
-            <p className="text-sm font-bold text-slate-900 truncate">
-              {context?.student?.graduation_year ? `Class of ${context.student.graduation_year}` : "Pending Assignment"}
-            </p>
-          </div>
-        </div>
+        )}
       </div>
     </div>
   );

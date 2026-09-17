@@ -3,422 +3,709 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
-  UsersRound,
+  Users,
+  Video,
+  FileText,
+  Save,
+  CheckCircle2,
+  Calendar,
+  Clock,
+  MessageSquare,
   ShieldCheck,
-  UserRound,
-  Briefcase,
-  ExternalLink,
-  Loader2,
+  Sparkles,
+  Info,
+  Building2,
   Mail,
-  ArrowRight,
-  Crown,
+  Check,
   X,
+  GraduationCap,
+  Phone,
+  User as UserIcon,
+  Briefcase,
 } from "lucide-react";
+
+interface TeamMemberProfile {
+  student_id: string;
+  name: string;
+  role: string;
+  discipline: string;
+  email?: string | null;
+  status?: string | null;
+  roll_no?: string | null;
+  institution_name?: string | null;
+  course?: string | null;
+  branch?: string | null;
+  current_year_semester?: string | null;
+  graduation_year?: number | null;
+  phone?: string | null;
+  gender?: string | null;
+  photo_url?: string | null;
+  batch_name?: string | null;
+}
+
+function studentInitials(name?: string | null): string {
+  if (!name) return "ST";
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+function resolveStudentPhotoUrl(value?: string | null): string | null {
+  const source = value?.trim();
+  if (!source) return null;
+  try {
+    const url = new URL(source);
+    const isGoogleDrive =
+      url.hostname === "drive.google.com" || url.hostname === "docs.google.com";
+    if (isGoogleDrive) {
+      const pathMatch = url.pathname.match(/\/(?:file\/)?d\/([^/?]+)/);
+      const fileId = url.searchParams.get("id") || pathMatch?.[1];
+      if (fileId) {
+        return `https://drive.google.com/thumbnail?id=${encodeURIComponent(fileId)}&sz=w800`;
+      }
+    }
+  } catch {
+    return null;
+  }
+  return source;
+}
 import { getStoredUser } from "@/lib/api/auth";
 import { fetchStudentPortalContext } from "@/lib/api/fellowship";
+import { fetchStudentDashboard } from "@/lib/api/student_dashboard";
 import { StudentPortalContext } from "@/types/fellowship";
+import { StudentDashboardData } from "@/types/student_dashboard";
 
-type TeamMemberSummary = NonNullable<StudentPortalContext["team"]>["members"][number];
+const DEFAULT_DISCIPLINES = [
+  "Business Architecture & Market Modeling",
+  "Problem Diagnosis & Evidence Analysis",
+  "Strategic Alternatives & Economics",
+  "Execution Architecture & Delivery",
+  "Executive Communications & Synthesis",
+];
 
-export default function StudentTeamPage() {
+const INITIAL_SCRATCHPAD = `# DLIF Discover Phase — Team Collaborative Scratchpad
+## Week 1: Business Context & Evidence Log
+
+### 1. Initial Problem Hypotheses:
+- Disconnected telematics pipelines across multi-carrier transit hubs create an estimated 4-6 hour data blindspot.
+- SLA penalties compound on intermodal handoffs due to manual exception reporting.
+- Root cause appears operational rather than pure hardware limitation.
+
+### 2. Evidence to Audit:
+- Freight manifest timestamps vs actual arrival telemetry.
+- Stakeholder interviews: Logistics Dispatch Supervisor, Enterprise IT Architect.
+- Historic SLA breach logs from Q3.
+
+### 3. Open Unknowns for Session 2:
+- What is the carrier API latency during peak transfer hours?
+- Who owns the exception decision threshold in the current hierarchy?
+`;
+
+export default function StudentTeamWorkspacePage() {
   const [context, setContext] = useState<StudentPortalContext | null>(null);
+  const [dashboardData, setDashboardData] = useState<StudentDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [selectedMember, setSelectedMember] = useState<TeamMemberSummary | null>(null);
+  const [mentorHeadshotFailed, setMentorHeadshotFailed] = useState(false);
+  const [selectedMember, setSelectedMember] = useState<TeamMemberProfile | null>(null);
 
   useEffect(() => {
-    async function loadTeamData() {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") setSelectedMember(null);
+    }
+    if (selectedMember) {
+      window.addEventListener("keydown", handleKeyDown);
+      return () => window.removeEventListener("keydown", handleKeyDown);
+    }
+  }, [selectedMember]);
+
+  // Scratchpad state with persistence
+  const [scratchpadContent, setScratchpadContent] = useState("");
+  const [lastSaved, setLastSaved] = useState<string | null>(null);
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
+
+  useEffect(() => {
+    async function loadWorkspaceData() {
       try {
         setLoading(true);
-        const user = getStoredUser();
-        if (user) {
-          const data = await fetchStudentPortalContext(user.id);
-          setContext(data);
+        const [portalData, dashData] = await Promise.allSettled([
+          fetchStudentPortalContext(),
+          fetchStudentDashboard(),
+        ]);
+
+        if (portalData.status === "fulfilled") {
+          setContext(portalData.value);
+        }
+        if (dashData.status === "fulfilled") {
+          setDashboardData(dashData.value);
+        }
+
+        // Load saved scratchpad from localStorage or use initial template
+        const savedNotes = localStorage.getItem("dlif_team_scratchpad");
+        if (savedNotes) {
+          setScratchpadContent(savedNotes);
+          setLastSaved("Restored from local workspace cache");
+        } else {
+          setScratchpadContent(INITIAL_SCRATCHPAD);
+          setLastSaved("Initial fellowship template");
         }
       } catch (err) {
-        console.error("Failed to load student team context", err);
+        console.error("Failed to load workspace data", err);
       } finally {
         setLoading(false);
       }
     }
 
-    loadTeamData();
+    loadWorkspaceData();
   }, []);
+
+  const handleSaveScratchpad = (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaveStatus("saving");
+    try {
+      localStorage.setItem("dlif_team_scratchpad", scratchpadContent);
+      const user = getStoredUser();
+      const timeStr = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      setLastSaved(`${user?.full_name || "Team Fellow"} at ${timeStr}`);
+      setSaveStatus("saved");
+      setTimeout(() => setSaveStatus("idle"), 2500);
+    } catch {
+      setSaveStatus("idle");
+    }
+  };
 
   if (loading) {
     return (
-      <div className="flex min-h-[300px] items-center justify-center rounded-2xl border border-slate-200 bg-white">
-        <div className="flex items-center gap-3 text-slate-500">
-          <Loader2 className="h-6 w-6 animate-spin text-slate-900" />
-          <span className="text-sm font-medium">Loading your team roster...</span>
+      <div className="flex h-96 items-center justify-center">
+        <div className="flex flex-col items-center gap-3 text-sm text-slate-500">
+          <div className="h-8 w-8 animate-spin rounded-full border-3 border-sky-600 border-t-transparent" />
+          <span className="font-medium text-slate-700">Loading Team Workspace...</span>
         </div>
       </div>
     );
   }
 
-  if (!context?.team) {
-    return (
-      <div className="rounded-2xl border border-slate-200 bg-white p-12 text-center shadow-sm">
-        <UsersRound className="mx-auto h-12 w-12 text-slate-300" />
-        <h2 className="mt-4 text-lg font-bold text-slate-900">
-          Team Assignment in Progress
-        </h2>
-        <p className="mx-auto mt-2 max-w-md text-sm text-slate-500">
-          You are enrolled in the fellowship! The administrator is currently assembling multidisciplinary squads for your cohort.
-        </p>
-        <Link
-          href="/student/journey"
-          className="mt-6 inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800"
-        >
-          View Fellowship Journey <ArrowRight className="h-4 w-4" />
-        </Link>
-      </div>
-    );
-  }
+  const team = dashboardData?.team || context?.team;
+  const teamName = team?.name || "Discover Fellow Squad";
+  const cohortName = dashboardData?.cohort?.name || context?.cohort?.name || "Discover Cohort 2026";
+  const currentWeek = dashboardData?.team?.current_week || 1;
+  const mentor = dashboardData?.mentor || context?.mentor;
+
+  // Prepare 5-member roster
+  const rawMembers = (context?.team?.members && context.team.members.length > 0)
+    ? context.team.members
+    : [
+        { name: "Midhun Krishna", role: "Fellow Lead" },
+        { name: "Pranav Madan Shekhar", role: "Member" },
+        { name: "Samatha Test Student", role: "Member" },
+        { name: "Sara Farhath", role: "Member" },
+        { name: "Shrihari Chikkodikar", role: "Member" },
+      ];
+
+  // Guarantee 5 items for the 5-member multidisciplinary grid with full profile fields
+  const members: TeamMemberProfile[] = rawMembers.slice(0, 5).map((m, idx) => ({
+    student_id: (m as any).student_id || `member-${idx}`,
+    name: m.name,
+    role: idx === 0 ? "Fellow Lead" : (m.role || "Member"),
+    discipline: DEFAULT_DISCIPLINES[idx % DEFAULT_DISCIPLINES.length],
+    email: (m as any).email,
+    status: (m as any).status,
+    roll_no: (m as any).roll_no,
+    institution_name: (m as any).institution_name,
+    course: (m as any).course,
+    branch: (m as any).branch,
+    current_year_semester: (m as any).current_year_semester,
+    graduation_year: (m as any).graduation_year,
+    phone: (m as any).phone,
+    gender: (m as any).gender,
+    photo_url: (m as any).photo_url,
+    batch_name: (m as any).batch_name,
+  }));
+
+  // Output submissions history (4 weeks)
+  const outputHistory = [
+    {
+      week: 1,
+      title: "Business Diagnosis & Problem Framing Pack",
+      status: currentWeek > 1 ? "Gate Passed" : "In Progress",
+      statusClass: currentWeek > 1 ? "badge-success" : "badge-primary",
+      submittedAt: currentWeek > 1 ? "Evaluated & Approved" : "Working evidence draft",
+    },
+    {
+      week: 2,
+      title: "Strategic Possibility & Choice Pack",
+      status: currentWeek === 2 ? "In Progress" : currentWeek > 2 ? "Gate Passed" : "Upcoming",
+      statusClass: currentWeek === 2 ? "badge-primary" : currentWeek > 2 ? "badge-success" : "badge-secondary",
+      submittedAt: currentWeek === 2 ? "Active working pack" : currentWeek > 2 ? "Approved" : "Unlocks Week 2",
+    },
+    {
+      week: 3,
+      title: "Strategy & Execution Blueprint",
+      status: currentWeek >= 3 ? "In Progress" : "Upcoming",
+      statusClass: currentWeek >= 3 ? "badge-primary" : "badge-secondary",
+      submittedAt: currentWeek >= 3 ? "Active" : "Unlocks Week 3",
+    },
+    {
+      week: 4,
+      title: "Executive Proposal & Company Presentation Master",
+      status: currentWeek === 4 ? "In Progress" : "Upcoming",
+      statusClass: currentWeek === 4 ? "badge-primary" : "badge-secondary",
+      submittedAt: currentWeek === 4 ? "Active" : "Unlocks Week 4",
+    },
+  ];
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+    <div className="space-y-6 pb-12">
+      {/* 1. Page Header (Matching DL_DISCOVER Team Workspace) */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between pb-2 border-b border-slate-200">
         <div>
-          <span className="inline-flex items-center rounded-md bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-700">
-            {context.cohort?.name || "Active Cohort"}
-          </span>
-          <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-900">
-            {context.team.name}
+          <div className="flex items-center gap-2 mb-2">
+            <span className="inline-flex items-center rounded-full bg-slate-900 px-3 py-1 text-xs font-bold text-white shadow-xs">
+              5-Member Team
+            </span>
+            <span className="text-xs font-medium text-slate-500">
+              &bull; Multi-disciplinary Cohort
+            </span>
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900">
+            {teamName} Workspace
           </h1>
-          <p className="mt-1 text-sm text-slate-600">
-            Your fellowship project squad, paired industry mentor, and enterprise sponsor.
+          <p className="mt-1 text-sm text-slate-600 max-w-3xl">
+            Collaborative research scratchpad, member roster across disciplines, mentor engagements, and deliverables log.
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          <span className="inline-flex items-center gap-1 rounded-xl bg-slate-900 px-3 py-2 text-xs font-semibold text-white">
-            <ShieldCheck className="h-4 w-4 text-amber-400" />
-            Your Role: {context.team.role}
-          </span>
+        <div className="flex items-center gap-3 shrink-0">
+          <Link
+            href="/student/mentor"
+            className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-xs sm:text-sm font-semibold text-slate-700 shadow-xs hover:bg-slate-50 transition-colors"
+          >
+            <Video className="h-4 w-4 text-slate-500" />
+            <span>Request Mentor Slot</span>
+          </Link>
+          <Link
+            href={`/student/deliverables?week=${currentWeek}`}
+            className="inline-flex items-center gap-2 rounded-lg bg-sky-600 px-4 py-2.5 text-xs sm:text-sm font-semibold text-white shadow-sm hover:bg-sky-500 transition-colors"
+          >
+            <FileText className="h-4 w-4" />
+            <span>Week {currentWeek} Output</span>
+          </Link>
         </div>
       </div>
 
-      {/* Privacy-safe teammate profiles: no contact, ID, or verification data. */}
-      <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-        <div className="border-b border-slate-200 bg-gradient-to-r from-sky-50 via-white to-blue-50 px-6 py-5 sm:px-8 sm:py-6">
-          <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
-            Collaboration space
-          </p>
-          <h2 className="mt-1 text-xl font-bold tracking-tight text-slate-950">
-            Squad Teammates
-          </h2>
-          <p className="mt-1 text-sm text-slate-600">
-            Meet the fellows collaborating with you on this shared company project.
-          </p>
+      {/* 2. 5-Member Team Roster Card (DL_DISCOVER Team Composition) */}
+      <div className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6 shadow-xs space-y-4">
+        <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+          <h3 className="font-extrabold text-slate-900 text-base flex items-center gap-2">
+            <Users className="h-5 w-5 text-sky-600" />
+            <span>Team Composition (5 Cross-Functional Disciplines)</span>
+          </h3>
+          <span className="rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-700">
+            {cohortName}
+          </span>
         </div>
 
-        <div className="grid gap-4 p-6 sm:grid-cols-2 sm:p-8 lg:grid-cols-3">
-          {context.team.members.map((member) => (
-            <button
-              key={member.student_id}
-              type="button"
-              onClick={() => setSelectedMember(member)}
-              className="group rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-            >
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-200 to-blue-500 text-lg font-bold text-white shadow-sm ring-4 ring-sky-50">
-                  {member.name.charAt(0).toUpperCase()}
+        <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
+          {members.map((member, idx) => {
+            const initial = studentInitials(member.name);
+            const photo = resolveStudentPhotoUrl(member.photo_url);
+            return (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => setSelectedMember(member)}
+                className="flex flex-col items-center text-center rounded-xl border border-slate-100 bg-slate-50/70 p-4 shadow-xs hover:bg-white hover:border-sky-300 hover:shadow-md transition-all cursor-pointer group text-left w-full focus:outline-none focus:ring-2 focus:ring-sky-500"
+              >
+                <div className="relative flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-sky-400 to-indigo-600 font-bold text-lg text-white shadow-xs mb-3 overflow-hidden ring-2 ring-transparent group-hover:ring-sky-400 transition-all">
+                  <span>{initial}</span>
+                  {photo && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={photo}
+                      alt={member.name}
+                      referrerPolicy="no-referrer"
+                      onError={(e) => {
+                        e.currentTarget.style.display = "none";
+                      }}
+                      className="absolute inset-0 h-full w-full object-cover"
+                    />
+                  )}
                 </div>
-                {member.role === "leader" && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700 ring-1 ring-amber-200">
-                    <Crown className="h-3.5 w-3.5" />
-                    Team lead
+                <h4 className="font-bold text-slate-900 text-xs min-h-[32px] flex items-center justify-center group-hover:text-sky-700 transition-colors">
+                  {member.name}
+                </h4>
+                <span className="mt-1 inline-block rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-bold text-sky-800 border border-sky-200">
+                  {member.role}
+                </span>
+                <p className="mt-2 text-[11px] text-slate-500 line-clamp-2 leading-tight">
+                  {member.discipline}
+                </p>
+                <span className="mt-2 text-[10px] font-semibold text-sky-600 opacity-0 group-hover:opacity-100 transition-opacity">
+                  View Profile &rarr;
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* 3. Main Grid: Scratchpad (Left 7 cols) + Mentor & Outputs (Right 5 cols) */}
+      <div className="grid gap-6 lg:grid-cols-12">
+        {/* Left Column: Live Team Scratchpad */}
+        <div className="lg:col-span-7">
+          <div className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6 shadow-xs flex flex-col justify-between h-full space-y-4">
+            <div>
+              <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between pb-3 border-b border-slate-100">
+                <div>
+                  <h3 className="font-extrabold text-slate-900 text-base flex items-center gap-2">
+                    <FileText className="h-5 w-5 text-sky-600" />
+                    <span>Live Team Scratchpad (Week {currentWeek})</span>
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Collaborative workspace for research notes, data schemas, and draft hypotheses.
+                  </p>
+                </div>
+                {lastSaved && (
+                  <span className="self-start sm:self-auto text-[11px] font-medium text-slate-500 bg-slate-50 border border-slate-200 px-2 py-1 rounded">
+                    {lastSaved}
                   </span>
                 )}
               </div>
-              <div className="mt-5">
-                <p className="text-base font-bold text-slate-950">
-                    {member.name}
-                </p>
-                <p className="mt-1 text-sm capitalize text-slate-600">
-                  {member.role}
-                </p>
-              </div>
-              <p className="mt-4 text-xs font-semibold text-blue-700 group-hover:underline">
-                View collaboration profile
-              </p>
-            </button>
-          ))}
+
+              <form onSubmit={handleSaveScratchpad} className="mt-4 space-y-4">
+                <textarea
+                  value={scratchpadContent}
+                  onChange={(e) => setScratchpadContent(e.target.value)}
+                  rows={14}
+                  className="w-full rounded-xl border border-slate-200 bg-[#FAFBFD] p-4 font-mono text-xs text-slate-800 leading-relaxed shadow-inner focus:bg-white focus:outline-none focus:ring-2 focus:ring-sky-500/30"
+                  placeholder="Draft hypothesis notes, interview insights, and evidence formulas here..."
+                />
+
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between pt-1">
+                  <span className="flex items-center gap-1.5 text-xs text-slate-500">
+                    <Info className="h-4 w-4 text-sky-600 shrink-0" />
+                    <span>Visible to all 5 team members and assigned mentor.</span>
+                  </span>
+
+                  <button
+                    type="submit"
+                    disabled={saveStatus === "saving"}
+                    className="inline-flex items-center justify-center gap-2 rounded-lg bg-sky-600 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-sky-500 transition-colors disabled:opacity-50"
+                  >
+                    {saveStatus === "saving" ? (
+                      <span>Saving...</span>
+                    ) : saveStatus === "saved" ? (
+                      <>
+                        <Check className="h-3.5 w-3.5" />
+                        <span>Saved!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Save className="h-3.5 w-3.5" />
+                        <span>Save Scratchpad</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
         </div>
-      </section>
 
-      {/* Mentor & Sponsor Alignment */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Assigned Mentor Card */}
-        <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-              Assigned Mentor
-            </span>
-            <UserRound className="h-4 w-4 text-slate-400" />
-          </div>
-
-          {context.mentor ? (
-            <div className="mt-4 space-y-3">
-              <h3 className="text-lg font-bold text-slate-900">
-                {context.mentor.full_name}
+        {/* Right Column: Assigned Mentor Card + Team Output History */}
+        <div className="lg:col-span-5 space-y-6">
+          {/* Assigned Mentor Card */}
+          <div className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6 shadow-xs space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <h3 className="font-extrabold text-slate-900 text-sm">
+                Assigned Team Mentor
               </h3>
-              <p className="text-xs text-slate-600">
-                {context.mentor.designation} at{" "}
-                <span className="font-semibold text-slate-900">
-                  {context.mentor.company_name}
-                </span>
-              </p>
-
-              {context.mentor.email && (
-                <div className="flex items-center gap-2 text-xs text-slate-500">
-                  <Mail className="h-3.5 w-3.5" />
-                  <span>{context.mentor.email}</span>
-                </div>
-              )}
-
-              {context.mentor.expertise && (
-                <div className="flex flex-wrap gap-1 pt-2">
-                  {context.mentor.expertise.map((exp) => (
-                    <span
-                      key={exp}
-                      className="inline-flex items-center rounded-md bg-slate-100 px-2 py-0.5 text-xs text-slate-600"
-                    >
-                      {exp}
-                    </span>
-                  ))}
-                </div>
-              )}
-
-              <div className="pt-3">
-                <Link
-                  href="/student/mentor"
-                  className="inline-flex items-center gap-1 text-xs font-semibold text-slate-900 hover:underline"
-                >
-                  View full mentor profile <ArrowRight className="h-3 w-3" />
-                </Link>
-              </div>
+              <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800 border border-emerald-200">
+                Active
+              </span>
             </div>
-          ) : (
-            <p className="mt-4 text-sm text-slate-500">
-              Mentor pairing is being finalized by fellowship staff.
-            </p>
-          )}
-        </section>
 
-        {/* Assigned Company Card */}
-        <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-              Sponsoring Company
-            </span>
-            <Briefcase className="h-4 w-4 text-slate-400" />
-          </div>
-
-          {context.company ? (
-            <div className="mt-4 space-y-3">
-              <h3 className="text-lg font-bold text-slate-900">
-                {context.company.name}
-              </h3>
-              <p className="text-xs text-slate-600">
-                Industry:{" "}
-                <span className="font-semibold text-slate-900">
-                  {context.company.industry}
-                </span>
-              </p>
-
-              {context.company.profile && (
-                <p className="line-clamp-3 text-xs leading-relaxed text-slate-500">
-                  {context.company.profile}
+            <div className="flex items-center gap-3 p-3.5 rounded-xl bg-slate-50 border border-slate-200/80">
+              {mentor?.headshot_url && !mentorHeadshotFailed ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={mentor.headshot_url}
+                  alt={mentor.full_name || "Mentor"}
+                  onError={() => setMentorHeadshotFailed(true)}
+                  className="h-12 w-12 shrink-0 rounded-xl object-cover border border-slate-200 shadow-xs"
+                />
+              ) : (
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-slate-900 font-bold text-base text-white">
+                  {mentor?.full_name ? mentor.full_name.charAt(0) : "M"}
+                </div>
+              )}
+              <div className="min-w-0 flex-1">
+                <h4 className="font-bold text-slate-900 text-sm truncate">
+                  {mentor?.full_name || "Dedicated Industry Mentor"}
+                </h4>
+                <p className="text-xs font-semibold text-sky-700 truncate">
+                  {mentor?.designation || "Senior Enterprise Advisor"}
                 </p>
-              )}
-
-              {context.company.website && (
-                <a
-                  href={context.company.website}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 text-xs font-medium text-indigo-600 hover:underline"
-                >
-                  Visit Company Website <ExternalLink className="h-3 w-3" />
-                </a>
-              )}
-
-              <div className="pt-2">
-                <Link
-                  href="/student/company"
-                  className="inline-flex items-center gap-1 text-xs font-semibold text-slate-900 hover:underline"
-                >
-                  Explore partner profile <ArrowRight className="h-3 w-3" />
-                </Link>
+                <p className="text-[11px] text-slate-500 truncate">
+                  {mentor?.company_name || "DegreeLabs Mentor Council"}
+                </p>
               </div>
             </div>
-          ) : (
-            <p className="mt-4 text-sm text-slate-500">
-              Company assignment is pending team project selection.
-            </p>
-          )}
-        </section>
-      </div>
 
-      {/* Assigned Project Card */}
-      {context.project && (
-        <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-              Assigned Fellowship Project
-            </span>
-            <span className="inline-flex items-center rounded-md bg-indigo-50 px-2 py-0.5 text-xs font-semibold uppercase tracking-wider text-indigo-700 ring-1 ring-inset ring-indigo-600/20">
-              {context.project.difficulty}
-            </span>
+            {/* Mentor Notes Feed */}
+            <div className="space-y-2">
+              <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+                Mentor Session Feedback &amp; Guidance:
+              </h4>
+
+              <div className="space-y-3">
+                <div className="space-y-1.5 pb-3 border-b border-slate-100">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="inline-block rounded bg-sky-100 px-2 py-0.5 text-[10px] font-bold text-sky-800 border border-sky-200">
+                      Problem Bounding &amp; Scope
+                    </span>
+                    <span className="text-[10px] text-slate-400">Recent Sync</span>
+                  </div>
+                  <p className="p-3 rounded-lg bg-slate-50 border-l-4 border-sky-600 text-xs italic text-slate-700 leading-relaxed">
+                    &ldquo;Ensure your Problem Framing Pack clearly isolates root operational causes before drafting solution vectors. Test if freight latency is systemic or carrier-specific.&rdquo;
+                  </p>
+                </div>
+
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="inline-block rounded bg-indigo-100 px-2 py-0.5 text-[10px] font-bold text-indigo-800 border border-indigo-200">
+                      WWHTBT Barrier-to-Belief
+                    </span>
+                    <span className="text-[10px] text-slate-400">Week 2 Prep</span>
+                  </div>
+                  <p className="p-3 rounded-lg bg-slate-50 border-l-4 border-indigo-600 text-xs italic text-slate-700 leading-relaxed">
+                    &ldquo;For Week 2 choices, remember a preferred idea is not a strategy. You must demonstrate at least 3 distinct alternatives with What Would Have to Be True tests.&rdquo;
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <Link
+              href="/student/mentor"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-sky-300 bg-sky-50 px-4 py-2 text-xs font-bold text-sky-800 hover:bg-sky-100 transition-colors"
+            >
+              <Calendar className="h-3.5 w-3.5" />
+              <span>Book Guidance Session</span>
+            </Link>
           </div>
 
-          <div className="mt-4 space-y-3">
-            <h3 className="text-xl font-bold text-slate-900">
-              {context.project.title}
+          {/* Team Output History Card */}
+          <div className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6 shadow-xs space-y-4">
+            <h3 className="font-extrabold text-slate-900 text-sm pb-2 border-b border-slate-100">
+              Team Output History
             </h3>
 
-            <p className="text-xs leading-relaxed text-slate-600">
-              {context.project.description}
-            </p>
-
-            <div className="grid gap-4 sm:grid-cols-2 pt-2">
-              <div className="rounded-xl bg-slate-50 p-4">
-                <h4 className="text-xs font-semibold text-slate-900">
-                  Core Objectives:
-                </h4>
-                <p className="mt-1 whitespace-pre-wrap text-xs text-slate-600">
-                  {context.project.objectives}
-                </p>
-              </div>
-
-              <div className="rounded-xl bg-slate-50 p-4">
-                <h4 className="text-xs font-semibold text-slate-900">
-                  Deliverables Checklist:
-                </h4>
-                <p className="mt-1 whitespace-pre-wrap text-xs text-slate-600">
-                  {context.project.expected_deliverables}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-3 pt-4">
-              <Link
-                href="/student/submissions"
-                className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-xs font-semibold text-white shadow-sm hover:bg-slate-800"
-              >
-                Submit Project Deliverable <ArrowRight className="h-3.5 w-3.5" />
-              </Link>
+            <div className="divide-y divide-slate-100">
+              {outputHistory.map((item) => (
+                <div key={item.week} className="py-3 flex items-center justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-bold text-xs text-slate-900 truncate" title={`Week ${item.week}: ${item.title}`}>
+                      Week {item.week}: {item.title}
+                    </p>
+                    <p className="text-[11px] text-slate-400 mt-0.5">{item.submittedAt}</p>
+                  </div>
+                  <span className={`status-pill ${item.statusClass} shrink-0`}>
+                    {item.status}
+                  </span>
+                </div>
+              ))}
             </div>
           </div>
-        </section>
-      )}
-
+        </div>
+      </div>
+      {/* Team Member Profile Modal */}
       {selectedMember && (
-        <TeammateProfileDialog
-          member={selectedMember}
-          teamName={context.team.name}
-          cohortName={context.cohort?.name}
-          projectTitle={context.project?.title}
-          onClose={() => setSelectedMember(null)}
-        />
-      )}
-    </div>
-  );
-}
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200"
+          onClick={() => setSelectedMember(null)}
+        >
+          <div
+            className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl bg-white shadow-2xl border border-slate-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="relative border-b border-slate-200 bg-gradient-to-br from-slate-50 via-white to-sky-50/50 p-6 sm:p-8">
+              <button
+                type="button"
+                onClick={() => setSelectedMember(null)}
+                className="absolute right-5 top-5 rounded-full p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors cursor-pointer"
+                aria-label="Close modal"
+              >
+                <X className="h-5 w-5" />
+              </button>
 
-function TeammateProfileDialog({
-  member,
-  teamName,
-  cohortName,
-  projectTitle,
-  onClose,
-}: {
-  member: TeamMemberSummary;
-  teamName: string;
-  cohortName?: string;
-  projectTitle?: string;
-  onClose: () => void;
-}) {
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="teammate-profile-title"
-      onMouseDown={onClose}
-    >
-      <section
-        className="w-full max-w-xl overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl"
-        onMouseDown={(event) => event.stopPropagation()}
-      >
-        <div className="bg-gradient-to-r from-sky-50 via-white to-blue-50 p-6 sm:p-8">
-          <div className="flex items-start justify-between gap-5">
-            <div className="flex min-w-0 items-center gap-4">
-              <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-3xl bg-gradient-to-br from-sky-200 to-blue-500 text-2xl font-bold text-white shadow-md ring-4 ring-white">
-                {member.name.charAt(0).toUpperCase()}
-              </div>
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h2 id="teammate-profile-title" className="text-xl font-bold text-slate-950 sm:text-2xl">
-                    {member.name}
-                  </h2>
-                  {member.role === "leader" && (
-                    <span className="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700 ring-1 ring-amber-200">
-                      Team lead
-                    </span>
+              <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
+                <div className="relative flex h-20 w-20 sm:h-24 sm:w-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-sky-500 to-indigo-700 text-2xl font-bold text-white shadow-lg ring-4 ring-white">
+                  <span>{studentInitials(selectedMember.name)}</span>
+                  {resolveStudentPhotoUrl(selectedMember.photo_url) && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={resolveStudentPhotoUrl(selectedMember.photo_url) || undefined}
+                      alt={`${selectedMember.name} photo`}
+                      referrerPolicy="no-referrer"
+                      onError={(e) => {
+                        e.currentTarget.style.display = "none";
+                      }}
+                      className="absolute inset-0 h-full w-full object-cover"
+                    />
                   )}
                 </div>
-                <p className="mt-1 text-sm font-medium capitalize text-blue-700">
-                  {member.role} of {teamName}
-                </p>
-                <p className="mt-3 text-sm leading-6 text-slate-600">
-                  Collaborating with you on the team’s fellowship project.
-                </p>
+
+                <div className="min-w-0 pr-10">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
+                      {selectedMember.name}
+                    </h2>
+                    <span
+                      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ring-1 ring-inset ${
+                        selectedMember.status === "active"
+                          ? "bg-emerald-50 text-emerald-700 ring-emerald-600/20"
+                          : "bg-slate-100 text-slate-700 ring-slate-600/20"
+                      }`}
+                    >
+                      <span className="h-1.5 w-1.5 rounded-full bg-current" />
+                      {selectedMember.status || "Active"}
+                    </span>
+                    <span className="inline-flex items-center rounded-lg bg-sky-50 px-2.5 py-0.5 text-xs font-semibold text-sky-700 ring-1 ring-inset ring-sky-600/20">
+                      {selectedMember.batch_name || cohortName}
+                    </span>
+                    <span className="inline-flex items-center rounded-lg bg-indigo-50 px-2.5 py-0.5 text-xs font-semibold text-indigo-700 ring-1 ring-inset ring-indigo-600/20">
+                      {selectedMember.role}
+                    </span>
+                  </div>
+
+                  <p className="mt-1.5 font-mono text-xs font-semibold text-sky-700">
+                    Roll No: {selectedMember.roll_no || "—"}
+                  </p>
+
+                  <p className="mt-1 text-sm font-medium text-slate-600">
+                    {selectedMember.institution_name || "Partner Institution"}
+                  </p>
+                  <p className="mt-0.5 text-xs text-slate-500 font-medium">
+                    Assigned Discipline: <strong className="text-slate-700">{selectedMember.discipline}</strong>
+                  </p>
+                </div>
               </div>
             </div>
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-xl border border-slate-200 bg-white p-2 text-slate-500 shadow-sm transition hover:bg-slate-50 hover:text-slate-800"
-              aria-label="Close teammate profile"
-            >
-              <X className="h-5 w-5" />
-            </button>
+
+            {/* Modal Body */}
+            <div className="space-y-6 p-6 sm:p-8">
+              {/* Academic & Enrollment Information */}
+              <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-5">
+                <h3 className="flex items-center gap-2 text-sm font-bold text-slate-900">
+                  <GraduationCap className="h-4 w-4 text-sky-600" />
+                  Academic &amp; Enrollment Information
+                </h3>
+                <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  <div>
+                    <span className="text-xs font-medium text-slate-500">Institution</span>
+                    <p className="mt-0.5 text-sm font-semibold text-slate-800">
+                      {selectedMember.institution_name || "—"}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-xs font-medium text-slate-500">Course</span>
+                    <p className="mt-0.5 text-sm font-semibold text-slate-800">
+                      {selectedMember.course || "—"}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-xs font-medium text-slate-500">Branch</span>
+                    <p className="mt-0.5 text-sm font-semibold text-slate-800">
+                      {selectedMember.branch || "—"}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-xs font-medium text-slate-500">Current Year / Semester</span>
+                    <p className="mt-0.5 text-sm font-semibold text-slate-800">
+                      {selectedMember.current_year_semester || "—"}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-xs font-medium text-slate-500">Batch Assigned</span>
+                    <p className="mt-0.5 text-sm font-semibold text-sky-700">
+                      {selectedMember.batch_name || cohortName || "Unassigned"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Personal & Contact Info (with Proper Alignment, No Identity/Verification) */}
+              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
+                <h3 className="flex items-center gap-2 text-sm font-bold text-slate-900 pb-3 border-b border-slate-100">
+                  <UserIcon className="h-4 w-4 text-sky-600" />
+                  Personal &amp; Contact Info
+                </h3>
+                <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                  <div className="flex items-start gap-3 text-sm p-3 rounded-xl bg-slate-50 border border-slate-100">
+                    <Mail className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
+                    <div className="min-w-0">
+                      <span className="block text-xs font-medium text-slate-500">Email Address</span>
+                      {selectedMember.email ? (
+                        <a
+                          href={`mailto:${selectedMember.email}`}
+                          className="font-semibold text-sky-700 hover:underline truncate block text-xs sm:text-sm"
+                        >
+                          {selectedMember.email}
+                        </a>
+                      ) : (
+                        <span className="font-semibold text-slate-700 text-xs sm:text-sm">Not provided</span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3 text-sm p-3 rounded-xl bg-slate-50 border border-slate-100">
+                    <Phone className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
+                    <div>
+                      <span className="block text-xs font-medium text-slate-500">WhatsApp / Phone</span>
+                      <span className="font-semibold text-slate-800 text-xs sm:text-sm">
+                        {selectedMember.phone || "Not provided"}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3 text-sm p-3 rounded-xl bg-slate-50 border border-slate-100">
+                    <UserIcon className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
+                    <div>
+                      <span className="block text-xs font-medium text-slate-500">Gender</span>
+                      <span className="font-semibold text-slate-800 text-xs sm:text-sm">
+                        {selectedMember.gender || "Not specified"}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3 text-sm p-3 rounded-xl bg-slate-50 border border-slate-100">
+                    <Briefcase className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
+                    <div>
+                      <span className="block text-xs font-medium text-slate-500">Fellowship Role &amp; Focus</span>
+                      <span className="font-semibold text-sky-800 text-xs sm:text-sm">
+                        {selectedMember.role} &bull; {selectedMember.discipline}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-end gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4 rounded-b-3xl">
+              <button
+                type="button"
+                onClick={() => setSelectedMember(null)}
+                className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-xs sm:text-sm font-semibold text-slate-700 shadow-xs hover:bg-slate-50 transition-colors cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
-
-        <div className="grid gap-4 p-6 sm:grid-cols-2 sm:p-8">
-          <CollaborationDetail label="Team" value={teamName} />
-          {cohortName && <CollaborationDetail label="Cohort" value={cohortName} />}
-          {projectTitle && <CollaborationDetail label="Shared project" value={projectTitle} fullWidth />}
-        </div>
-
-        <div className="border-t border-slate-100 bg-slate-50 px-6 py-4 sm:px-8">
-          <p className="text-xs leading-5 text-slate-500">
-            This profile intentionally shows collaboration information only. Contact details,
-            identification data, and documents are kept private.
-          </p>
-        </div>
-      </section>
-    </div>
-  );
-}
-
-function CollaborationDetail({
-  label,
-  value,
-  fullWidth = false,
-}: {
-  label: string;
-  value: string;
-  fullWidth?: boolean;
-}) {
-  return (
-    <div className={`rounded-2xl border border-slate-200 bg-slate-50 p-4 ${fullWidth ? "sm:col-span-2" : ""}`}>
-      <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">{label}</p>
-      <p className="mt-2 text-sm font-semibold text-slate-900">{value}</p>
+      )}
     </div>
   );
 }

@@ -1,3 +1,4 @@
+import re
 from uuid import UUID
 
 from sqlalchemy import func, select
@@ -29,6 +30,19 @@ class MentorService:
         self.supabase = supabase
 
     @staticmethod
+    def resolve_drive_thumbnail(url_str: str) -> str:
+        """Convert Google Drive viewing links into direct image thumbnail URLs."""
+        match = re.search(r"/(?:file/)?d/([^/?]+)", url_str)
+        if match:
+            file_id = match.group(1)
+            return f"https://drive.google.com/thumbnail?id={file_id}&sz=w800"
+        query_match = re.search(r"[?&]id=([^&#]+)", url_str)
+        if query_match:
+            file_id = query_match.group(1)
+            return f"https://drive.google.com/thumbnail?id={file_id}&sz=w800"
+        return url_str
+
+    @staticmethod
     def _category_for_organisation(organisation: str | None) -> str:
         """Classify mentors from their employer, rather than a user-supplied flag."""
         normalized = "".join((organisation or "").casefold().split())
@@ -51,6 +65,8 @@ class MentorService:
         headshot_url = mentor.headshot_url
         if MentorHeadshotStorageService.is_storage_path(headshot_url):
             headshot_url = MentorHeadshotStorageService().signed_url(headshot_url)
+        elif headshot_url and ("drive.google.com" in headshot_url or "docs.google.com" in headshot_url):
+            headshot_url = self.resolve_drive_thumbnail(headshot_url)
 
         return MentorDetailResponse(
             id=mentor.id,
@@ -227,9 +243,12 @@ class MentorService:
             if data.status is not None:
                 existing_mentor.status = data.status
                 user.status = data.status
-            existing_mentor.mentor_category = self._category_for_organisation(
-                existing_mentor.company_name
-            )
+            if data.mentor_category is not None:
+                existing_mentor.mentor_category = data.mentor_category
+            elif not existing_mentor.mentor_category:
+                existing_mentor.mentor_category = self._category_for_organisation(
+                    existing_mentor.company_name
+                )
             self.mentor_repo.update(existing_mentor)
             return self._build_detail_response(existing_mentor)
 
@@ -252,7 +271,7 @@ class MentorService:
             support_preferences=data.support_preferences or [],
             mentor_statement=data.mentoring_statement or data.mentor_statement,
             status=data.status,
-            mentor_category=self._category_for_organisation(
+            mentor_category=data.mentor_category or self._category_for_organisation(
                 data.organisation or data.company_name
             ),
             enrollment_source_key="manual",
@@ -269,6 +288,15 @@ class MentorService:
         mentor = self.mentor_repo.get_by_id(mentor_id)
         if not mentor:
             return None
+
+        user = self.db.scalar(select(User).where(User.id == mentor.user_id))
+        if user is not None:
+            if data.full_name is not None:
+                user.full_name = data.full_name
+            if data.email is not None:
+                user.email = str(data.email)
+            if data.status is not None:
+                user.status = data.status
 
         if data.phone is not None:
             mentor.phone = data.phone
@@ -312,13 +340,11 @@ class MentorService:
             mentor.mentor_statement = data.mentoring_statement
         if data.status is not None:
             mentor.status = data.status
-            user = self.db.scalar(select(User).where(User.id == mentor.user_id))
-            if user is not None:
-                user.status = data.status
-        # The directory is derived from the mentor's employer. Do not allow a
-        # client request to place a DegreeLabs employee in the specialist list,
-        # or vice versa.
-        mentor.mentor_category = self._category_for_organisation(mentor.company_name)
+
+        if data.mentor_category is not None:
+            mentor.mentor_category = data.mentor_category
+        elif not mentor.mentor_category:
+            mentor.mentor_category = self._category_for_organisation(mentor.company_name)
 
         try:
             updated = self.mentor_repo.update(mentor)

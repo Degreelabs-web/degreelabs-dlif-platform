@@ -1,10 +1,15 @@
-
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { ChevronDown, ChevronLeft, ChevronRight, X } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  X,
+  LogOut,
+  Sparkles,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 
 import {
@@ -12,7 +17,7 @@ import {
   mentorNavigation,
   studentNavigation,
 } from "@/lib/constants/navigation";
-import { DegreeLabsLogo } from "@/components/brand/DegreeLabsLogo";
+import { getStoredUser, logoutUser } from "@/lib/api/auth";
 
 type SidebarProps = {
   role: "student" | "mentor" | "admin";
@@ -31,6 +36,18 @@ export default function Sidebar({
 }: SidebarProps) {
   const pathname = usePathname();
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
+  const [currentUser, setCurrentUser] = useState<{
+    full_name?: string;
+    email?: string;
+    role?: string;
+  } | null>(null);
+
+  useEffect(() => {
+    const user = getStoredUser();
+    if (user) {
+      setCurrentUser(user);
+    }
+  }, []);
 
   useEffect(() => {
     if (!open) {
@@ -60,12 +77,16 @@ export default function Sidebar({
         ? mentorNavigation
         : adminNavigation;
 
-  const portalTitle =
+  const roleLabel =
     role === "student"
-      ? "Student Portal"
+      ? "Discover Fellow"
       : role === "mentor"
-        ? "Mentor Portal"
-        : "Admin Portal";
+        ? "Dedicated Mentor"
+        : "Program Director";
+
+  const handleSignOut = () => {
+    logoutUser();
+  };
 
   return (
     <>
@@ -74,51 +95,56 @@ export default function Sidebar({
           type="button"
           aria-label="Close navigation"
           onClick={onClose}
-          className="fixed inset-0 z-40 bg-slate-900/35 backdrop-blur-sm lg:hidden"
+          className="fixed inset-0 z-40 bg-slate-950/60 backdrop-blur-xs lg:hidden"
         />
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-72 flex-col overflow-hidden border-r border-slate-100 bg-white shadow-2xl shadow-blue-950/10 transition-[transform,width,border-color] duration-300 lg:sticky lg:top-0 lg:h-screen lg:translate-x-0 lg:shadow-none ${open ? "translate-x-0" : "-translate-x-full"
-          } ${desktopCollapsed ? "lg:w-24" : "lg:w-72"}`}
+        className={`fixed inset-y-0 left-0 z-50 flex flex-col overflow-hidden bg-gradient-to-b from-[#090e1a] via-[#0f172a] to-[#162032] text-white shadow-2xl border-r border-white/10 transition-[transform,width] duration-300 lg:sticky lg:top-0 lg:h-screen lg:translate-x-0 lg:shadow-none ${
+          open ? "translate-x-0" : "-translate-x-full"
+        } ${desktopCollapsed ? "lg:w-20" : "lg:w-[270px]"}`}
       >
+        {/* Brand Header */}
         <div
-          className={`flex h-20 items-center border-b border-slate-100 ${desktopCollapsed ? "justify-center gap-1 px-2" : "justify-between px-5"
-            }`}
+          className={`flex h-20 items-center border-b border-white/10 ${
+            desktopCollapsed ? "justify-center px-2" : "justify-between px-5"
+          }`}
         >
           {desktopCollapsed ? (
             <Link
-              href="/"
+              href="/student"
               onClick={onClose}
-              className="hidden h-11 w-11 shrink-0 overflow-hidden rounded-xl p-1 lg:block"
-              aria-label="DegreeLabs home"
+              className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-sky-400 to-indigo-600 text-white font-extrabold text-sm shadow-md shadow-sky-500/30"
+              aria-label="DegreeLabs Discover"
             >
-              <Image
-                src="/degreelabs-logo.png"
-                alt="DegreeLabs"
-                width={1754}
-                height={372}
-                priority
-                className="h-auto w-[170px] !max-w-none"
-              />
+              DL
             </Link>
           ) : (
             <Link
-              href="/"
+              href="/student"
               onClick={onClose}
-              className="flex min-w-0 items-center rounded-xl"
-              aria-label="DegreeLabs home"
+              className="flex items-center gap-3 group"
+              aria-label="DegreeLabs Discover"
             >
-              <DegreeLabsLogo size="compact" priority />
+              <div className="flex h-9 items-center justify-center rounded-lg bg-gradient-to-br from-sky-400 to-indigo-600 px-2.5 py-1 text-white font-black text-xs tracking-wider shadow-md shadow-sky-500/25">
+                DISCOVER
+              </div>
+              <div className="leading-tight">
+                <div className="font-display text-lg font-extrabold tracking-tight text-white group-hover:text-sky-300 transition-colors">
+                  DegreeLabs
+                </div>
+                <div className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">
+                  Capability Engine
+                </div>
+              </div>
             </Link>
           )}
 
           <button
             type="button"
             onClick={onToggleDesktop}
-            className="hidden h-8 w-8 shrink-0 items-center justify-center rounded-lg text-brand-500 transition hover:bg-brand-50 hover:text-brand-700 lg:inline-flex"
+            className="hidden h-7 w-7 shrink-0 items-center justify-center rounded-lg text-slate-400 hover:bg-white/10 hover:text-white transition lg:inline-flex"
             aria-label={desktopCollapsed ? "Expand navigation" : "Collapse navigation"}
-            title={desktopCollapsed ? "Expand navigation" : "Collapse navigation"}
           >
             {desktopCollapsed ? (
               <ChevronRight className="h-4 w-4" />
@@ -130,16 +156,25 @@ export default function Sidebar({
           <button
             type="button"
             onClick={onClose}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-slate-500 hover:bg-slate-100 lg:hidden"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-white/10 hover:text-white lg:hidden"
             aria-label="Close navigation"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
+        {/* Section title */}
+        {!desktopCollapsed && (
+          <div className="px-5 pt-4 pb-1 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+            Discover Program (Active)
+          </div>
+        )}
+
+        {/* Navigation links */}
         <nav
-          className={`flex-1 space-y-1.5 overflow-y-auto ${desktopCollapsed ? "p-2" : "p-4"
-            }`}
+          className={`flex-1 space-y-1 overflow-y-auto ${
+            desktopCollapsed ? "p-2" : "px-3 py-2"
+          }`}
         >
           {navigation.map((item) => {
             const Icon = item.icon;
@@ -155,20 +190,14 @@ export default function Sidebar({
                     key={item.href}
                     href={item.href}
                     onClick={onClose}
-                    aria-current={isActive ? "page" : undefined}
                     title={item.label}
-                    aria-label={item.label}
-                    className={`group flex h-11 w-full items-center justify-center rounded-xl transition ${isActive
-                      ? "bg-gradient-to-r from-brand-500 to-brand-600 text-white shadow-md shadow-blue-500/20"
-                      : "text-slate-600 hover:bg-brand-50 hover:text-brand-700"
-                      }`}
+                    className={`flex h-10 w-full items-center justify-center rounded-xl transition ${
+                      isActive
+                        ? "bg-sky-500/20 text-sky-400 font-semibold"
+                        : "text-slate-400 hover:bg-white/5 hover:text-white"
+                    }`}
                   >
-                    <Icon
-                      className={`h-[19px] w-[19px] ${isActive
-                        ? "text-white"
-                        : "text-slate-400 group-hover:text-brand-500"
-                        }`}
-                    />
+                    <Icon className="h-4 w-4" />
                   </Link>
                 );
               }
@@ -183,21 +212,22 @@ export default function Sidebar({
                         [item.href]: !isExpanded,
                       }))
                     }
-                    aria-expanded={isExpanded}
-                    className={`group flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-left text-sm font-semibold transition ${isActive
-                      ? "bg-brand-50 text-brand-700"
-                      : "text-slate-600 hover:bg-brand-50 hover:text-brand-700"
-                      }`}
+                    className={`flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-left text-xs font-semibold transition ${
+                      isActive
+                        ? "bg-sky-500/15 text-white border-l-[3px] border-sky-400"
+                        : "text-slate-400 hover:bg-white/5 hover:text-white"
+                    }`}
                   >
-                    <Icon className="h-[18px] w-[18px] shrink-0 text-brand-500" />
+                    <Icon className="h-4 w-4 shrink-0 text-slate-400" />
                     <span className="flex-1">{item.label}</span>
                     <ChevronDown
-                      className={`h-4 w-4 transition-transform ${isExpanded ? "rotate-180" : ""
-                        }`}
+                      className={`h-3.5 w-3.5 transition-transform ${
+                        isExpanded ? "rotate-180" : ""
+                      }`}
                     />
                   </button>
                   {isExpanded && (
-                    <div className="ml-6 space-y-1 border-l border-brand-100 pl-3">
+                    <div className="ml-5 space-y-1 border-l border-white/10 pl-3">
                       {item.children.map((child) => {
                         const isChildActive = pathname === child.href;
                         return (
@@ -205,11 +235,11 @@ export default function Sidebar({
                             key={child.href}
                             href={child.href}
                             onClick={onClose}
-                            aria-current={isChildActive ? "page" : undefined}
-                            className={`block rounded-lg px-3 py-2 text-sm font-semibold transition ${isChildActive
-                              ? "bg-gradient-to-r from-brand-500 to-brand-600 text-white shadow-sm"
-                              : "text-slate-600 hover:bg-brand-50 hover:text-brand-700"
-                              }`}
+                            className={`block rounded-lg px-2.5 py-1.5 text-xs font-medium transition ${
+                              isChildActive
+                                ? "bg-sky-500/20 text-sky-300 font-bold"
+                                : "text-slate-400 hover:text-white hover:bg-white/5"
+                            }`}
                           >
                             {child.label}
                           </Link>
@@ -226,21 +256,21 @@ export default function Sidebar({
                 key={item.href}
                 href={item.href}
                 onClick={onClose}
-                aria-current={isActive ? "page" : undefined}
                 title={desktopCollapsed ? item.label : undefined}
-                className={`group flex items-center rounded-xl text-sm font-semibold transition ${isActive
-                  ? "bg-gradient-to-r from-brand-500 to-brand-600 text-white shadow-md shadow-blue-500/20"
-                  : "text-slate-600 hover:bg-brand-50 hover:text-brand-700"
-                  } ${desktopCollapsed
-                    ? "h-11 w-full justify-center"
+                className={`flex items-center rounded-xl text-xs font-semibold transition ${
+                  isActive
+                    ? "bg-sky-500/15 text-white border-l-[3px] border-sky-400 shadow-xs"
+                    : "text-slate-400 hover:bg-white/5 hover:text-white"
+                } ${
+                  desktopCollapsed
+                    ? "h-10 w-full justify-center"
                     : "gap-3 px-3.5 py-2.5"
-                  }`}
+                }`}
               >
                 <Icon
-                  className={`h-[18px] w-[18px] shrink-0 ${isActive
-                    ? "text-white"
-                    : "text-slate-400 group-hover:text-brand-500"
-                    }`}
+                  className={`h-4 w-4 shrink-0 ${
+                    isActive ? "text-sky-400" : "text-slate-400"
+                  }`}
                 />
                 {!desktopCollapsed && <span>{item.label}</span>}
               </Link>
@@ -248,16 +278,35 @@ export default function Sidebar({
           })}
         </nav>
 
-        <div
-          className={`border-t border-slate-100 p-4 ${desktopCollapsed ? "lg:hidden" : ""
-            }`}
-        >
-          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 to-slate-800 p-4 shadow-lg shadow-blue-950/10">
-            <div className="absolute -right-5 -top-6 h-20 w-20 rounded-full bg-brand-400/20 blur-xl" />
-            <p className="relative text-xs font-bold text-white">{portalTitle}</p>
-            <p className="relative mt-1 text-[11px] text-blue-100/70">
-              DegreeLabs Workspace
-            </p>
+        {/* User Footer (Matching DL_DISCOVER base layout) */}
+        <div className="border-t border-white/10 p-3">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-sky-400 to-indigo-600 font-bold text-xs text-white uppercase shadow-xs">
+                {currentUser?.full_name ? currentUser.full_name.charAt(0) : "S"}
+              </div>
+              {!desktopCollapsed && (
+                <div className="min-w-0">
+                  <p className="truncate text-xs font-bold text-white leading-tight">
+                    {currentUser?.full_name || "Discover Fellow"}
+                  </p>
+                  <span className="inline-block mt-0.5 rounded bg-sky-400/20 px-1.5 py-0.2 text-[9px] font-bold text-sky-300">
+                    {roleLabel}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {!desktopCollapsed && (
+              <button
+                type="button"
+                onClick={handleSignOut}
+                title="Sign Out"
+                className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-red-500/20 hover:text-red-400 transition-colors shrink-0"
+              >
+                <LogOut className="h-4 w-4" />
+              </button>
+            )}
           </div>
         </div>
       </aside>

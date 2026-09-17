@@ -1,0 +1,255 @@
+{
+  "program": "DegreeLabs Impact Fellowship (DLIF)",
+  "phase": "Discover",
+  "total_weeks": 4,
+  "total_sessions": 12,
+  "sessions_per_week": 3,
+  "team_size": 5,
+  "credential_pathway": [
+    { "code": "READINESS", "name": "UKM Competency Readiness Certificate", "status": "completed" },
+    { "code": "DISCOVER", "name": "Certificate in Problem Analysis & Solution Architecture", "status": "active" },
+    { "code": "VALIDATE", "name": "Certificate in Venture Validation & Proof-of-Concept", "status": "locked" },
+    { "code": "GROW", "name": "Fellowship Venture Scale Certification", "status": "locked" }
+  ],
+  "capabilities": [
+    {
+      "id": "cap-1",
+      "name": "Business Understanding",
+      "description": "Comprehending enterprise operational models, stakeholder incentives, and commercial mechanics.",
+      "level": "Developing",
+      "score": 75,
+      "benchmark": "Level 3 - Diagnostic Fluency"
+    },
+    {
+      "id": "cap-2",
+      "name": "Evidence & Problem Framing",
+      "description": "Grounding insights in primary & secondary evidence, separating observations from unverified assumptions.",
+      "level": "Proficient",
+      "score": 82,
+      "benchmark": "Level 4 - Falsifiable Scoping"
+    },
+    {
+      "id": "cap-3",
+      "name": "Strategic Choice",
+      "description": "Evaluating strategic possibilities, WWHTBT barrier-to-belief testing, and defensible tradeoff selection.",
+      "level": "Developing",
+      "score": 68,
+      "benchmark": "Level 3 - Possibility Architecture"
+    },
+    {
+      "id": "cap-4",
+      "name": "Execution Thinking",
+      "description": "Designing roadmap milestones, operational architectures, dependencies, and risk mitigations.",
+      "level": "Foundation",
+      "score": 60,
+      "benchmark": "Level 2 - Architectural Planning"
+    },
+    {
+      "id": "cap-5",
+      "name": "Professional Communication",
+      "description": "Synthesizing executive proposals, persuasive board-ready narrative, and structured visual assets.",
+      "level": "Proficient",
+      "score": 85,
+      "benchmark": "Level 4 - Executive Readiness"
+    }
+  ],
+  "weeks": [
+    {
+      "week_number": 1,
+      "title": "Discover the Real Problem",
+      "strategic_question": "What is really happening here?",
+      "output_title": "Business Diagnosis & Problem Framing Pack",
+      "output_description": "Comprehensive diagnostic dossier documenting root causes, system dependencies, and bounded problem framing.",
+      "quality_gate": {
+        "name": "Problem Framing Quality Gate",
+        "rule": "No clear, bounded, evidence-supported problem = no progression to Week 2.",
+        "evaluator": "Academic & Industry Review Committee"
+      },
+      "sessions": [
+        {
+          "session_number": 1,
+          "title": "Business Context & Evidence",
+          "session_type": "learn_work",
+          "type_label": "Learn & Work Session",
+          "focus": "Deconstruct the company brief, map revenue & operational drivers, and audit available evidence.",
+          "required_working_evidence": "Company Context & Challenge Sheet; Evidence/Assumption/Unknowns Log (Initial Entries)",
+          "duration_minutes": 90
+        },
+        {
+          "session_number": 2,
+          "title": "Problem Framing & Diagnosis",
+          "session_type": "learn_work",
+          "type_label": "Learn & Work Session",
+          "focus": "Map workflows, pinpoint friction points, synthesize core 'How Might We' questions, and define measurable outcomes.",
+          "required_working_evidence": "Workflow + Stakeholder Map; Problem Framing + Outcome Definition draft",
+          "duration_minutes": 90
+        },
+        {
+          "session_number": 3,
+          "title": "Discovery Review",
+          "session_type": "output_review_gate",
+          "type_label": "Quality Gate & Review Session",
+          "focus": "Defend the Problem Framing Pack before your Dedicated Team Mentor & Facilitator. Formal progression gate.",
+          "required_working_evidence": "Completed Business Diagnosis & Problem Framing Pack",
+          "duration_minutes": 120
+        }
+      ],
+      "templates": [
+        { "id": "t-1", "name": "Company Context & Challenge Sheet", "type": "Core Template", "status": "ready", "url": "", "description": "Decode the company brief — map revenue model, operational drivers, and the commercial stakes of the challenge." },
+        { "id": "t-2", "name": "Workflow + Stakeholder Map", "type": "Core Template", "status": "ready", "url": "", "description": "Visualise end-to-end workflows, identify friction points, and plot all stakeholders with their interests and influence." },
+        { "id": "t-3", "name": "Evidence / Assumption / Unknowns Log", "type": "Living Document", "status": "active", "url": "", "description": "Continuously track what you know (evidence), what you believe (assumptions), and what you still need to prove (unknowns)." },
+        { "id": "t-4", "name": "Problem Framing + Outcome Definition", "type": "Gate Deliverable", "status": "ready", "url": "", "description": "Synthesise root causes into a bounded, evidence-supported problem statement with measurable outcome targets." }
+      ]
+    },
+    {
+      "week_number": 2,
+      "title": "Create Strategic Possibilities",
+      "strategic_question": "What could we choose to do?",
+      "output_title": "Strategic Possibility & Choice Pack",
+      "output_description": "Comparative matrix of distinct strategic alternatives rigorously tested with What Would Have to Be True (WWHTBT) analysis.",
+      "quality_gate": {
+        "name": "Strategic Choice Quality Gate",
+        "rule": "A preferred idea is not a strategic choice — team must show alternatives, assumptions, evidence and a defensible reason for choosing one direction.",
+        "evaluator": "Mentor Panel & Strategy Evaluators"
+      },
+      "sessions": [
+        {
+          "session_number": 4,
+          "title": "Research & Possibility Generation",
+          "session_type": "learn_work",
+          "type_label": "Learn & Work Session",
+          "focus": "Explore divergent possibilities across market models, technology vectors, and organizational capabilities.",
+          "required_working_evidence": "Strategic Possibilities Canvas (3+ distinct strategic vectors)",
+          "duration_minutes": 90
+        },
+        {
+          "session_number": 5,
+          "title": "What Would Have to Be True? (WWHTBT)",
+          "session_type": "learn_work",
+          "type_label": "Learn & Work Session",
+          "focus": "Isolate critical assumptions across customers, company, competitors, and economics. Stress-test barriers to belief.",
+          "required_working_evidence": "WWHTBT + Barrier-to-Belief Test Matrix",
+          "duration_minutes": 90
+        },
+        {
+          "session_number": 6,
+          "title": "Strategic Choice Review",
+          "session_type": "output_review_gate",
+          "type_label": "Quality Gate & Review Session",
+          "focus": "Present selected strategic choice backed by evidence and alternative trade-off justifications.",
+          "required_working_evidence": "Strategic Choice / Decision Record & Pack",
+          "duration_minutes": 120
+        }
+      ],
+      "templates": [
+        { "id": "t-5", "name": "Strategic Possibilities Canvas", "type": "Core Template", "status": "upcoming" },
+        { "id": "t-6", "name": "WWHTBT + Barrier-to-Belief Test", "type": "Core Template", "status": "upcoming" },
+        { "id": "t-7", "name": "Strategic Choice / Decision Record", "type": "Gate Deliverable", "status": "upcoming" }
+      ]
+    },
+    {
+      "week_number": 3,
+      "title": "Design the Strategy",
+      "strategic_question": "If this is our choice, how will it actually work?",
+      "output_title": "Strategy & Execution Blueprint",
+      "output_description": "End-to-end architecture bridging chosen strategy with operational milestones, dependency maps, and risk controls.",
+      "quality_gate": {
+        "name": "Coherence Architecture Gate",
+        "rule": "Problem → Choice → Strategy → Execution must form one coherent chain.",
+        "evaluator": "Technical & Industry Specialists"
+      },
+      "sessions": [
+        {
+          "session_number": 7,
+          "title": "Integrated Strategy Choices",
+          "session_type": "learn_work",
+          "type_label": "Learn & Work Session",
+          "focus": "Where to play, how to win, required capabilities, and supporting management systems.",
+          "required_working_evidence": "Integrated Strategy Choices Worksheet",
+          "duration_minutes": 90
+        },
+        {
+          "session_number": 8,
+          "title": "Execution Architecture",
+          "session_type": "learn_work",
+          "type_label": "Learn & Work Session",
+          "focus": "Translate strategy into phased release tracks, workstreams, resourcing models, and milestone targets.",
+          "required_working_evidence": "Execution Architecture + Phased Roadmap",
+          "duration_minutes": 90
+        },
+        {
+          "session_number": 9,
+          "title": "Strategy Review",
+          "session_type": "output_review_gate",
+          "type_label": "Quality Gate & Review Session",
+          "focus": "Defend operational feasibility, risk mitigations, and systemic coherence across the entire stack.",
+          "required_working_evidence": "Dependencies, Risks + Success Measures Log & Strategy Blueprint",
+          "duration_minutes": 120
+        }
+      ],
+      "templates": [
+        { "id": "t-8", "name": "Integrated Strategy Choices", "type": "Core Template", "status": "upcoming" },
+        { "id": "t-9", "name": "Execution Architecture + Roadmap", "type": "Core Template", "status": "upcoming" },
+        { "id": "t-10", "name": "Dependencies, Risks + Success Measures", "type": "Gate Deliverable", "status": "upcoming" }
+      ]
+    },
+    {
+      "week_number": 4,
+      "title": "Build the Case for Action",
+      "strategic_question": "Why should the company believe us?",
+      "output_title": "Executive Proposal, Company Presentation, Strategic Design Portfolio",
+      "output_description": "Executive pitch deck, formal written proposal dossier, and master strategic design portfolio submitted for company shortlisting.",
+      "quality_gate": {
+        "name": "Final Discover Review & Shortlisting Gate",
+        "rule": "Company shortlisting decision → entry into Validate phase.",
+        "evaluator": "Company Challenge Owner & DegreeLabs Executive Jury"
+      },
+      "sessions": [
+        {
+          "session_number": 10,
+          "title": "Proposal Architecture",
+          "session_type": "learn_work",
+          "type_label": "Learn & Work Session",
+          "focus": "Structure the executive investment case, commercial rationale, and compelling narrative arc.",
+          "required_working_evidence": "Executive Proposal Draft (Sections 1-4)",
+          "duration_minutes": 90
+        },
+        {
+          "session_number": 11,
+          "title": "Executive Communication",
+          "session_type": "learn_work",
+          "type_label": "Learn & Work Session",
+          "focus": "Deck design, rhetorical framing, objection handling, and pitch rehearsal with Specialist Mentors.",
+          "required_working_evidence": "Company Presentation Master Deck (v1.0)",
+          "duration_minutes": 90
+        },
+        {
+          "session_number": 12,
+          "title": "Final Discover Review",
+          "session_type": "output_review_gate",
+          "type_label": "Quality Gate & Review Session",
+          "focus": "Formal final presentation to Company Challenge Owner and DegreeLabs jury for Phase Gate Progression.",
+          "required_working_evidence": "Final Executive Proposal + Pitch Deck + Strategic Design Portfolio",
+          "duration_minutes": 150
+        }
+      ],
+      "templates": [
+        { "id": "t-11", "name": "Executive Proposal Template", "type": "Core Template", "status": "upcoming" },
+        { "id": "t-12", "name": "Company Presentation Master", "type": "Core Template", "status": "upcoming" },
+        { "id": "t-13", "name": "Strategic Design Portfolio (Master)", "type": "Ongoing Master Document", "status": "active" }
+      ]
+    }
+  ],
+  "ongoing_deliverables": [
+    { "id": "t-13", "name": "Strategic Design Portfolio", "scope": "Weeks 1–4 Ongoing Master Dossier" },
+    { "id": "t-3", "name": "Evidence / Assumption / Unknowns Log", "scope": "Continuous Working Evidence Tracker" }
+  ],
+  "roles": [
+    { "role": "Fellows", "description": "Student fellows working collaboratively in teams of 5." },
+    { "role": "Dedicated Team Mentor", "description": "Guides weekly deliverables, checks progress, and provides core feedback." },
+    { "role": "Specialist Mentor", "description": "Subject matter experts brought in for domain/technical depth as-needed." },
+    { "role": "Facilitator", "description": "Conducts cohort sessions, workshops, and enforces sprint rituals." },
+    { "role": "Company Challenge Owner", "description": "Industry sponsor defining the real challenge and evaluating final proposals." },
+    { "role": "DegreeLabs Program Team", "description": "Oversees cohort execution, standards, quality gates, and certification." }
+  ]
+}
