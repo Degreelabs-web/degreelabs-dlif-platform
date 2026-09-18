@@ -4,6 +4,8 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.db.models.project import Project
+from app.db.models.team_mentor_assignment import TeamMentorAssignment
+from app.db.models.team_project_assignment import TeamProjectAssignment
 from app.db.repositories.mentor import MentorRepository
 from app.db.models.user import User
 from sqlalchemy import select
@@ -152,11 +154,22 @@ class ProjectService:
             return False
 
         try:
+            # Clean up auto-derived mentor assignments for teams on this project
+            marker = f"Automatically assigned from project {project_id}"
+            self.db.query(TeamMentorAssignment).filter(
+                TeamMentorAssignment.notes == marker
+            ).delete(synchronize_session=False)
+
+            # Clean up any team project assignments for this project
+            self.db.query(TeamProjectAssignment).filter(
+                TeamProjectAssignment.project_id == project_id
+            ).delete(synchronize_session=False)
+
             self.project_repo.delete(project)
             return True
         except IntegrityError as exc:
             self.project_repo.rollback()
-            raise ValueError("Cannot delete project with active team assignments.") from exc
+            raise ValueError(f"Cannot delete project: {exc}") from exc
 
     def get_assigned_teams(self, project_id: UUID):
         project = self.project_repo.get_by_id(project_id)

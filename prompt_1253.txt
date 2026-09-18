@@ -1,0 +1,188 @@
+<USER_REQUEST>
+ROLE
+You are working inside the degreelabs-dlif-platform monorepo
+(apps/web = Next.js + TypeScript, apps/api = FastAPI + Python,
+PostgreSQL, Supabase Auth). Before changing anything, read:
+- docs/ (architecture, database schema, API contracts)
+- apps/api's models/schema files and any existing migrations
+- apps/web's existing "company challenge" / "project" UI components
+Do not invent a schema — extend what already exists. If a table/field
+you need doesn't exist yet, add a migration for it and say so in your
+summary.
+
+GOAL
+Onboard the company "Cikitsa India" and its assigned DISCOVER
+challenge — Project A: Journey Intelligence ("AI Patient Follow-up &
+Arrival Conversion") — into the platform end to end: database record,
+team + mentor assignment, and UI, using the real brand asset.
+
+── 1. COMPANY RECORD ──────────────────────────────────────────────
+Create (or update) the company/industry-partner record:
+
+  name: "Cikitsa India"
+  tagline: "Let Us.. Take Care..."
+  accreditation: "NABH Accredited"
+  category: "Medical Value Travel (MVT) Facilitator"
+  founder_sponsor: "Punit Sureka"
+  founder_title: "Founder"
+  description: >
+    Cikitsa India supports international patients travelling to India
+    for medical treatment. It coordinates patients, referral sources,
+    hospitals, documentation, medical-travel requirements,
+    appointments, travel support and post-treatment follow-up.
+  public_journey_stages:
+    - Initial Inquiry
+    - VIL Issue
+    - Visa Processing
+    - Travel & Treatment
+    - Post-Treatment
+  brand_colors:
+    primary_red: "#ED1C24"
+    primary_green: "#39B54A"
+    accent_blue: "#2E5AA8"
+  logo_asset: cikitsa-india-logo.png   # attached — transparent PNG,
+                                        # extracted directly from the
+                                        # official company brief.
+                                        # Place under the same public/
+                                        # assets path used by other
+                                        # company logos and reference
+                                        # it from the company record's
+                                        # logo_url field.
+
+── 2. PROJECT RECORD (Journey Intelligence) ───────────────────────
+Create the company challenge / project record, linked to Cikitsa India:
+
+  code: "PROJECT_A_JOURNEY_INTELLIGENCE"
+  title: "AI Patient Follow-up & Arrival Conversion"
+  challenge_area: "Journey Intelligence"
+  phase: "Discover"
+  cohort_date: "2026-09-15"
+  status: "assigned"
+  challenge_statement: >
+    How might Cikitsa India use AI to ensure that every viable patient
+    receives the right follow-up, at the right time, through the right
+    person — so that fewer patients become invisible between VIL
+    issuance, visa approval, arrival and hospital treatment?
+  why_it_matters: >
+    Cikitsa India invests significant effort before and during the VIL
+    process, but visibility weakens later in the journey. When
+    downstream status is unclear, the company loses the ability to
+    coordinate next actions, maintain source/hospital attribution,
+    offer relevant services, and understand the eventual treatment or
+    commercial outcome.
+  questions_to_investigate:
+    - "What events currently trigger a follow-up, and who owns each one?"
+    - "How are follow-up dates decided and recorded?"
+    - "What happens when an agent, patient or hospital does not respond?"
+    - "How does Cikitsa learn that a visa was issued, travel is planned, a patient arrived, or a hospital visit occurred?"
+    - "At which handoffs does context or visibility weaken most often?"
+    - "Which follow-up activities create measurable business value?"
+    - "Which actions can be deterministic, which may benefit from AI assistance, and which require human judgement?"
+  project_boundaries:
+    - "Do not assume the answer is a chatbot, CRM, WhatsApp bot, predictive model or 'arrival tracker'."
+    - "Do not design unauthorised passport, border, telecom, device or location tracking."
+    - "Do not make autonomous clinical or medical decisions."
+    - "Any future patient communication must be designed around consent, human oversight and company approval."
+  north_star_metric: >
+    Percentage of visa-approved cases for which Cikitsa India can
+    account for the downstream journey.
+  supporting_measures:
+    - "Overdue follow-ups"
+    - "Response rate"
+    - "Arrival confirmation"
+    - "Time-to-next-action"
+    - "Treatment attribution"
+  related_context_figures:      # company-provided estimates, not audited
+    vil_requests_per_month: "~2,000"
+    patients_obtaining_visas_per_month: "~150"
+    known_tracked_arrivals: "~30-35"
+    hospital_network: "~900"
+    bangladesh_patient_share: "~67%"
+  discover_timeline:
+    week_1: { focus: "Understand", output: "Business Diagnosis & Problem Framing Pack" }
+    week_2: { focus: "Explore",    output: "Strategic Possibility & Choice Pack" }
+    week_3: { focus: "Design",     output: "Strategy & Execution Blueprint" }
+    week_4: { focus: "Propose",    output: "Executive Proposal + Company Presentation" }
+
+  # Note the other two approved-but-unassigned challenge areas as
+  # reference data on the company record (Intake Intelligence,
+  # Operations Intelligence) so they exist for future team allocation,
+  # but do NOT assign a team to them in this task.
+
+── 3. TEAM & MENTOR ASSIGNMENT ────────────────────────────────────
+Create a Team record (size 5, per the handbook's fixed team size) and
+link it to the Journey Intelligence project above.
+
+  team_name: "<TEAM NAME — e.g. Cohort-Sep26-Team-A>"
+  fellows:
+    - "<Fellow 1 full name / email>"
+    - "<Fellow 2 full name / email>"
+    - "<Fellow 3 full name / email>"
+    - "<Fellow 4 full name / email>"
+    - "<Fellow 5 full name / email>"
+  dedicated_team_mentor: "<Mentor full name / email>"
+  mentor_role: "Dedicated Team Mentor"        # per handbook: questions,
+                                               # critiques, exposes gaps,
+                                               # coaches reasoning — does
+                                               # NOT solve the problem
+  company_challenge_owner: "Punit Sureka"
+  assignment_status: "active"
+  gate_schedule:
+    week_1_gate: "Business Diagnosis & Problem Framing Pack"
+    week_2_gate: "Strategic Possibility & Choice Pack"
+    week_3_gate: "Strategy & Execution Blueprint"
+    week_4_gate: "Final Executive Proposal + Presentation"
+
+Wire this into whatever "team management" and "mentor assignment"
+tables/relations already exist (per docs/database). If team↔project
+and mentor↔team relations aren't modelled yet, add the minimal
+migration to support a team having exactly one active company
+challenge and one dedicated mentor per DISCOVER phase.
+
+── 4. UI UPDATES ───────────────────────────────────────────────────
+Update both the student-facing and admin-facing views in apps/web:
+
+  - Company profile page: Cikitsa India logo (use the attached asset,
+    not a placeholder), tagline, NABH-accredited badge, "Live Industry
+    Challenge" badge, founder/sponsor line.
+  - Project/challenge detail page for Journey Intelligence: challenge
+    statement, why-it-matters, questions to investigate (checklist
+    style), project boundaries (flagged clearly — these are hard
+    constraints, not suggestions), north-star + supporting measures,
+    and the 4-week Discover timeline as a horizontal stepper matching
+    the weekly gate structure already defined in the platform.
+  - Team page: the 5 assigned fellows, dedicated mentor, and current
+    gate status.
+  - Visual polish: pull accent colors from the Cikitsa India logo
+    (red/green/blue) for that company's card and detail-page accents
+    only — do not change the platform's own global theme. Keep
+    typography and spacing consistent with the platform's existing
+    design system; this should read as a native addition, not a
+    bolted-on page.
+
+── 5. DELIVERABLE ──────────────────────────────────────────────────
+- Migration file(s) for any new fields/tables.
+- Seed script (or admin-panel-insertable JSON/SQL) for the company,
+  project, team and mentor records above.
+- Updated frontend components/pages listed in Section 4.
+- A short summary of every schema assumption you made and every file
+  you touched, so it's reviewable in one pass.
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-09-18T21:17:27+05:30.
+
+The user's current state is as follows:
+Active Document: c:\Users\navel\OneDrive\Desktop\DL_V1\apps\api\requirements.txt (LANGUAGE_UNSPECIFIED)
+Cursor is on line: 10
+Other open documents:
+- c:\Users\navel\OneDrive\Desktop\DL_V1\apps\api\requirements.txt (LANGUAGE_UNSPECIFIED)
+- c:\Users\navel\OneDrive\Desktop\DL_V1\apps\api\.env (LANGUAGE_UNSPECIFIED)
+- c:\Users\navel\OneDrive\Desktop\DL_V1\apps\api\app\db\models\mentor.py (LANGUAGE_PYTHON)
+- c:\Users\navel\OneDrive\Desktop\DL_V1\apps\api\app\db\models\challenge_assignment.py (LANGUAGE_PYTHON)
+- c:\Users\navel\OneDrive\Desktop\DL_V1\apps\api\app\db\migrations\versions\168c6ccd9e49_cascade_institution_deletion.py (LANGUAGE_PYTHON)
+Running terminal commands:
+- ngrok http 8000 (in c:\Users\navel\OneDrive\Desktop\DL_V1\apps\api, running for 11h41m3s)
+- .\.venv\Scripts\Activate.ps1
+python -m uvicorn app.main:app --reload (in c:\Users\navel\OneDrive\Desktop\DL_V1\apps\api, running for 19m5s)
+- npm run dev (in c:\Users\navel\OneDrive\Desktop\DL_V1\apps\web, running for 13m39s)
+</ADDITIONAL_METADATA>

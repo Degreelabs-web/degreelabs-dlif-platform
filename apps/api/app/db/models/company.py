@@ -2,7 +2,7 @@ from datetime import datetime
 from uuid import UUID, uuid4
 
 # pyrefly: ignore [missing-import]
-from sqlalchemy import DateTime, String, Text, func
+from sqlalchemy import DateTime, JSON, String, Text, func
 # pyrefly: ignore [missing-import]
 from sqlalchemy.dialects.postgresql import UUID as PostgreSQLUUID
 # pyrefly: ignore [missing-import]
@@ -66,6 +66,46 @@ class Company(Base):
 
     logo_url: Mapped[str | None] = mapped_column(
         String(2048),
+        nullable=True,
+    )
+
+    tagline: Mapped[str | None] = mapped_column(
+        String(255),
+        nullable=True,
+    )
+
+    accreditation: Mapped[str | None] = mapped_column(
+        String(255),
+        nullable=True,
+    )
+
+    category: Mapped[str | None] = mapped_column(
+        String(255),
+        nullable=True,
+    )
+
+    founder_sponsor: Mapped[str | None] = mapped_column(
+        String(255),
+        nullable=True,
+    )
+
+    founder_title: Mapped[str | None] = mapped_column(
+        String(100),
+        nullable=True,
+    )
+
+    public_journey_stages: Mapped[list | None] = mapped_column(
+        JSON,
+        nullable=True,
+    )
+
+    brand_colors: Mapped[dict | None] = mapped_column(
+        JSON,
+        nullable=True,
+    )
+
+    reference_challenge_areas: Mapped[list | None] = mapped_column(
+        JSON,
         nullable=True,
     )
 

@@ -218,7 +218,7 @@ class TeamAssignmentService:
         if not project:
             raise LookupError(f"Project with id '{data.project_id}' not found.")
 
-        if project.status not in ["active", "draft"]:
+        if project.status not in ["active", "draft", "assigned"]:
             raise ValueError(f"Project is '{project.status}' and cannot be assigned to teams.")
 
         # Check project max teams

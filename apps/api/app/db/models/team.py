@@ -24,6 +24,13 @@ class Team(Base):
         index=True,
     )
 
+    company_id: Mapped[UUID | None] = mapped_column(
+        PostgreSQLUUID(as_uuid=True),
+        ForeignKey("companies.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+
     name: Mapped[str] = mapped_column(
         String(255),
         nullable=False,

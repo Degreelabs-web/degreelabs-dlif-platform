@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID, uuid4
 
-from sqlalchemy import DateTime, ForeignKey, Index, String, Text, func
+from sqlalchemy import DateTime, ForeignKey, Index, JSON, String, Text, func
 from sqlalchemy.dialects.postgresql import UUID as PostgreSQLUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -57,6 +57,16 @@ class TeamProjectAssignment(Base):
 
     notes: Mapped[str | None] = mapped_column(
         Text,
+        nullable=True,
+    )
+
+    gate_schedule: Mapped[dict | None] = mapped_column(
+        JSON,
+        nullable=True,
+    )
+
+    company_challenge_owner: Mapped[str | None] = mapped_column(
+        String(255),
         nullable=True,
     )
 

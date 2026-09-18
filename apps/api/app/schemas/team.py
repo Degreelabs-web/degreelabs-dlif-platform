@@ -29,6 +29,7 @@ class TeamMemberResponse(TeamMemberBase):
 class TeamBase(BaseModel):
     name: str = Field(..., min_length=2, max_length=255)
     cohort_id: UUID
+    company_id: UUID | None = None
     status: str = Field(default="active", max_length=50)
 
 
@@ -39,11 +40,13 @@ class TeamCreate(TeamBase):
 
 class TeamUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=2, max_length=255)
+    company_id: UUID | None = None
     status: str | None = Field(default=None, max_length=50)
 
 
 class TeamResponse(TeamBase):
     id: UUID
+    company_name: str | None = None
     created_at: datetime
     updated_at: datetime
     members: list[TeamMemberResponse] = []

@@ -2,7 +2,7 @@ from datetime import date, datetime
 from uuid import UUID, uuid4
 
 # pyrefly: ignore [missing-import]
-from sqlalchemy import CheckConstraint, Date, DateTime, ForeignKey, Integer, String, Text, func
+from sqlalchemy import CheckConstraint, Date, DateTime, ForeignKey, Integer, JSON, String, Text, func
 # pyrefly: ignore [missing-import]
 from sqlalchemy.dialects.postgresql import UUID as PostgreSQLUUID
 # pyrefly: ignore [missing-import]
@@ -54,6 +54,67 @@ class Project(Base):
     expected_deliverables: Mapped[str] = mapped_column(
         Text,
         nullable=False,
+    )
+
+    code: Mapped[str | None] = mapped_column(
+        String(100),
+        nullable=True,
+        index=True,
+    )
+
+    challenge_area: Mapped[str | None] = mapped_column(
+        String(100),
+        nullable=True,
+    )
+
+    phase: Mapped[str | None] = mapped_column(
+        String(50),
+        nullable=True,
+    )
+
+    cohort_date: Mapped[date | None] = mapped_column(
+        Date,
+        nullable=True,
+    )
+
+    challenge_statement: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+
+    why_it_matters: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+
+    questions_to_investigate: Mapped[list | None] = mapped_column(
+        JSON,
+        nullable=True,
+    )
+
+    project_boundaries: Mapped[list | None] = mapped_column(
+        JSON,
+        nullable=True,
+    )
+
+    north_star_metric: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+
+    supporting_measures: Mapped[list | None] = mapped_column(
+        JSON,
+        nullable=True,
+    )
+
+    related_context_figures: Mapped[dict | None] = mapped_column(
+        JSON,
+        nullable=True,
+    )
+
+    discover_timeline: Mapped[dict | None] = mapped_column(
+        JSON,
+        nullable=True,
     )
 
     start_date: Mapped[date | None] = mapped_column(

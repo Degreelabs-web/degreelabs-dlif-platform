@@ -192,6 +192,8 @@ class PortalExperienceService:
                     TeamProjectAssignment.status == "active",
                 )
             )
+            company = None
+            project = None
             if project_assignment:
                 project = self.db.scalar(
                     select(Project).where(Project.id == project_assignment.project_id)
@@ -199,26 +201,53 @@ class PortalExperienceService:
                 company = self.db.scalar(
                     select(Company).where(Company.id == project_assignment.company_id)
                 )
-                if company:
-                    company_data = {
-                        "id": str(company.id),
-                        "name": company.name,
-                        "industry": company.industry,
-                        "website": company.website,
-                        "logo_url": company.logo_url,
-                        "profile": company.profile,
-                    }
-                if project:
+            elif team.company_id:
+                company = self.db.scalar(
+                    select(Company).where(Company.id == team.company_id)
+                )
+
+            if company:
+                company_data = {
+                    "id": str(company.id),
+                    "name": company.name,
+                    "industry": company.industry,
+                    "website": company.website,
+                    "logo_url": company.logo_url,
+                    "profile": company.profile,
+                    "tagline": company.tagline,
+                    "accreditation": company.accreditation,
+                    "category": company.category,
+                    "founder_sponsor": company.founder_sponsor,
+                    "founder_title": company.founder_title,
+                    "public_journey_stages": company.public_journey_stages,
+                    "brand_colors": company.brand_colors,
+                    "reference_challenge_areas": company.reference_challenge_areas,
+                }
+            if project:
                     project_data = {
                         "id": str(project.id),
                         "title": project.title,
                         "description": project.description,
                         "objectives": project.objectives,
                         "expected_deliverables": project.expected_deliverables,
+                        "code": project.code,
+                        "challenge_area": project.challenge_area,
+                        "phase": project.phase,
+                        "cohort_date": str(project.cohort_date) if project.cohort_date else None,
+                        "challenge_statement": project.challenge_statement,
+                        "why_it_matters": project.why_it_matters,
+                        "questions_to_investigate": project.questions_to_investigate,
+                        "project_boundaries": project.project_boundaries,
+                        "north_star_metric": project.north_star_metric,
+                        "supporting_measures": project.supporting_measures,
+                        "related_context_figures": project.related_context_figures,
+                        "discover_timeline": project.discover_timeline,
                         "status": project.status,
                         "start_date": str(project.start_date) if project.start_date else None,
                         "end_date": str(project.end_date) if project.end_date else None,
                         "difficulty": project.difficulty,
+                        "gate_schedule": project_assignment.gate_schedule,
+                        "company_challenge_owner": project_assignment.company_challenge_owner,
                     }
 
         # 5. Stats

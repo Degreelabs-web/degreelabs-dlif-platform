@@ -11,6 +11,18 @@ class ProjectBase(BaseModel):
     description: str = Field(..., min_length=10)
     objectives: str = Field(..., min_length=10)
     expected_deliverables: str = Field(..., min_length=10)
+    code: str | None = Field(default=None, max_length=100)
+    challenge_area: str | None = Field(default=None, max_length=100)
+    phase: str | None = Field(default=None, max_length=50)
+    cohort_date: date | None = None
+    challenge_statement: str | None = None
+    why_it_matters: str | None = None
+    questions_to_investigate: list[str] | None = None
+    project_boundaries: list[str] | None = None
+    north_star_metric: str | None = None
+    supporting_measures: list[str] | None = None
+    related_context_figures: dict[str, str] | None = None
+    discover_timeline: dict[str, dict[str, str]] | None = None
     start_date: date | None = None
     end_date: date | None = None
     status: str = Field(default="draft", max_length=50)
@@ -30,10 +42,23 @@ class ProjectCreate(ProjectBase):
 
 class ProjectUpdate(BaseModel):
     company_id: UUID | None = None
+    mentor_id: UUID | None = None
     title: str | None = Field(default=None, min_length=2, max_length=255)
     description: str | None = Field(default=None, min_length=10)
     objectives: str | None = Field(default=None, min_length=10)
     expected_deliverables: str | None = Field(default=None, min_length=10)
+    code: str | None = Field(default=None, max_length=100)
+    challenge_area: str | None = Field(default=None, max_length=100)
+    phase: str | None = Field(default=None, max_length=50)
+    cohort_date: date | None = None
+    challenge_statement: str | None = None
+    why_it_matters: str | None = None
+    questions_to_investigate: list[str] | None = None
+    project_boundaries: list[str] | None = None
+    north_star_metric: str | None = None
+    supporting_measures: list[str] | None = None
+    related_context_figures: dict[str, str] | None = None
+    discover_timeline: dict[str, dict[str, str]] | None = None
     start_date: date | None = None
     end_date: date | None = None
     status: str | None = Field(default=None, max_length=50)

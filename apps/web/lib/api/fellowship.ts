@@ -293,6 +293,15 @@ export async function unassignMentorFromProject(projectId: string): Promise<Proj
   });
 }
 
+
+
+export async function assignCompanyToTeam(teamId: string, companyId: string | null): Promise<void> {
+  return apiClient<void>(`/teams/${teamId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ company_id: companyId }),
+  });
+}
+
 export async function fetchProjectAssignments(params?: {
   team_id?: string;
   project_id?: string;

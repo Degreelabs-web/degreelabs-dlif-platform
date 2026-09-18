@@ -30,9 +30,18 @@ class TeamService:
         member_responses = [
             TeamMemberResponse.model_validate(m) for m in members
         ]
+        company_name = None
+        if team.company_id:
+            from app.db.models.company import Company
+            comp = self.db.scalar(select(Company).where(Company.id == team.company_id))
+            if comp:
+                company_name = comp.name
+
         return TeamResponse(
             id=team.id,
             cohort_id=team.cohort_id,
+            company_id=team.company_id,
+            company_name=company_name,
             name=team.name,
             status=team.status,
             created_at=team.created_at,
@@ -105,6 +114,7 @@ class TeamService:
         team = Team(
             name=data.name,
             cohort_id=data.cohort_id,
+            company_id=data.company_id,
             status=data.status,
         )
 
@@ -136,6 +146,9 @@ class TeamService:
                     f"Team '{data.name}' already exists in this cohort."
                 )
             team.name = data.name
+
+        if "company_id" in data.model_fields_set:
+            team.company_id = data.company_id
 
         if data.status is not None:
             team.status = data.status
