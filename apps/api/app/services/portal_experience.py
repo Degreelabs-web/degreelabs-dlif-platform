@@ -12,6 +12,7 @@ from app.db.models.cohort import Cohort
 from app.db.models.company import Company
 from app.db.models.institution import Institution
 from app.db.models.mentor import Mentor
+from app.db.models.mentor_slot_request import MentorSlotRequest
 from app.db.models.project import Project
 from app.db.models.student_cohort_assignment import StudentCohortAssignment
 from app.db.models.student_profile import StudentProfile
@@ -56,15 +57,23 @@ class PortalExperienceService:
                 try:
                     if StudentPhotoStorageService.is_storage_path(sp.photo_url):
                         photo_url = StudentPhotoStorageService().signed_url(sp.photo_url)
+                    elif MentorHeadshotStorageService.is_storage_path(sp.photo_url):
+                        photo_url = MentorHeadshotStorageService().signed_url(sp.photo_url)
                     else:
                         photo_url = sp.photo_url
                 except Exception:
                     photo_url = sp.photo_url
 
+            is_lead = bool(
+                getattr(m, "is_team_lead", False)
+                or (m.role and m.role.lower() in ["fellow lead", "lead", "team_lead"])
+            )
             team_members_list.append({
                 "student_id": str(m.student_id),
+                "user_id": str(u.id) if u else None,
                 "name": u.full_name if u else "Team Member",
-                "role": m.role or "Member",
+                "role": "Fellow Lead" if is_lead else (m.role or "Member"),
+                "is_team_lead": is_lead,
                 "email": u.email if u else None,
                 "status": u.status if u else "active",
                 "roll_no": sp.student_id if sp else None,
@@ -638,6 +647,41 @@ class PortalExperienceService:
                         else (real_time.strftime("%A, %d %b, %I:%M %p UTC") if hasattr(real_time, "strftime") else str(real_time))
                     ),
                     "meeting_link": real_meet_link,
+                })
+
+        # Prepend active approved mentor slot consultations for this team
+        if team:
+            approved_slots = self.db.scalars(
+                select(MentorSlotRequest)
+                .where(
+                    MentorSlotRequest.team_id == team.id,
+                    MentorSlotRequest.status == "approved",
+                    MentorSlotRequest.confirmed_start_time.is_not(None),
+                    MentorSlotRequest.confirmed_start_time >= (now - timedelta(hours=2)),
+                )
+                .order_by(MentorSlotRequest.confirmed_start_time.asc())
+            ).all()
+
+            for slot in approved_slots:
+                start_dt = slot.confirmed_start_time
+                end_dt = slot.confirmed_end_time or (start_dt + timedelta(minutes=45))
+                dur = max(15, int((end_dt - start_dt).total_seconds() / 60))
+                upcoming_sessions.insert(0, {
+                    "session_number": "Mentor Slot",
+                    "week_number": current_week_number,
+                    "title": f"Mentor Consultation: {slot.topic}",
+                    "session_type": "mentor_slot",
+                    "type_label": "Mentor Consultation Slot",
+                    "focus": f"Team consultation agenda: {slot.topic}",
+                    "required_working_evidence": "Consultation notes and actionable sprint steps",
+                    "duration_minutes": dur,
+                    "scheduled_at": start_dt.isoformat(),
+                    "formatted_date": (
+                        start_dt.astimezone(timezone(timedelta(hours=5, minutes=30))).strftime("%A, %d %b, %I:%M %p IST")
+                        if hasattr(start_dt, "astimezone")
+                        else start_dt.strftime("%A, %d %b, %I:%M %p UTC")
+                    ),
+                    "meeting_link": slot.meet_link,
                 })
 
         # 9. Next Action banner calculation

@@ -22,12 +22,21 @@ import {
   Phone,
   User as UserIcon,
   Briefcase,
+  AlertCircle,
 } from "lucide-react";
+import { RequestMentorSlotModal } from "@/components/student/RequestMentorSlotModal";
+import {
+  fetchTeamMentorSlots,
+  updateMentorSlot,
+  cancelMentorSlot,
+  MentorSlotRequest,
+} from "@/lib/api/mentor_slots";
 
 interface TeamMemberProfile {
   student_id: string;
   name: string;
   role: string;
+  is_team_lead?: boolean;
   discipline: string;
   email?: string | null;
   status?: string | null;
@@ -53,6 +62,7 @@ function studentInitials(name?: string | null): string {
 function resolveStudentPhotoUrl(value?: string | null): string | null {
   const source = value?.trim();
   if (!source) return null;
+  if (source.startsWith("/") || source.startsWith("data:")) return source;
   try {
     const url = new URL(source);
     const isGoogleDrive =
@@ -61,13 +71,37 @@ function resolveStudentPhotoUrl(value?: string | null): string | null {
       const pathMatch = url.pathname.match(/\/(?:file\/)?d\/([^/?]+)/);
       const fileId = url.searchParams.get("id") || pathMatch?.[1];
       if (fileId) {
-        return `https://drive.google.com/thumbnail?id=${encodeURIComponent(fileId)}&sz=w800`;
+        return `https://lh3.googleusercontent.com/d/${encodeURIComponent(fileId)}`;
       }
     }
   } catch {
-    return null;
+    return source;
   }
   return source;
+}
+
+function getLocalStudentFallback(rollNo?: string | null, name?: string | null): string | null {
+  const normRoll = (rollNo || "").trim();
+  const normName = (name || "").toLowerCase();
+  if (normRoll === "DL-IF/2026/001" || normName.includes("shrihari")) {
+    return "/students/DL-IF_2026_001_Photo.jpeg";
+  }
+  if (normRoll === "DL-IF/2026/009" || normName.includes("sreehari")) {
+    return "/students/DL-IF_2026_009_Photo.png";
+  }
+  if (normRoll === "DL-IF/2026/019" || normName.includes("midhun")) {
+    return "/students/DL-IF_2026_019_Photo.jpeg";
+  }
+  if (normRoll === "DL-IF/2026/028" || normName.includes("sara")) {
+    return "/students/DL-IF_2026_028_Photo.png";
+  }
+  if (normRoll === "DL-IF/2026/032" || normName.includes("pranav")) {
+    return "/students/DL-IF_2026_032_Photo.jpeg";
+  }
+  if (normName.includes("samatha") || normRoll.toLowerCase().includes("test")) {
+    return "/students/samatha_photo.jpeg";
+  }
+  return null;
 }
 import { getStoredUser } from "@/lib/api/auth";
 import { fetchStudentPortalContext } from "@/lib/api/fellowship";
@@ -101,12 +135,24 @@ const INITIAL_SCRATCHPAD = `# DLIF Discover Phase — Team Collaborative Scratch
 - Who owns the exception decision threshold in the current hierarchy?
 `;
 
+function isTeamLeadRole(role?: string, isTeamLead?: boolean): boolean {
+  if (isTeamLead === true) return true;
+  const r = (role || "").toLowerCase().trim();
+  return r === "fellow lead" || r === "lead" || r === "team_lead" || r === "leader";
+}
+
 export default function StudentTeamWorkspacePage() {
   const [context, setContext] = useState<StudentPortalContext | null>(null);
   const [dashboardData, setDashboardData] = useState<StudentDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [mentorHeadshotFailed, setMentorHeadshotFailed] = useState(false);
   const [selectedMember, setSelectedMember] = useState<TeamMemberProfile | null>(null);
+  const [mentorSlotModalOpen, setMentorSlotModalOpen] = useState(false);
+  const [existingSlotRequest, setExistingSlotRequest] = useState<MentorSlotRequest | null>(null);
+  const [editSlotOpen, setEditSlotOpen] = useState(false);
+  const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
+  const [slotActionLoading, setSlotActionLoading] = useState(false);
+  const [slotActionError, setSlotActionError] = useState<string | null>(null);
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -158,6 +204,22 @@ export default function StudentTeamWorkspacePage() {
     loadWorkspaceData();
   }, []);
 
+  // Fetch existing mentor slot requests for this team (once team id is known)
+  useEffect(() => {
+    const teamId = (dashboardData?.team as any)?.id || (context?.team as any)?.id;
+    if (!teamId) return;
+    fetchTeamMentorSlots(teamId)
+      .then((slots) => {
+        if (slots && slots.length > 0) {
+          // Surface the most recent request (first in list)
+          setExistingSlotRequest(slots[0]);
+        }
+      })
+      .catch(() => {
+        // Silently ignore; this is non-critical
+      });
+  }, [dashboardData, context]);
+
   const handleSaveScratchpad = (e: React.FormEvent) => {
     e.preventDefault();
     setSaveStatus("saving");
@@ -193,6 +255,8 @@ export default function StudentTeamWorkspacePage() {
   // Prepare 5-member roster
   const rawMembers = (context?.team?.members && context.team.members.length > 0)
     ? context.team.members
+    : (dashboardData?.team?.members && dashboardData.team.members.length > 0)
+    ? dashboardData.team.members
     : [
         { name: "Midhun Krishna", role: "Fellow Lead" },
         { name: "Pranav Madan Shekhar", role: "Member" },
@@ -205,7 +269,8 @@ export default function StudentTeamWorkspacePage() {
   const members: TeamMemberProfile[] = rawMembers.slice(0, 5).map((m, idx) => ({
     student_id: (m as any).student_id || `member-${idx}`,
     name: m.name,
-    role: idx === 0 ? "Fellow Lead" : (m.role || "Member"),
+    role: (m as any).role || "Member",
+    is_team_lead: (m as any).is_team_lead,
     discipline: DEFAULT_DISCIPLINES[idx % DEFAULT_DISCIPLINES.length],
     email: (m as any).email,
     status: (m as any).status,
@@ -220,6 +285,19 @@ export default function StudentTeamWorkspacePage() {
     photo_url: (m as any).photo_url,
     batch_name: (m as any).batch_name,
   }));
+
+  // Determine if the current user is the team lead
+  // Match by email (always present in both stored session and team member data)
+  const storedUser = getStoredUser();
+  const currentEmail = storedUser?.email?.toLowerCase();
+  const currentUserMember = currentEmail
+    ? members.find((m) => m.email?.toLowerCase() === currentEmail)
+    : undefined;
+  const isCurrentUserTeamLead = currentUserMember
+    ? isTeamLeadRole(currentUserMember.role, currentUserMember.is_team_lead)
+    : false;
+
+  const teamId = (dashboardData?.team as any)?.id || (context?.team as any)?.id || "";
 
   // Output submissions history (4 weeks)
   const outputHistory = [
@@ -255,6 +333,70 @@ export default function StudentTeamWorkspacePage() {
 
   return (
     <div className="space-y-6 pb-12">
+      {/* Mentor Slot Request Status Banner */}
+      {existingSlotRequest && (
+        <div
+          className={`flex items-start gap-3 rounded-xl border px-4 py-3 text-sm ${
+            existingSlotRequest.status === "approved"
+              ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+              : existingSlotRequest.status === "declined"
+              ? "border-red-200 bg-red-50 text-red-800"
+              : "border-amber-200 bg-amber-50 text-amber-800"
+          }`}
+        >
+          {existingSlotRequest.status === "approved" ? (
+            <CheckCircle2 className="h-5 w-5 shrink-0 mt-0.5 text-emerald-600" />
+          ) : existingSlotRequest.status === "declined" ? (
+            <X className="h-5 w-5 shrink-0 mt-0.5 text-red-500" />
+          ) : (
+            <AlertCircle className="h-5 w-5 shrink-0 mt-0.5 text-amber-600" />
+          )}
+          <div className="min-w-0 flex-1">
+            <p className="font-semibold">
+              {existingSlotRequest.status === "approved"
+                ? "Mentor Slot Approved!"
+                : existingSlotRequest.status === "declined"
+                ? "Mentor Slot Request Declined"
+                : "Mentor Slot Request Pending Review"}
+            </p>
+            <p className="mt-0.5 text-xs opacity-80">
+              {existingSlotRequest.status === "approved" && existingSlotRequest.meet_link ? (
+                <>
+                  Scheduled for{" "}
+                  <strong>{existingSlotRequest.confirmed_start_time?.slice(0, 16).replace("T", " ")}</strong>.
+                  {" "}Your Google Meet link is available on the{" "}
+                  <Link href="/student" className="underline font-semibold">Student Dashboard</Link>.
+                </>
+              ) : existingSlotRequest.status === "declined" ? (
+                existingSlotRequest.admin_note || "Admin has declined the request. You may submit a new request."
+              ) : (
+                `Request submitted on ${
+                  existingSlotRequest.created_at?.slice(0, 10) || "—"
+                }. The DLIF admin will respond shortly.`
+              )}
+            </p>
+          </div>
+          {existingSlotRequest.status === "pending" && isCurrentUserTeamLead && (
+            <div className="flex shrink-0 items-center gap-2">
+              <button
+                type="button"
+                onClick={() => { setSlotActionError(null); setEditSlotOpen(true); }}
+                className="rounded-lg border border-amber-400 bg-amber-100 px-3 py-1.5 text-xs font-bold text-amber-900 hover:bg-amber-200 transition-colors"
+              >
+                Edit
+              </button>
+              <button
+                type="button"
+                onClick={() => { setSlotActionError(null); setCancelConfirmOpen(true); }}
+                className="rounded-lg border border-red-300 bg-red-50 px-3 py-1.5 text-xs font-bold text-red-700 hover:bg-red-100 transition-colors"
+              >
+                Cancel Request
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* 1. Page Header (Matching DL_DISCOVER Team Workspace) */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between pb-2 border-b border-slate-200">
         <div>
@@ -275,13 +417,27 @@ export default function StudentTeamWorkspacePage() {
         </div>
 
         <div className="flex items-center gap-3 shrink-0">
-          <Link
-            href="/student/mentor"
-            className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-xs sm:text-sm font-semibold text-slate-700 shadow-xs hover:bg-slate-50 transition-colors"
-          >
-            <Video className="h-4 w-4 text-slate-500" />
-            <span>Request Mentor Slot</span>
-          </Link>
+          {isCurrentUserTeamLead ? (
+            <button
+              type="button"
+              onClick={() => setMentorSlotModalOpen(true)}
+              className="inline-flex items-center gap-2 rounded-lg border border-sky-300 bg-sky-50 px-3.5 py-2.5 text-xs sm:text-sm font-semibold text-sky-800 shadow-xs hover:bg-sky-100 transition-colors"
+              title="Request a mentor consultation slot for your team"
+            >
+              <Video className="h-4 w-4 text-sky-600" />
+              <span>Request Mentor Slot</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              disabled
+              className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-xs sm:text-sm font-semibold text-slate-400 shadow-xs cursor-not-allowed"
+              title="Only the Team Lead can request a mentor slot"
+            >
+              <Video className="h-4 w-4 text-slate-300" />
+              <span>Request Mentor Slot</span>
+            </button>
+          )}
           <Link
             href={`/student/deliverables?week=${currentWeek}`}
             className="inline-flex items-center gap-2 rounded-lg bg-sky-600 px-4 py-2.5 text-xs sm:text-sm font-semibold text-white shadow-sm hover:bg-sky-500 transition-colors"
@@ -307,7 +463,8 @@ export default function StudentTeamWorkspacePage() {
         <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
           {members.map((member, idx) => {
             const initial = studentInitials(member.name);
-            const photo = resolveStudentPhotoUrl(member.photo_url);
+            const fallbackPhoto = getLocalStudentFallback(member.roll_no, member.name);
+            const photo = resolveStudentPhotoUrl(member.photo_url) || fallbackPhoto;
             return (
               <button
                 key={idx}
@@ -322,8 +479,26 @@ export default function StudentTeamWorkspacePage() {
                     <img
                       src={photo}
                       alt={member.name}
-                      referrerPolicy="no-referrer"
+                      crossOrigin="anonymous"
                       onError={(e) => {
+                        const current = e.currentTarget.src;
+                        if (fallbackPhoto && !current.includes(fallbackPhoto)) {
+                          e.currentTarget.src = fallbackPhoto;
+                          return;
+                        }
+                        if (current.includes("lh3.googleusercontent.com/d/")) {
+                          const fileId = current.split("/d/")[1]?.split(/[?=&]/)[0];
+                          if (fileId) {
+                            e.currentTarget.src = `https://drive.google.com/thumbnail?id=${fileId}&sz=w800`;
+                            return;
+                          }
+                        } else if (current.includes("drive.google.com/thumbnail")) {
+                          const fileId = new URL(current).searchParams.get("id");
+                          if (fileId) {
+                            e.currentTarget.src = `https://drive.google.com/uc?export=view&id=${fileId}`;
+                            return;
+                          }
+                        }
                         e.currentTarget.style.display = "none";
                       }}
                       className="absolute inset-0 h-full w-full object-cover"
@@ -483,14 +658,6 @@ export default function StudentTeamWorkspacePage() {
                 </div>
               </div>
             </div>
-
-            <Link
-              href="/student/mentor"
-              className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-sky-300 bg-sky-50 px-4 py-2 text-xs font-bold text-sky-800 hover:bg-sky-100 transition-colors"
-            >
-              <Calendar className="h-3.5 w-3.5" />
-              <span>Book Guidance Session</span>
-            </Link>
           </div>
 
           {/* Team Output History Card */}
@@ -541,21 +708,45 @@ export default function StudentTeamWorkspacePage() {
               </button>
 
               <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
-                <div className="relative flex h-20 w-20 sm:h-24 sm:w-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-sky-500 to-indigo-700 text-2xl font-bold text-white shadow-lg ring-4 ring-white">
-                  <span>{studentInitials(selectedMember.name)}</span>
-                  {resolveStudentPhotoUrl(selectedMember.photo_url) && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={resolveStudentPhotoUrl(selectedMember.photo_url) || undefined}
-                      alt={`${selectedMember.name} photo`}
-                      referrerPolicy="no-referrer"
-                      onError={(e) => {
-                        e.currentTarget.style.display = "none";
-                      }}
-                      className="absolute inset-0 h-full w-full object-cover"
-                    />
-                  )}
-                </div>
+                {(() => {
+                  const modalFallback = getLocalStudentFallback(selectedMember.roll_no, selectedMember.name);
+                  const modalPhoto = resolveStudentPhotoUrl(selectedMember.photo_url) || modalFallback;
+                  return (
+                    <div className="relative flex h-20 w-20 sm:h-24 sm:w-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-sky-500 to-indigo-700 text-2xl font-bold text-white shadow-lg ring-4 ring-white">
+                      <span>{studentInitials(selectedMember.name)}</span>
+                      {modalPhoto && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={modalPhoto}
+                          alt={`${selectedMember.name} photo`}
+                          crossOrigin="anonymous"
+                          onError={(e) => {
+                            const current = e.currentTarget.src;
+                            if (modalFallback && !current.includes(modalFallback)) {
+                              e.currentTarget.src = modalFallback;
+                              return;
+                            }
+                            if (current.includes("lh3.googleusercontent.com/d/")) {
+                              const fileId = current.split("/d/")[1]?.split(/[?=&]/)[0];
+                              if (fileId) {
+                                e.currentTarget.src = `https://drive.google.com/thumbnail?id=${fileId}&sz=w800`;
+                                return;
+                              }
+                            } else if (current.includes("drive.google.com/thumbnail")) {
+                              const fileId = new URL(current).searchParams.get("id");
+                              if (fileId) {
+                                e.currentTarget.src = `https://drive.google.com/uc?export=view&id=${fileId}`;
+                                return;
+                              }
+                            }
+                            e.currentTarget.style.display = "none";
+                          }}
+                          className="absolute inset-0 h-full w-full object-cover"
+                        />
+                      )}
+                    </div>
+                  );
+                })()}
 
                 <div className="min-w-0 pr-10">
                   <div className="flex flex-wrap items-center gap-2">
@@ -706,6 +897,261 @@ export default function StudentTeamWorkspacePage() {
           </div>
         </div>
       )}
+
+      {/* Request Mentor Slot Modal (new request) */}
+      <RequestMentorSlotModal
+        isOpen={mentorSlotModalOpen}
+        onClose={() => setMentorSlotModalOpen(false)}
+        teamId={teamId}
+        teamName={teamName}
+        onSuccess={(newRequest) => {
+          setExistingSlotRequest(newRequest);
+          setMentorSlotModalOpen(false);
+        }}
+      />
+
+      {/* Edit Slot Request Modal */}
+      {editSlotOpen && existingSlotRequest && (
+        <EditSlotModal
+          request={existingSlotRequest}
+          teamId={teamId}
+          onClose={() => setEditSlotOpen(false)}
+          onSaved={(updated) => {
+            setExistingSlotRequest(updated);
+            setEditSlotOpen(false);
+          }}
+        />
+      )}
+
+      {/* Cancel Confirm Dialog */}
+      {cancelConfirmOpen && existingSlotRequest && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-100 text-red-600">
+                <X className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-900">Cancel Slot Request?</h3>
+                <p className="text-xs text-slate-500 mt-0.5">This will permanently delete your pending request. You can submit a new one anytime.</p>
+              </div>
+            </div>
+            {slotActionError && (
+              <div className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700">
+                <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                <span>{slotActionError}</span>
+              </div>
+            )}
+            <div className="flex justify-end gap-2.5">
+              <button
+                type="button"
+                onClick={() => setCancelConfirmOpen(false)}
+                disabled={slotActionLoading}
+                className="rounded-xl border border-slate-300 px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors disabled:opacity-50"
+              >
+                Keep Request
+              </button>
+              <button
+                type="button"
+                disabled={slotActionLoading}
+                onClick={async () => {
+                  setSlotActionLoading(true);
+                  setSlotActionError(null);
+                  try {
+                    await cancelMentorSlot(teamId, existingSlotRequest.id);
+                    setExistingSlotRequest(null);
+                    setCancelConfirmOpen(false);
+                  } catch (err: any) {
+                    setSlotActionError(err?.data?.detail || err?.message || "Failed to cancel.");
+                  } finally {
+                    setSlotActionLoading(false);
+                  }
+                }}
+                className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2 text-xs font-bold text-white hover:bg-red-500 disabled:opacity-50 transition-colors"
+              >
+                {slotActionLoading ? (
+                  <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                  </svg>
+                ) : <X className="h-4 w-4" />}
+                Yes, Cancel It
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Edit Slot Modal ─────────────────────────────────────────────────────────
+
+function EditSlotModal({
+  request,
+  teamId,
+  onClose,
+  onSaved,
+}: {
+  request: MentorSlotRequest;
+  teamId: string;
+  onClose: () => void;
+  onSaved: (updated: MentorSlotRequest) => void;
+}) {
+  const [date, setDate] = useState(request.preferred_date || "");
+  const [startTime, setStartTime] = useState(
+    typeof request.preferred_time_start === "string"
+      ? request.preferred_time_start.slice(0, 5)
+      : ""
+  );
+  const [endTime, setEndTime] = useState(
+    typeof request.preferred_time_end === "string"
+      ? request.preferred_time_end.slice(0, 5)
+      : ""
+  );
+  const [topic, setTopic] = useState(request.topic || "");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const todayStr = new Date().toISOString().split("T")[0];
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    if (!date || !startTime || !endTime) { setError("All fields are required."); return; }
+    if (startTime >= endTime) { setError("End time must be after start time."); return; }
+    if (topic.trim().length < 10) { setError("Topic must be at least 10 characters."); return; }
+    try {
+      setLoading(true);
+      const updated = await updateMentorSlot(teamId, request.id, {
+        preferred_date: date,
+        preferred_time_start: startTime.length === 5 ? `${startTime}:00` : startTime,
+        preferred_time_end: endTime.length === 5 ? `${endTime}:00` : endTime,
+        topic: topic.trim(),
+      });
+      onSaved(updated);
+    } catch (err: any) {
+      setError(err?.data?.detail || err?.message || "Failed to update request.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-200">
+      <div
+        className="relative w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 sm:p-7 shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button
+          type="button"
+          onClick={onClose}
+          className="absolute right-4 top-4 rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 transition-colors"
+        >
+          <X className="h-5 w-5" />
+        </button>
+
+        <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-600">
+            <Video className="h-5 w-5" />
+          </div>
+          <div>
+            <h2 className="text-base font-bold text-slate-900">Edit Slot Request</h2>
+            <p className="text-xs text-slate-500">Update your preferred date, time, or consultation topic.</p>
+          </div>
+        </div>
+
+        <form onSubmit={handleSubmit} className="mt-5 space-y-4">
+          {error && (
+            <div className="flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50/80 p-3 text-xs text-red-700">
+              <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+              <span>{error}</span>
+            </div>
+          )}
+
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1.5">
+              <Calendar className="h-3.5 w-3.5 text-sky-600" />
+              <span>Preferred Date</span>
+            </label>
+            <input
+              type="date"
+              min={todayStr}
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              required
+              className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-xs focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1.5">
+                <Clock className="h-3.5 w-3.5 text-sky-600" />
+                <span>Start Window</span>
+              </label>
+              <input
+                type="time"
+                value={startTime}
+                onChange={(e) => setStartTime(e.target.value)}
+                required
+                className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm shadow-xs focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1.5">
+                <Clock className="h-3.5 w-3.5 text-slate-400" />
+                <span>End Window</span>
+              </label>
+              <input
+                type="time"
+                value={endTime}
+                onChange={(e) => setEndTime(e.target.value)}
+                required
+                className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm shadow-xs focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1.5">
+              <MessageSquare className="h-3.5 w-3.5 text-sky-600" />
+              <span>Consultation Topic &amp; Focus Questions</span>
+            </label>
+            <textarea
+              rows={3}
+              value={topic}
+              onChange={(e) => setTopic(e.target.value)}
+              required
+              className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 shadow-xs focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
+            />
+          </div>
+
+          <div className="flex items-center justify-end gap-2.5 pt-1">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={loading}
+              className="rounded-xl border border-slate-300 px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="inline-flex items-center gap-2 rounded-xl bg-amber-500 px-5 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-amber-400 disabled:opacity-50 transition-colors"
+            >
+              {loading ? (
+                <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                </svg>
+              ) : <Check className="h-4 w-4" />}
+              Save Changes
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }

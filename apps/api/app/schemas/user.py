@@ -36,16 +36,28 @@ class UserProvisionResponse(BaseModel):
     full_name: str
     role: str
     status: str
+    photo_url: str | None = None
+    phone: str | None = None
+    course: str | None = None
+    branch: str | None = None
+    current_year_semester: str | None = None
+    graduation_year: int | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
 
 class UserProfileUpdateRequest(BaseModel):
-    full_name: str = Field(..., min_length=2, max_length=255)
+    full_name: str | None = Field(default=None, min_length=2, max_length=255)
+    phone: str | None = Field(default=None, max_length=30)
+    course: str | None = Field(default=None, max_length=255)
+    branch: str | None = Field(default=None, max_length=255)
+    current_year_semester: str | None = Field(default=None, max_length=50)
 
     @field_validator("full_name")
     @classmethod
-    def normalize_full_name(cls, value: str) -> str:
+    def normalize_full_name(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
         normalized = " ".join(value.split())
         if len(normalized) < 2:
             raise ValueError("Full name must contain at least 2 characters.")

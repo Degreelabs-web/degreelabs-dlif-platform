@@ -76,6 +76,9 @@ class Settings(BaseSettings):
     google_calendar_id: str = "primary"
     # Timezone sent to Google Calendar API (e.g. 'Asia/Kolkata', 'UTC').
     google_calendar_timezone: str = "UTC"
+
+    # Notification email for mentor slot requests and administrative escalations
+    admin_notification_email: str = "admin.dlif@degreelabs.com"
     
     model_config = SettingsConfigDict(
         env_file=".env",

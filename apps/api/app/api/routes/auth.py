@@ -14,6 +14,7 @@ from app.core.rbac import require_admin
 from app.core.security import get_current_user_token
 from app.db.models.user import User
 from app.db.models.mentor import Mentor
+from app.db.models.student_profile import StudentProfile
 from app.db.session import get_db
 from app.schemas.user import (
     TwoFactorConfirmRequest,
@@ -28,6 +29,8 @@ from app.schemas.user import (
     UserProvisionResponse,
 )
 from app.services.auth import get_current_user
+from app.services.student_photo_storage import StudentPhotoStorageService
+from fastapi import File, UploadFile
 from app.services.email_delivery import (
     EmailConfigurationError,
     EmailDeliveryError,
@@ -45,6 +48,30 @@ from app.services.supabase_admin import SupabaseAdminError, SupabaseAdminService
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 logger = logging.getLogger(__name__)
+
+
+def _build_user_response(user: User, db: Session) -> UserProvisionResponse:
+    """Build an enriched UserProvisionResponse that includes student profile fields."""
+    student_profile = None
+    if user.role == "student":
+        student_profile = (
+            db.query(StudentProfile)
+            .filter(StudentProfile.user_id == user.id)
+            .first()
+        )
+    return UserProvisionResponse(
+        id=user.id,
+        email=user.email,
+        full_name=user.full_name,
+        role=user.role,
+        status=user.status,
+        photo_url=_resolve_student_photo(student_profile),
+        phone=student_profile.phone if student_profile else None,
+        course=student_profile.course if student_profile else None,
+        branch=student_profile.branch if student_profile else None,
+        current_year_semester=student_profile.current_year_semester if student_profile else None,
+        graduation_year=student_profile.graduation_year if student_profile else None,
+    )
 
 
 def _two_factor_configuration_unavailable(
@@ -190,7 +217,7 @@ def login(
     return UserLoginResponse(
         access_token=access_token,
         token_type="bearer",
-        user=UserProvisionResponse.model_validate(user),
+        user=_build_user_response(user, db),
         requires_2fa=False,
     )
 
@@ -238,19 +265,6 @@ def complete_mentor_onboarding(
             detail="We could not save your password securely. Please try again shortly.",
         ) from exc
 
-
-@router.patch("/me", response_model=UserProvisionResponse)
-def update_current_user_profile(
-    data: UserProfileUpdateRequest,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    """Allow an authenticated user to update their own display name."""
-    current_user.full_name = data.full_name
-    db.commit()
-    db.refresh(current_user)
-    return current_user
-
     now = datetime.now(timezone.utc)
     user.status = "active"
     mentor.status = "active"
@@ -259,6 +273,121 @@ def update_current_user_profile(
     db.commit()
     db.refresh(user)
     return UserProvisionResponse.model_validate(user)
+
+
+
+@router.patch("/me", response_model=UserProvisionResponse)
+def update_current_user_profile(
+    data: UserProfileUpdateRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Allow an authenticated user to update their display name and student profile fields."""
+    # Update full_name on the User row if provided
+    if data.full_name is not None:
+        current_user.full_name = data.full_name
+
+    # If the user is a student, update their StudentProfile too
+    student_profile = None
+    if current_user.role == "student":
+        student_profile = (
+            db.query(StudentProfile)
+            .filter(StudentProfile.user_id == current_user.id)
+            .first()
+        )
+        if student_profile:
+            if data.phone is not None:
+                student_profile.phone = data.phone
+            if data.course is not None:
+                student_profile.course = data.course
+            if data.branch is not None:
+                student_profile.branch = data.branch
+            if data.current_year_semester is not None:
+                student_profile.current_year_semester = data.current_year_semester
+
+    db.commit()
+    db.refresh(current_user)
+    if student_profile:
+        db.refresh(student_profile)
+
+    # Build an enriched response so the frontend can update localStorage
+    response = UserProvisionResponse(
+        id=current_user.id,
+        email=current_user.email,
+        full_name=current_user.full_name,
+        role=current_user.role,
+        status=current_user.status,
+        photo_url=_resolve_student_photo(student_profile),
+        phone=student_profile.phone if student_profile else None,
+        course=student_profile.course if student_profile else None,
+        branch=student_profile.branch if student_profile else None,
+        current_year_semester=student_profile.current_year_semester if student_profile else None,
+        graduation_year=student_profile.graduation_year if student_profile else None,
+    )
+    return response
+
+
+@router.post("/me/photo", response_model=UserProvisionResponse)
+async def upload_own_profile_photo(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Allow a logged-in student to upload their own profile photo."""
+    if current_user.role != "student":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only students can upload a profile photo via this endpoint.",
+        )
+
+    student_profile = (
+        db.query(StudentProfile)
+        .filter(StudentProfile.user_id == current_user.id)
+        .first()
+    )
+    if student_profile is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Student profile not found.",
+        )
+
+    storage = StudentPhotoStorageService()
+    previous_path = student_profile.photo_url
+    student_profile.photo_url = await storage.upload(current_user.id, file)
+    db.commit()
+    db.refresh(student_profile)
+
+    # Clean up old photo quietly
+    if previous_path and StudentPhotoStorageService.is_storage_path(previous_path):
+        storage.delete_quietly(previous_path)
+
+    response = UserProvisionResponse(
+        id=current_user.id,
+        email=current_user.email,
+        full_name=current_user.full_name,
+        role=current_user.role,
+        status=current_user.status,
+        photo_url=_resolve_student_photo(student_profile),
+        phone=student_profile.phone,
+        course=student_profile.course,
+        branch=student_profile.branch,
+        current_year_semester=student_profile.current_year_semester,
+        graduation_year=student_profile.graduation_year,
+    )
+    return response
+
+
+def _resolve_student_photo(profile: StudentProfile | None) -> str | None:
+    """Return a signed URL if the photo is in Supabase Storage, else the raw value."""
+    if profile is None or not profile.photo_url:
+        return None
+    try:
+        if StudentPhotoStorageService.is_storage_path(profile.photo_url):
+            return StudentPhotoStorageService().signed_url(profile.photo_url)
+        return profile.photo_url
+    except Exception:
+        return profile.photo_url
+
 
 
 @router.post(
@@ -320,7 +449,7 @@ def verify_two_factor(
     return UserLoginResponse(
         access_token=access_token,
         token_type="bearer",
-        user=UserProvisionResponse.model_validate(user),
+        user=_build_user_response(user, db),
         requires_2fa=False,
     )
 
@@ -394,24 +523,13 @@ def confirm_setup_two_factor(
     }
 
 
-
-
-@router.get("/me")
+@router.get("/me", response_model=UserProvisionResponse)
 def get_me(
     current_user: User = Depends(get_current_user),
-    token: dict = Depends(get_current_user_token),
+    db: Session = Depends(get_db),
 ):
-    return {
-        "authenticated": True,
-        "user": {
-            "id": str(current_user.id),
-            "email": current_user.email,
-            "full_name": current_user.full_name,
-            "role": current_user.role,
-            "status": current_user.status,
-        },
-        "supabase_token_role": token.get("role"),
-    }
+    """Return the current authenticated user with enriched profile fields."""
+    return _build_user_response(current_user, db)
 
 
 @router.post(

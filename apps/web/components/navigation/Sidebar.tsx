@@ -40,13 +40,21 @@ export default function Sidebar({
     full_name?: string;
     email?: string;
     role?: string;
+    photo_url?: string | null;
   } | null>(null);
 
   useEffect(() => {
-    const user = getStoredUser();
-    if (user) {
-      setCurrentUser(user);
-    }
+    const refresh = () => {
+      const user = getStoredUser();
+      if (user) setCurrentUser(user);
+    };
+    refresh();
+    window.addEventListener("dlif_user_updated", refresh);
+    window.addEventListener("storage", refresh);
+    return () => {
+      window.removeEventListener("dlif_user_updated", refresh);
+      window.removeEventListener("storage", refresh);
+    };
   }, []);
 
   useEffect(() => {
@@ -282,8 +290,17 @@ export default function Sidebar({
         <div className="border-t border-white/10 p-3">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-sky-400 to-indigo-600 font-bold text-xs text-white uppercase shadow-xs">
-                {currentUser?.full_name ? currentUser.full_name.charAt(0) : "S"}
+              <div className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-sky-400 to-indigo-600 font-bold text-xs text-white uppercase shadow-xs overflow-hidden">
+                <span>{currentUser?.full_name ? currentUser.full_name.charAt(0) : "S"}</span>
+                {currentUser?.photo_url && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={currentUser.photo_url}
+                    alt={currentUser.full_name ?? "Profile"}
+                    className="absolute inset-0 h-full w-full object-cover"
+                    onError={(e) => { e.currentTarget.style.display = "none"; }}
+                  />
+                )}
               </div>
               {!desktopCollapsed && (
                 <div className="min-w-0">

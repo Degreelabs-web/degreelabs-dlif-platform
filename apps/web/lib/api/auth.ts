@@ -6,6 +6,13 @@ export interface UserSession {
   full_name: string;
   role: "admin" | "student" | "mentor";
   status: string;
+  // Student-only enrichment fields (null/undefined for non-students)
+  photo_url?: string | null;
+  phone?: string | null;
+  course?: string | null;
+  branch?: string | null;
+  current_year_semester?: string | null;
+  graduation_year?: number | null;
 }
 
 export interface LoginSuccessResponse {
@@ -83,13 +90,67 @@ export async function completeMentorOnboarding(
   });
 }
 
-export async function updateCurrentUserProfile(
-  fullName: string
-): Promise<UserSession> {
+/**
+ * Update the authenticated user's profile (name + student fields).
+ * All fields are optional — only supply what changed.
+ */
+export async function updateCurrentUserProfile(fields: {
+  full_name?: string;
+  phone?: string;
+  course?: string;
+  branch?: string;
+  current_year_semester?: string;
+}): Promise<UserSession> {
   const user = await apiClient<UserSession>("/auth/me", {
     method: "PATCH",
-    body: JSON.stringify({ full_name: fullName }),
+    body: JSON.stringify(fields),
   });
+
+  if (typeof window !== "undefined") {
+    localStorage.setItem("dlif_user", JSON.stringify(user));
+    window.dispatchEvent(new Event("dlif_user_updated"));
+  }
+
+  return user;
+}
+
+/**
+ * Upload a new profile photo for the current student.
+ * Returns the updated UserSession (including signed photo_url).
+ */
+export async function uploadProfilePhoto(file: File): Promise<UserSession> {
+  const token =
+    typeof window !== "undefined" ? localStorage.getItem("dlif_token") : null;
+
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const apiBase =
+    process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ?? "http://localhost:8000";
+
+  const res = await fetch(`${apiBase}/auth/me/photo`, {
+    method: "POST",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: formData,
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { detail?: string })?.detail ?? "Photo upload failed.");
+  }
+
+  const user: UserSession = await res.json();
+
+  if (typeof window !== "undefined") {
+    localStorage.setItem("dlif_user", JSON.stringify(user));
+    window.dispatchEvent(new Event("dlif_user_updated"));
+  }
+
+  return user;
+}
+
+export async function fetchCurrentUserProfile(): Promise<UserSession> {
+  const user = await apiClient<UserSession>("/auth/me");
 
   if (typeof window !== "undefined") {
     localStorage.setItem("dlif_user", JSON.stringify(user));

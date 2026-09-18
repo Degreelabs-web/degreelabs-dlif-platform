@@ -149,14 +149,22 @@ def is_enabled() -> bool:
 def _build_event_body(
     title: str,
     scheduled_at: datetime,
-    duration_minutes: int,
+    duration_minutes: int | None = None,
+    end_time: datetime | None = None,
+    attendee_emails: list[str] | None = None,
+    description: str | None = None,
     request_id: str | None = None,
 ) -> dict:
     """Build the Calendar event JSON payload."""
     start_dt = scheduled_at.astimezone(timezone.utc)
-    end_dt = start_dt + timedelta(minutes=duration_minutes)
+    if end_time:
+        end_dt = end_time.astimezone(timezone.utc)
+    elif duration_minutes:
+        end_dt = start_dt + timedelta(minutes=duration_minutes)
+    else:
+        end_dt = start_dt + timedelta(minutes=60)
 
-    return {
+    body: dict = {
         "summary": title,
         "start": {
             "dateTime": start_dt.strftime("%Y-%m-%dT%H:%M:%S") + "Z",
@@ -174,6 +182,14 @@ def _build_event_body(
             }
         },
     }
+
+    if description:
+        body["description"] = description
+
+    if attendee_emails:
+        body["attendees"] = [{"email": email} for email in attendee_emails if email]
+
+    return body
 
 
 def _extract_meet_link(event: dict) -> str | None:
@@ -194,7 +210,10 @@ def create_meet(
     *,
     title: str,
     scheduled_at: datetime,
-    duration_minutes: int,
+    duration_minutes: int | None = None,
+    end_time: datetime | None = None,
+    attendee_emails: list[str] | None = None,
+    description: str | None = None,
 ) -> tuple[str, str]:
     """Create a Google Calendar event with a Meet link.
 
@@ -209,12 +228,19 @@ def create_meet(
 
     calendar_id = settings.google_calendar_id
     url = f"{_CALENDAR_BASE}/calendars/{calendar_id}/events"
-    body = _build_event_body(title, scheduled_at, duration_minutes)
+    body = _build_event_body(
+        title,
+        scheduled_at,
+        duration_minutes=duration_minutes,
+        end_time=end_time,
+        attendee_emails=attendee_emails,
+        description=description,
+    )
 
     resp = _request_with_retry(
         "POST",
         url,
-        params={"conferenceDataVersion": "1"},
+        params={"conferenceDataVersion": "1", "sendUpdates": "all" if attendee_emails else "none"},
         json=body,
     )
 
@@ -243,7 +269,10 @@ def update_meet(
     google_event_id: str,
     title: str,
     scheduled_at: datetime,
-    duration_minutes: int,
+    duration_minutes: int | None = None,
+    end_time: datetime | None = None,
+    attendee_emails: list[str] | None = None,
+    description: str | None = None,
 ) -> None:
     """Patch an existing Calendar event's start/end times.
 
@@ -260,9 +289,14 @@ def update_meet(
     url = f"{_CALENDAR_BASE}/calendars/{calendar_id}/events/{google_event_id}"
 
     start_dt = scheduled_at.astimezone(timezone.utc)
-    end_dt = start_dt + timedelta(minutes=duration_minutes)
+    if end_time:
+        end_dt = end_time.astimezone(timezone.utc)
+    elif duration_minutes:
+        end_dt = start_dt + timedelta(minutes=duration_minutes)
+    else:
+        end_dt = start_dt + timedelta(minutes=60)
 
-    patch_body = {
+    patch_body: dict = {
         "summary": title,
         "start": {
             "dateTime": start_dt.strftime("%Y-%m-%dT%H:%M:%S") + "Z",
@@ -274,10 +308,16 @@ def update_meet(
         },
     }
 
+    if description:
+        patch_body["description"] = description
+
+    if attendee_emails:
+        patch_body["attendees"] = [{"email": email} for email in attendee_emails if email]
+
     resp = _request_with_retry(
         "PATCH",
         url,
-        params={"conferenceDataVersion": "1"},
+        params={"conferenceDataVersion": "1", "sendUpdates": "all" if attendee_emails else "none"},
         json=patch_body,
     )
 

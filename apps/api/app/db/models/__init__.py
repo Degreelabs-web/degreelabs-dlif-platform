@@ -17,6 +17,7 @@ from app.db.models.material import (
     MaterialMentorCategory,
 )
 from app.db.models.mentor import Mentor
+from app.db.models.mentor_slot_request import MentorSlotRequest
 from app.db.models.project import Project
 from app.db.models.recording import Recording
 from app.db.models.session import Session
@@ -51,6 +52,7 @@ __all__ = [
     "Team",
     "TeamMember",
     "Mentor",
+    "MentorSlotRequest",
     "Company",
     "Project",
     "TeamMentorAssignment",

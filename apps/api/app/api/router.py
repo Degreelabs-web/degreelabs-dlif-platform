@@ -14,6 +14,9 @@ from app.api.routes.feedback import router as feedback_router
 from app.api.routes.health import router as health_router
 from app.api.routes.institutions import router as institutions_router
 from app.api.routes.mentors import router as mentors_router
+from app.api.routes.mentor_slot_requests import (
+    router as mentor_slot_requests_router,
+)
 from app.api.routes.materials import admin_router as admin_materials_router, mentor_router as mentor_materials_router, student_router as student_materials_router
 from app.api.routes.portal import router as portal_router
 from app.api.routes.projects import router as projects_router
@@ -69,6 +72,11 @@ api_router.include_router(
 api_router.include_router(
     mentors_router,
     tags=["Mentors"],
+)
+
+api_router.include_router(
+    mentor_slot_requests_router,
+    tags=["Mentor Slot Requests"],
 )
 
 api_router.include_router(admin_materials_router, tags=["Admin Materials"])

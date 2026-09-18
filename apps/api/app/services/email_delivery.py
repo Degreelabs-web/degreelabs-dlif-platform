@@ -93,23 +93,232 @@ class EmailDeliveryService:
                 f'''<!doctype html><html><body style="margin:0;background:#f5f9ff;font-family:Arial,sans-serif;color:#10233f"><div style="max-width:520px;margin:0 auto;padding:40px 20px"><div style="background:#fff;border:1px solid #d8e5f5;border-radius:20px;padding:32px"><div style="font-size:24px;font-weight:800">Degree<span style="color:#3978f6">Labs</span></div><p style="margin:24px 0 8px;font-size:18px;font-weight:700">Set up your mentor account</p><p>Hello {safe_name}, your mentor profile is ready. Choose a password to activate your account.</p><p style="margin:28px 0"><a href="{safe_link}" style="display:inline-block;background:#2563eb;color:#fff;padding:14px 22px;border-radius:10px;text-decoration:none;font-weight:700">Set your password</a></p><p style="color:#58708e;font-size:14px;line-height:1.6">This link is single-use and expires according to the security policy. We will never email you a password.</p></div></div></body></html>''',
                 subtype="html",
             )
-            if self.config.smtp_use_ssl:
-                client = smtplib.SMTP_SSL(
-                    self.config.smtp_host,
-                    self.config.smtp_port,
-                    timeout=self.config.smtp_timeout_seconds,
-                    context=ssl.create_default_context(),
-                )
-                self._send_and_close(client, message, use_tls=False)
-            else:
-                client = smtplib.SMTP(
-                    self.config.smtp_host,
-                    self.config.smtp_port,
-                    timeout=self.config.smtp_timeout_seconds,
-                )
-                self._send_and_close(client, message, use_tls=self.config.smtp_use_tls)
+            self._deliver_message(message)
         except (OSError, ValueError, smtplib.SMTPException) as exc:
             raise EmailDeliveryError("The password setup email could not be delivered.") from exc
+
+    def _deliver_message(self, message: EmailMessage) -> None:
+        self._validate_configuration()
+        if self.config.smtp_use_ssl:
+            client = smtplib.SMTP_SSL(
+                self.config.smtp_host,
+                self.config.smtp_port,
+                timeout=self.config.smtp_timeout_seconds,
+                context=ssl.create_default_context(),
+            )
+            self._send_and_close(client, message, use_tls=False)
+        else:
+            client = smtplib.SMTP(
+                self.config.smtp_host,
+                self.config.smtp_port,
+                timeout=self.config.smtp_timeout_seconds,
+            )
+            self._send_and_close(client, message, use_tls=self.config.smtp_use_tls)
+
+    def send_mentor_slot_requested_admin(
+        self,
+        *,
+        team_name: str,
+        lead_name: str,
+        preferred_date: str,
+        time_window: str,
+        topic: str,
+        request_id: str,
+    ) -> None:
+        """Notify the DLIF admin when a team lead submits a mentor slot request."""
+        recipient = self.config.admin_notification_email or "admin.dlif@degreelabs.com"
+        message = EmailMessage()
+        message["Subject"] = f"New Mentor Slot Request: {team_name} (Lead: {lead_name})"
+        message["From"] = f"{self.config.smtp_from_name} <{self.config.smtp_from_email}>"
+        message["To"] = recipient
+
+        body_text = "\n".join([
+            "DLIF Administrator,",
+            "",
+            f"A new mentor slot request has been submitted by {lead_name} on behalf of Team {team_name}.",
+            "",
+            f"Preferred Date: {preferred_date}",
+            f"Preferred Time Window: {time_window}",
+            f"Topic / Agenda: {topic}",
+            "",
+            "Please review, assign a mentor, and approve or decline in the Admin Command Center:",
+            "/admin/mentor-slots",
+        ])
+        message.set_content(body_text)
+
+        safe_team = escape(team_name)
+        safe_lead = escape(lead_name)
+        safe_date = escape(preferred_date)
+        safe_time = escape(time_window)
+        safe_topic = escape(topic)
+
+        message.add_alternative(
+            f'''<!doctype html><html><body style="margin:0;background:#f5f9ff;font-family:Arial,sans-serif;color:#10233f"><div style="max-width:560px;margin:0 auto;padding:32px 16px"><div style="background:#fff;border:1px solid #d8e5f5;border-radius:16px;padding:32px"><div style="font-size:22px;font-weight:800">Degree<span style="color:#3978f6">Labs</span></div><h2 style="margin:20px 0 8px;font-size:18px;color:#0f172a">New Mentor Slot Request</h2><p style="color:#475569;margin-top:0">A team lead has requested an advisory consultation slot.</p><div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px;margin:20px 0"><p style="margin:0 0 8px"><strong>Team:</strong> {safe_team}</p><p style="margin:0 0 8px"><strong>Fellow Lead:</strong> {safe_lead}</p><p style="margin:0 0 8px"><strong>Preferred Date:</strong> {safe_date}</p><p style="margin:0 0 8px"><strong>Time Window:</strong> {safe_time}</p><p style="margin:0"><strong>Agenda:</strong> {safe_topic}</p></div><p style="color:#64748b;font-size:13px">Log in to the Admin Dashboard to review, assign an available mentor, and generate the Google Meet room.</p></div></div></body></html>''',
+            subtype="html",
+        )
+        try:
+            self._deliver_message(message)
+        except Exception as exc:
+            # Do not crash the request if transactional email delivery fails in dev/test
+            pass
+
+    def send_mentor_slot_approved(
+        self,
+        *,
+        recipient_emails: list[str],
+        team_name: str,
+        mentor_name: str,
+        confirmed_time: str,
+        meet_link: str,
+        topic: str,
+    ) -> None:
+        """Notify team members and the assigned mentor of the confirmed session."""
+        valid_recipients = [e for e in recipient_emails if e and "@" in e]
+        if not valid_recipients:
+            return
+
+        message = EmailMessage()
+        message["Subject"] = f"Mentor Slot Confirmed: Team {team_name} with {mentor_name}"
+        message["From"] = f"{self.config.smtp_from_name} <{self.config.smtp_from_email}>"
+        message["To"] = ", ".join(valid_recipients)
+
+        body_text = "\n".join([
+            f"Hello Team {team_name},",
+            "",
+            "Your mentor consultation slot has been confirmed!",
+            "",
+            f"Assigned Mentor: {mentor_name}",
+            f"Scheduled Date & Time: {confirmed_time}",
+            f"Topic / Agenda: {topic}",
+            f"Google Meet Link: {meet_link}",
+            "",
+            "Please join the room 5 minutes prior to the start time.",
+        ])
+        message.set_content(body_text)
+
+        safe_team = escape(team_name)
+        safe_mentor = escape(mentor_name)
+        safe_time = escape(confirmed_time)
+        safe_meet = escape(meet_link, quote=True)
+        safe_topic = escape(topic)
+
+        message.add_alternative(
+            f'''<!doctype html><html><body style="margin:0;background:#f5f9ff;font-family:Arial,sans-serif;color:#10233f"><div style="max-width:560px;margin:0 auto;padding:32px 16px"><div style="background:#fff;border:1px solid #d8e5f5;border-radius:16px;padding:32px"><div style="font-size:22px;font-weight:800">Degree<span style="color:#3978f6">Labs</span></div><h2 style="margin:20px 0 8px;font-size:18px;color:#0f172a">Mentor Slot Confirmed</h2><p style="color:#475569;margin-top:0">Your team consultation session is scheduled.</p><div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;padding:16px;margin:20px 0"><p style="margin:0 0 8px"><strong>Team:</strong> {safe_team}</p><p style="margin:0 0 8px"><strong>Assigned Mentor:</strong> {safe_mentor}</p><p style="margin:0 0 8px"><strong>Date &amp; Time:</strong> {safe_time}</p><p style="margin:0 0 16px"><strong>Topic:</strong> {safe_topic}</p><a href="{safe_meet}" style="display:inline-block;background:#0284c7;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:700">Join Google Meet</a></div><p style="color:#64748b;font-size:13px">You can also join directly from your DegreeLabs Student Dashboard under Upcoming Sessions.</p></div></div></body></html>''',
+            subtype="html",
+        )
+        try:
+            self._deliver_message(message)
+        except Exception:
+            pass
+
+    def send_mentor_slot_declined(
+        self,
+        *,
+        recipient_emails: list[str],
+        team_name: str,
+        admin_note: str,
+        topic: str,
+    ) -> None:
+        """Notify the team lead if a slot request could not be accommodated."""
+        valid_recipients = [e for e in recipient_emails if e and "@" in e]
+        if not valid_recipients:
+            return
+
+        message = EmailMessage()
+        message["Subject"] = f"Mentor Slot Request Update: Team {team_name}"
+        message["From"] = f"{self.config.smtp_from_name} <{self.config.smtp_from_email}>"
+        message["To"] = ", ".join(valid_recipients)
+
+        body_text = "\n".join([
+            f"Hello Team {team_name},",
+            "",
+            "Your recent mentor slot request could not be scheduled at this time.",
+            "",
+            f"Topic: {topic}",
+            f"Admin Note: {admin_note}",
+            "",
+            "You may submit an updated request with alternative time slots via your Team Workspace.",
+        ])
+        message.set_content(body_text)
+
+        safe_team = escape(team_name)
+        safe_note = escape(admin_note)
+        safe_topic = escape(topic)
+
+        message.add_alternative(
+            f'''<!doctype html><html><body style="margin:0;background:#f5f9ff;font-family:Arial,sans-serif;color:#10233f"><div style="max-width:560px;margin:0 auto;padding:32px 16px"><div style="background:#fff;border:1px solid #d8e5f5;border-radius:16px;padding:32px"><div style="font-size:22px;font-weight:800">Degree<span style="color:#3978f6">Labs</span></div><h2 style="margin:20px 0 8px;font-size:18px;color:#0f172a">Mentor Slot Request Update</h2><p style="color:#475569;margin-top:0">Status update for Team {safe_team}</p><div style="background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:16px;margin:20px 0"><p style="margin:0 0 8px"><strong>Topic:</strong> {safe_topic}</p><p style="margin:0"><strong>Admin Note:</strong> {safe_note}</p></div><p style="color:#64748b;font-size:13px">Please coordinate with your team and submit an updated slot request with alternate availability.</p></div></div></body></html>''',
+            subtype="html",
+        )
+        try:
+            self._deliver_message(message)
+        except Exception:
+            pass
+
+    def send_mentor_slot_cancelled(
+        self,
+        *,
+        recipient_emails: list[str],
+        team_name: str,
+        topic: str,
+        scheduled_time: str | None = None,
+        mentor_name: str | None = None,
+        reason: str | None = None,
+    ) -> None:
+        """Notify students (and mentor) when a mentor session or slot request is cancelled."""
+        valid_recipients = [e for e in recipient_emails if e and "@" in e]
+        if not valid_recipients:
+            return
+
+        message = EmailMessage()
+        message["Subject"] = f"Mentor Session Cancelled: Team {team_name}"
+        message["From"] = f"{self.config.smtp_from_name} <{self.config.smtp_from_email}>"
+        message["To"] = ", ".join(valid_recipients)
+
+        lines = [
+            f"Hello Team {team_name},",
+            "",
+            "Please note that the following mentor consultation session has been cancelled:",
+            "",
+            f"Topic / Agenda: {topic}",
+        ]
+        if mentor_name:
+            lines.append(f"Mentor: {mentor_name}")
+        if scheduled_time:
+            lines.append(f"Scheduled Time: {scheduled_time}")
+        if reason:
+            lines.append(f"Reason / Note: {reason}")
+        lines.extend([
+            "",
+            "If you need to reschedule or request another slot, please submit a new request via your Team Workspace.",
+            "",
+            "DegreeLabs Fellowship Team",
+        ])
+        body_text = "\n".join(lines)
+        message.set_content(body_text)
+
+        safe_team = escape(team_name)
+        safe_topic = escape(topic)
+        safe_mentor = escape(mentor_name) if mentor_name else None
+        safe_time = escape(scheduled_time) if scheduled_time else None
+        safe_reason = escape(reason) if reason else None
+
+        details_html = f"<p style='margin:0 0 8px'><strong>Team:</strong> {safe_team}</p>"
+        details_html += f"<p style='margin:0 0 8px'><strong>Topic:</strong> {safe_topic}</p>"
+        if safe_mentor:
+            details_html += f"<p style='margin:0 0 8px'><strong>Mentor:</strong> {safe_mentor}</p>"
+        if safe_time:
+            details_html += f"<p style='margin:0 0 8px'><strong>Time:</strong> {safe_time}</p>"
+        if safe_reason:
+            details_html += f"<p style='margin:0'><strong>Note:</strong> {safe_reason}</p>"
+
+        message.add_alternative(
+            f'''<!doctype html><html><body style="margin:0;background:#f5f9ff;font-family:Arial,sans-serif;color:#10233f"><div style="max-width:560px;margin:0 auto;padding:32px 16px"><div style="background:#fff;border:1px solid #d8e5f5;border-radius:16px;padding:32px"><div style="font-size:22px;font-weight:800">Degree<span style="color:#3978f6">Labs</span></div><h2 style="margin:20px 0 8px;font-size:18px;color:#dc2626">Mentor Session Cancelled</h2><p style="color:#475569;margin-top:0">The mentor consultation session for Team {safe_team} has been cancelled.</p><div style="background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:16px;margin:20px 0">{details_html}</div><p style="color:#64748b;font-size:13px">You can submit a new slot request with updated availability anytime from your Team Workspace on the DegreeLabs platform.</p></div></div></body></html>''',
+            subtype="html",
+        )
+        try:
+            self._deliver_message(message)
+        except Exception:
+            pass
 
     def _validate_configuration(self) -> None:
         required = {

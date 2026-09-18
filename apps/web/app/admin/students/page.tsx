@@ -46,6 +46,7 @@ function studentPhotoUrl(value?: string | null): string | null {
   const source = value?.trim();
   if (!source) return null;
 
+  if (source.startsWith("/") || source.startsWith("data:")) return source;
   try {
     const url = new URL(source);
     const isGoogleDrive =
@@ -56,11 +57,11 @@ function studentPhotoUrl(value?: string | null): string | null {
       const pathMatch = url.pathname.match(/\/(?:file\/)?d\/([^/?]+)/);
       const fileId = url.searchParams.get("id") || pathMatch?.[1];
       if (fileId) {
-        return `https://drive.google.com/thumbnail?id=${encodeURIComponent(fileId)}&sz=w800`;
+        return `https://lh3.googleusercontent.com/d/${encodeURIComponent(fileId)}`;
       }
     }
   } catch {
-    return null;
+    return source;
   }
 
   return source;

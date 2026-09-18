@@ -16,6 +16,8 @@ import {
   RefreshCw,
   Copy,
   Check,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 import {
   fetchSessions,
@@ -26,6 +28,15 @@ import {
   retryGenerateMeet,
 } from "@/lib/api/sessions";
 import { fetchCohorts } from "@/lib/api/cohorts";
+import { fetchMentors } from "@/lib/api/fellowship";
+import {
+  fetchAdminMentorSlots,
+  approveMentorSlot,
+  declineMentorSlot,
+  rescheduleAdminMentorSlot,
+  deleteAdminMentorSlot,
+  MentorSlotRequest,
+} from "@/lib/api/mentor_slots";
 import { Cohort, Session } from "@/types/fellowship";
 import { EntityActionsMenu } from "@/components/admin/EntityActionsMenu";
 
@@ -44,12 +55,33 @@ function fromISTInputToUTC(val: string): string {
 }
 
 export default function AdminSessionsPage() {
+  const [activeTab, setActiveTab] = useState<"sessions" | "slot-requests">("sessions");
   const [sessions, setSessions] = useState<Session[]>([]);
   const [cohorts, setCohorts] = useState<Cohort[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCohort, setSelectedCohort] = useState("");
   const [retryingMeetId, setRetryingMeetId] = useState<string | null>(null);
   const [copiedMeetId, setCopiedMeetId] = useState<string | null>(null);
+
+  // Mentor slot requests state
+  const [slotRequests, setSlotRequests] = useState<MentorSlotRequest[]>([]);
+  const [slotFilter, setSlotFilter] = useState<"pending" | "approved" | "declined" | "all">("pending");
+  const [slotLoading, setSlotLoading] = useState(false);
+  const [mentorList, setMentorList] = useState<{ id: string; full_name: string }[]>([]);
+  const [schedulingRequest, setSchedulingRequest] = useState<MentorSlotRequest | null>(null);
+  const [decliningRequest, setDecliningRequest] = useState<MentorSlotRequest | null>(null);
+  // Schedule meet form state
+  const [schedDate, setSchedDate] = useState("");
+  const [schedStart, setSchedStart] = useState("");
+  const [schedEnd, setSchedEnd] = useState("");
+  const [schedMentor, setSchedMentor] = useState("");
+  const [schedNote, setSchedNote] = useState("");
+  const [schedLoading, setSchedLoading] = useState(false);
+  const [schedError, setSchedError] = useState<string | null>(null);
+  // Decline form state
+  const [declineNote, setDeclineNote] = useState("");
+  const [declineLoading, setDeclineLoading] = useState(false);
+  const [declineError, setDeclineError] = useState<string | null>(null);
 
   // Create Session Modal
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -90,12 +122,16 @@ export default function AdminSessionsPage() {
   async function loadData() {
     try {
       setLoading(true);
-      const [sessionsData, cohortsData] = await Promise.all([
+      const [sessionsData, cohortsData, mentorsData] = await Promise.all([
         fetchSessions({ cohort_id: selectedCohort || undefined }),
         fetchCohorts(),
+        fetchMentors().catch(() => []),
       ]);
       setSessions(sessionsData);
       setCohorts(cohortsData);
+      setMentorList(
+        (mentorsData as any[]).map((m: any) => ({ id: m.id, full_name: m.full_name || m.name || "Mentor" }))
+      );
       if (cohortsData.length > 0 && !sessionData.cohort_id) {
         setSessionData((prev) => ({ ...prev, cohort_id: cohortsData[0].id }));
         setCurriculumParams((prev) => ({ ...prev, cohort_id: cohortsData[0].id }));
@@ -107,9 +143,105 @@ export default function AdminSessionsPage() {
     }
   }
 
+  useEffect(() => { loadData(); }, [selectedCohort]);
+
+  // Load mentor slot requests
   useEffect(() => {
-    loadData();
-  }, [selectedCohort]);
+    async function loadSlots() {
+      setSlotLoading(true);
+      try {
+        const slots = await fetchAdminMentorSlots(slotFilter === "all" ? undefined : slotFilter);
+        setSlotRequests(slots);
+      } catch { setSlotRequests([]); }
+      finally { setSlotLoading(false); }
+    }
+    if (activeTab === "slot-requests") loadSlots();
+  }, [slotFilter, activeTab]);
+
+  const pendingCount = slotRequests.filter((r) => r.status === "pending").length;
+  const [deletingSlotId, setDeletingSlotId] = useState<string | null>(null);
+
+  function openScheduleModal(req: MentorSlotRequest) {
+    setSchedulingRequest(req);
+    if (req.confirmed_start_time) {
+      const startDatePart = req.confirmed_start_time.slice(0, 10);
+      const startTimePart = req.confirmed_start_time.slice(11, 16);
+      const endTimePart = req.confirmed_end_time ? req.confirmed_end_time.slice(11, 16) : "11:00";
+      setSchedDate(startDatePart);
+      setSchedStart(startTimePart);
+      setSchedEnd(endTimePart);
+      setSchedMentor(req.assigned_mentor_id || mentorList[0]?.id || "");
+      setSchedNote(req.admin_note || "");
+    } else {
+      setSchedDate(req.preferred_date || "");
+      setSchedStart(req.preferred_time_start?.slice(0, 5) || "10:00");
+      setSchedEnd(req.preferred_time_end?.slice(0, 5) || "11:00");
+      setSchedMentor(mentorList[0]?.id || "");
+      setSchedNote("");
+    }
+    setSchedError(null);
+  }
+
+  async function handleApproveSlot(e: React.FormEvent) {
+    e.preventDefault();
+    setSchedError(null);
+    if (!schedDate || !schedStart || !schedEnd || !schedMentor) {
+      setSchedError("All fields are required."); return;
+    }
+    if (schedStart >= schedEnd) { setSchedError("End time must be after start time."); return; }
+    try {
+      setSchedLoading(true);
+      const payload = {
+        assigned_mentor_id: schedMentor,
+        confirmed_start_time: `${schedDate}T${schedStart}:00`,
+        confirmed_end_time: `${schedDate}T${schedEnd}:00`,
+        admin_note: schedNote || undefined,
+      };
+
+      let updated: MentorSlotRequest;
+      if (schedulingRequest?.status === "approved") {
+        updated = await rescheduleAdminMentorSlot(schedulingRequest.id, payload);
+      } else {
+        updated = await approveMentorSlot(schedulingRequest!.id, payload);
+      }
+      setSlotRequests((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
+      setSchedulingRequest(null);
+    } catch (err: any) {
+      setSchedError(err?.data?.detail || err?.message || "Failed to save slot.");
+    } finally { setSchedLoading(false); }
+  }
+
+  async function handleDeleteSlot(req: MentorSlotRequest) {
+    const isApproved = req.status === "approved";
+    const msg = isApproved
+      ? `Are you sure you want to cancel and delete this scheduled mentor session for Team "${req.team_name || "Team"}"? This will cancel the meeting.`
+      : `Are you sure you want to delete this slot request for Team "${req.team_name || "Team"}"?`;
+    if (!window.confirm(msg)) return;
+
+    try {
+      setDeletingSlotId(req.id);
+      await deleteAdminMentorSlot(req.id);
+      setSlotRequests((prev) => prev.filter((r) => r.id !== req.id));
+    } catch (err: any) {
+      window.alert(err?.data?.detail || err?.message || "Failed to cancel slot request.");
+    } finally {
+      setDeletingSlotId(null);
+    }
+  }
+
+  async function handleDeclineSlot(e: React.FormEvent) {
+    e.preventDefault();
+    setDeclineError(null);
+    if (!declineNote.trim()) { setDeclineError("Please provide a reason."); return; }
+    try {
+      setDeclineLoading(true);
+      const updated = await declineMentorSlot(decliningRequest!.id, { admin_note: declineNote.trim() });
+      setSlotRequests((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
+      setDecliningRequest(null);
+    } catch (err: any) {
+      setDeclineError(err?.data?.detail || err?.message || "Failed to decline.");
+    } finally { setDeclineLoading(false); }
+  }
 
   function openCreateModal() {
     setEditingSession(null);
@@ -316,6 +448,42 @@ export default function AdminSessionsPage() {
         </div>
       </div>
 
+      {/* ── Tab switcher ── */}
+      <div className="flex items-center gap-1 rounded-xl border border-slate-200 bg-slate-50 p-1 w-fit">
+        <button
+          type="button"
+          onClick={() => setActiveTab("sessions")}
+          className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${
+            activeTab === "sessions"
+              ? "bg-white text-slate-900 shadow-sm border border-slate-200"
+              : "text-slate-500 hover:text-slate-700"
+          }`}
+        >
+          <CalendarDays className="h-4 w-4" />
+          Cohort Sessions
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab("slot-requests")}
+          className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${
+            activeTab === "slot-requests"
+              ? "bg-white text-slate-900 shadow-sm border border-slate-200"
+              : "text-slate-500 hover:text-slate-700"
+          }`}
+        >
+          <Video className="h-4 w-4" />
+          Mentor Slot Requests
+          {pendingCount > 0 && (
+            <span className="inline-flex items-center rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-bold text-white">
+              {pendingCount}
+            </span>
+          )}
+        </button>
+      </div>
+
+      {/* ══ TAB: Cohort Sessions ══ */}
+      {activeTab === "sessions" && (
+        <>
       {/* Cohort Filter */}
       <div className="flex flex-col gap-2 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:gap-3">
         <label className="text-sm font-semibold text-slate-700">
@@ -493,6 +661,313 @@ export default function AdminSessionsPage() {
               </div>
             );
           })}
+        </div>
+      )}
+      </>
+      )}
+
+      {/* ══ TAB: Mentor Slot Requests ══ */}
+      {activeTab === "slot-requests" && (
+        <section className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+          {/* Sub-header with filter tabs */}
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-slate-100 px-6 py-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-sky-100 text-sky-600">
+                <Video className="h-5 w-5" />
+              </div>
+              <div>
+                <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                  Mentor Slot Requests
+                  {pendingCount > 0 && slotFilter === "pending" && (
+                    <span className="inline-flex items-center rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-bold text-white">
+                      {pendingCount} pending
+                    </span>
+                  )}
+                </h2>
+                <p className="text-xs text-slate-500">
+                  Review requests, pick a confirmed time, assign a mentor, and auto-generate the Google Meet room.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-1 rounded-xl border border-slate-200 bg-slate-50 p-1 text-xs font-semibold">
+              {(["pending", "approved", "declined", "all"] as const).map((f) => (
+                <button
+                  key={f}
+                  type="button"
+                  onClick={() => setSlotFilter(f)}
+                  className={`rounded-lg px-3 py-1.5 capitalize transition-colors ${
+                    slotFilter === f
+                      ? "bg-white text-slate-900 shadow-sm border border-slate-200"
+                      : "text-slate-500 hover:text-slate-700"
+                  }`}
+                >
+                  {f}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Slot list */}
+          {slotLoading ? (
+            <div className="flex items-center justify-center py-12 text-slate-400">
+              <Loader2 className="h-5 w-5 animate-spin mr-2" />
+              <span className="text-sm">Loading requests…</span>
+            </div>
+          ) : slotRequests.length === 0 ? (
+            <div className="py-12 text-center">
+              <Video className="mx-auto h-8 w-8 text-slate-300 mb-2" />
+              <p className="text-sm font-medium text-slate-500">
+                No {slotFilter !== "all" ? slotFilter : ""} mentor slot requests.
+              </p>
+              <p className="text-xs text-slate-400 mt-1">
+                Team leads can request slots from their Team Workspace page.
+              </p>
+            </div>
+          ) : (
+            <div className="divide-y divide-slate-100">
+              {slotRequests.map((req) => (
+                <div key={req.id} className="flex flex-col gap-3 px-6 py-4 sm:flex-row sm:items-start sm:justify-between hover:bg-slate-50/60 transition-colors">
+                  <div className="min-w-0 flex-1 space-y-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-bold text-sm text-slate-900">{req.team_name || "Unknown Team"}</span>
+                      {req.cohort_name && (
+                        <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600">{req.cohort_name}</span>
+                      )}
+                      {/* Status badge */}
+                      <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-bold capitalize ${
+                        req.status === "approved" ? "bg-emerald-100 text-emerald-800 border-emerald-200"
+                        : req.status === "declined" ? "bg-red-100 text-red-700 border-red-200"
+                        : "bg-amber-100 text-amber-800 border-amber-200"
+                      }`}>{req.status}</span>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
+                      <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{req.preferred_date}</span>
+                      <span>{req.preferred_time_start?.slice(0, 5)} – {req.preferred_time_end?.slice(0, 5)}</span>
+                      {req.requester_name && <span>{req.requester_name}</span>}
+                    </div>
+                    <p className="text-xs text-slate-600 italic truncate max-w-xl">"{req.topic}"</p>
+                    {req.status === "approved" && req.confirmed_start_time && (
+                      <div className="flex flex-wrap items-center gap-2 text-xs mt-1">
+                        <span className="text-emerald-700 font-semibold">
+                          ✓ {req.confirmed_start_time.slice(0, 16).replace("T", " ")}
+                        </span>
+                        {req.meet_link && (
+                          <a href={req.meet_link} target="_blank" rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 rounded-md bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-emerald-700 font-semibold hover:bg-emerald-100 transition-colors">
+                            <Video className="h-3 w-3" />Join Meet
+                          </a>
+                        )}
+                        {req.assigned_mentor_name && <span className="text-slate-500">Mentor: {req.assigned_mentor_name}</span>}
+                      </div>
+                    )}
+                    {req.status === "declined" && req.admin_note && (
+                      <p className="text-xs text-red-600 mt-1">Reason: {req.admin_note}</p>
+                    )}
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2">
+                    {req.status === "pending" && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => { setDecliningRequest(req); setDeclineNote(""); setDeclineError(null); }}
+                          className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-100 transition-colors"
+                        >
+                          Decline
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => openScheduleModal(req)}
+                          className="inline-flex items-center gap-1.5 rounded-lg bg-sky-600 px-3.5 py-1.5 text-xs font-bold text-white hover:bg-sky-500 transition-colors shadow-sm"
+                        >
+                          <Video className="h-3.5 w-3.5" />Schedule Meet
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteSlot(req)}
+                          disabled={deletingSlotId === req.id}
+                          className="rounded-lg border border-slate-200 p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 hover:border-red-200 transition-colors disabled:opacity-50"
+                          title="Delete request"
+                        >
+                          {deletingSlotId === req.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-4 w-4" />
+                          )}
+                        </button>
+                      </>
+                    )}
+
+                    {req.status === "approved" && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => openScheduleModal(req)}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors shadow-xs"
+                          title="Edit / Reschedule session"
+                        >
+                          <Pencil className="h-3.5 w-3.5 text-slate-500" />
+                          Edit / Reschedule
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteSlot(req)}
+                          disabled={deletingSlotId === req.id}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-100 transition-colors disabled:opacity-50"
+                          title="Cancel scheduled session"
+                        >
+                          {deletingSlotId === req.id ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-3.5 w-3.5" />
+                          )}
+                          Cancel Session
+                        </button>
+                      </>
+                    )}
+
+                    {req.status === "declined" && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => openScheduleModal(req)}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors shadow-xs"
+                        >
+                          <Video className="h-3.5 w-3.5 text-sky-600" />
+                          Re-schedule
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteSlot(req)}
+                          disabled={deletingSlotId === req.id}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-red-50 hover:text-red-700 hover:border-red-200 transition-colors disabled:opacity-50"
+                          title="Delete request"
+                        >
+                          {deletingSlotId === req.id ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-3.5 w-3.5" />
+                          )}
+                          Delete
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* Schedule Meet Modal */}
+      {schedulingRequest && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="relative w-full max-w-lg rounded-2xl border border-slate-200 bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-6 py-5">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-100 text-sky-600">
+                  <Video className="h-5 w-5" />
+                </div>
+                <div>
+                  <h2 className="text-base font-bold text-slate-900">
+                    {schedulingRequest.status === "approved" ? "Edit / Reschedule Mentor Meet" : "Schedule Mentor Meet"}
+                  </h2>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Team: <span className="font-semibold text-slate-700">{schedulingRequest.team_name}</span>
+                    {schedulingRequest.requester_name && <> · {schedulingRequest.requester_name}</>}
+                  </p>
+                </div>
+              </div>
+              <button type="button" onClick={() => setSchedulingRequest(null)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 transition-colors">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            {/* Requested info */}
+            <div className="mx-6 mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+              <p className="font-semibold mb-1">Team's Requested Slot</p>
+              <p>Date: {schedulingRequest.preferred_date} &nbsp; Time: {schedulingRequest.preferred_time_start?.slice(0,5)} – {schedulingRequest.preferred_time_end?.slice(0,5)}</p>
+              <p className="mt-1 italic">"{schedulingRequest.topic}"</p>
+            </div>
+            <form onSubmit={handleApproveSlot} className="p-6 space-y-4">
+              {schedError && (
+                <div className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700">
+                  <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" /><span>{schedError}</span>
+                </div>
+              )}
+              <div>
+                <label className="mb-1.5 block text-xs font-bold text-slate-700">Confirmed Date <span className="text-red-500">*</span></label>
+                <input type="date" value={schedDate} onChange={(e) => setSchedDate(e.target.value)} required
+                  className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/20" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="mb-1.5 block text-xs font-bold text-slate-700">Start Time <span className="text-red-500">*</span></label>
+                  <input type="time" value={schedStart} onChange={(e) => setSchedStart(e.target.value)} required
+                    className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/20" />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-xs font-bold text-slate-700">End Time <span className="text-red-500">*</span></label>
+                  <input type="time" value={schedEnd} onChange={(e) => setSchedEnd(e.target.value)} required
+                    className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/20" />
+                </div>
+              </div>
+              <div>
+                <label className="mb-1.5 block text-xs font-bold text-slate-700">Assign Mentor <span className="text-red-500">*</span></label>
+                <select value={schedMentor} onChange={(e) => setSchedMentor(e.target.value)} required
+                  className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/20">
+                  <option value="">— Select a mentor —</option>
+                  {mentorList.map((m) => <option key={m.id} value={m.id}>{m.full_name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="mb-1.5 block text-xs font-bold text-slate-700">Admin Note <span className="text-slate-400 font-normal">(optional)</span></label>
+                <textarea rows={2} value={schedNote} onChange={(e) => setSchedNote(e.target.value)}
+                  placeholder="Instructions or context for the team…"
+                  className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm placeholder:text-slate-400 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/20" />
+              </div>
+              <div className="flex items-center justify-end gap-2.5 pt-1">
+                <button type="button" onClick={() => setSchedulingRequest(null)} disabled={schedLoading}
+                  className="rounded-xl border border-slate-300 px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors disabled:opacity-50">Cancel</button>
+                <button type="submit" disabled={schedLoading}
+                  className="inline-flex items-center gap-2 rounded-xl bg-sky-600 px-5 py-2.5 text-xs font-bold text-white hover:bg-sky-500 disabled:opacity-50 transition-colors">
+                  {schedLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                  {schedulingRequest.status === "approved" ? "Update & Reschedule Meet" : "Schedule & Generate Meet"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Decline Modal */}
+      {decliningRequest && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm">
+          <div className="relative w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl">
+            <button type="button" onClick={() => setDecliningRequest(null)} className="absolute right-4 top-4 rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 transition-colors">
+              <X className="h-4 w-4" />
+            </button>
+            <h2 className="text-base font-bold text-slate-900">Decline Slot Request</h2>
+            <p className="mt-1 text-xs text-slate-500">Team: <span className="font-semibold">{decliningRequest.team_name}</span>. They will be notified by email.</p>
+            <form onSubmit={handleDeclineSlot} className="mt-4 space-y-3">
+              {declineError && (
+                <div className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700">
+                  <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" /><span>{declineError}</span>
+                </div>
+              )}
+              <textarea rows={3} value={declineNote} onChange={(e) => setDeclineNote(e.target.value)}
+                placeholder="Reason for declining (e.g. slot unavailable, please resubmit for next week)…" required
+                className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm placeholder:text-slate-400 focus:border-red-400 focus:outline-none focus:ring-2 focus:ring-red-400/20" />
+              <div className="flex justify-end gap-2.5">
+                <button type="button" onClick={() => setDecliningRequest(null)} disabled={declineLoading}
+                  className="rounded-xl border border-slate-300 px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors disabled:opacity-50">Cancel</button>
+                <button type="submit" disabled={declineLoading}
+                  className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2 text-xs font-bold text-white hover:bg-red-500 disabled:opacity-50 transition-colors">
+                  {declineLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4" />}
+                  Decline Request
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 
