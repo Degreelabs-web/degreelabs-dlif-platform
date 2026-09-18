@@ -201,11 +201,11 @@ export default function Sidebar({
                     title={item.label}
                     className={`flex h-10 w-full items-center justify-center rounded-xl transition ${
                       isActive
-                        ? "bg-sky-500/20 text-sky-400 font-semibold"
-                        : "text-slate-400 hover:bg-white/5 hover:text-white"
+                        ? "nav-item-active"
+                        : "text-slate-400 hover:bg-white/8 hover:text-white"
                     }`}
                   >
-                    <Icon className="h-4 w-4" />
+                    <Icon className={`h-4 w-4 ${isActive ? "text-sky-300" : ""}`} />
                   </Link>
                 );
               }
@@ -222,11 +222,11 @@ export default function Sidebar({
                     }
                     className={`flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-left text-xs font-semibold transition ${
                       isActive
-                        ? "bg-sky-500/15 text-white border-l-[3px] border-sky-400"
-                        : "text-slate-400 hover:bg-white/5 hover:text-white"
+                        ? "nav-item-active"
+                        : "text-slate-400 hover:bg-white/8 hover:text-white"
                     }`}
                   >
-                    <Icon className="h-4 w-4 shrink-0 text-slate-400" />
+                    <Icon className={`h-4 w-4 shrink-0 ${isActive ? "text-sky-300" : "text-slate-400"}`} />
                     <span className="flex-1">{item.label}</span>
                     <ChevronDown
                       className={`h-3.5 w-3.5 transition-transform ${
@@ -245,8 +245,8 @@ export default function Sidebar({
                             onClick={onClose}
                             className={`block rounded-lg px-2.5 py-1.5 text-xs font-medium transition ${
                               isChildActive
-                                ? "bg-sky-500/20 text-sky-300 font-bold"
-                                : "text-slate-400 hover:text-white hover:bg-white/5"
+                                ? "bg-sky-400/20 text-sky-200 font-bold"
+                                : "text-slate-400 hover:text-white hover:bg-white/8"
                             }`}
                           >
                             {child.label}
@@ -267,8 +267,8 @@ export default function Sidebar({
                 title={desktopCollapsed ? item.label : undefined}
                 className={`flex items-center rounded-xl text-xs font-semibold transition ${
                   isActive
-                    ? "bg-sky-500/15 text-white border-l-[3px] border-sky-400 shadow-xs"
-                    : "text-slate-400 hover:bg-white/5 hover:text-white"
+                    ? "nav-item-active"
+                    : "text-slate-400 hover:bg-white/8 hover:text-white"
                 } ${
                   desktopCollapsed
                     ? "h-10 w-full justify-center"
@@ -277,7 +277,7 @@ export default function Sidebar({
               >
                 <Icon
                   className={`h-4 w-4 shrink-0 ${
-                    isActive ? "text-sky-400" : "text-slate-400"
+                    isActive ? "text-sky-300" : "text-slate-400"
                   }`}
                 />
                 {!desktopCollapsed && <span>{item.label}</span>}

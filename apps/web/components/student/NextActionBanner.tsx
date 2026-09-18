@@ -38,10 +38,10 @@ export function NextActionBanner({ action }: Props) {
     : "bg-sky-100 text-sky-900 border-sky-300";
 
   const buttonClass = isWarning
-    ? "bg-amber-600 hover:bg-amber-500 text-white shadow-amber-900/10"
+    ? "inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-bold shadow-sm transition-colors bg-amber-600 hover:bg-amber-500 text-white"
     : isGate
-    ? "bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-900/10"
-    : "bg-sky-600 hover:bg-sky-500 text-white shadow-sky-900/10";
+    ? "inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-bold shadow-sm transition-colors bg-indigo-600 hover:bg-indigo-500 text-white"
+    : "btn-gradient-primary";
 
   return (
     <div className={`rounded-xl border-2 p-5 shadow-xs transition-all ${containerStyle}`}>
@@ -70,13 +70,20 @@ export function NextActionBanner({ action }: Props) {
         </div>
 
         <div className="shrink-0 pt-2 md:pt-0">
-          <Link
-            href={action.link}
-            className={`inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-bold shadow-sm transition-colors ${buttonClass}`}
-          >
-            <span>{action.btn_text}</span>
-            <ArrowRight className="h-4 w-4" />
-          </Link>
+          {isWarning || isGate ? (
+            <Link
+              href={action.link}
+              className={buttonClass}
+            >
+              <span>{action.btn_text}</span>
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          ) : (
+            <Link href={action.link} className={buttonClass}>
+              <span>{action.btn_text}</span>
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          )}
         </div>
       </div>
     </div>

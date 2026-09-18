@@ -3,11 +3,14 @@
 :root {
   --background: #f8fafc;
   --foreground: #0f172a;
+
+  /* ── Brand Palette (unchanged hex values) ── */
   --dl-primary: #0f172a;
   --dl-secondary: #1e293b;
   --dl-accent: #0284c7;
   --dl-accent-hover: #0369a1;
   --dl-accent-light: #e0f2fe;
+  --dl-accent-rgb: 2, 132, 199;          /* for rgba(var(--dl-accent-rgb), x) */
   --dl-success: #059669;
   --dl-success-light: #d1fae5;
   --dl-warning: #d97706;
@@ -23,6 +26,17 @@
   --dl-text-main: #0f172a;
   --dl-text-muted: #64748b;
   --dl-text-subtle: #94a3b8;
+
+  /* ── Radius Scale ── */
+  --dl-radius-sm: 8px;
+  --dl-radius-md: 12px;
+  --dl-radius-lg: 16px;
+  --dl-radius-xl: 22px;
+
+  /* ── Shadow Scale (from DL_DISCOVER style.css) ── */
+  --dl-shadow-subtle: 0 1px 3px 0 rgba(0, 0, 0, 0.04), 0 1px 2px -1px rgba(0, 0, 0, 0.02);
+  --dl-shadow-card:   0 4px 12px -2px rgba(15, 23, 42, 0.06), 0 2px 4px -2px rgba(15, 23, 42, 0.04);
+  --dl-shadow-hover:  0 8px 24px -4px rgba(15, 23, 42, 0.10), 0 4px 8px -4px rgba(15, 23, 42, 0.06);
 }
 
 @theme inline {
@@ -67,6 +81,7 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-dm-sans), 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 15px;
   text-rendering: optimizeLegibility;
   min-height: 100vh;
   line-height: 1.6;
@@ -83,21 +98,72 @@ h6 {
   letter-spacing: -0.02em;
 }
 
-/* DL_DISCOVER Custom Card Styles */
+/* ── Card ─────────────────────────────────────────────── */
 .card-custom {
   background: #ffffff;
   border: 1px solid #e2e8f0;
-  border-radius: 14px;
+  border-radius: var(--dl-radius-lg);
   padding: 1.5rem;
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.04), 0 1px 2px -1px rgba(0, 0, 0, 0.02);
-  transition: all 0.2s ease-in-out;
+  box-shadow: var(--dl-shadow-subtle);
+  transition: box-shadow 0.2s ease-in-out, border-color 0.2s ease-in-out;
 }
 
 .card-custom:hover {
-  box-shadow: 0 4px 12px -2px rgba(15, 23, 42, 0.06);
+  box-shadow: var(--dl-shadow-hover);
+  border-color: #cbd5e1;
 }
 
-/* Status Pill */
+/* ── Primary Gradient CTA Button ─────────────────────── */
+/* sky-to-indigo gradient with glow shadow; reserved for primary actions only */
+.btn-gradient-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.125rem;
+  border-radius: var(--dl-radius-sm);
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #ffffff;
+  background: linear-gradient(135deg, #0284c7 0%, #6366f1 100%);
+  box-shadow: 0 4px 16px rgba(var(--dl-accent-rgb), 0.35);
+  border: none;
+  cursor: pointer;
+  transition: box-shadow 0.18s ease, transform 0.18s ease, filter 0.18s ease;
+  text-decoration: none;
+}
+
+.btn-gradient-primary:hover {
+  box-shadow: 0 8px 24px rgba(var(--dl-accent-rgb), 0.55);
+  filter: brightness(1.06);
+  transform: translateY(-1px);
+}
+
+.btn-gradient-primary:active {
+  transform: translateY(0);
+  box-shadow: 0 4px 12px rgba(var(--dl-accent-rgb), 0.35);
+}
+
+.btn-gradient-primary:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.3), 0 4px 16px rgba(var(--dl-accent-rgb), 0.4);
+}
+
+/* ── Sidebar Gradient ─────────────────────────────────── */
+/* Used on the aside sidebar element */
+.sidebar-gradient {
+  background: linear-gradient(180deg, #090e1a 0%, #0f172a 50%, #162032 100%);
+}
+
+/* ── Active Nav Item Highlight ───────────────────────── */
+/* Applied to active link items inside the sidebar */
+.nav-item-active {
+  background: linear-gradient(90deg, rgba(56, 189, 248, 0.18) 0%, rgba(99, 102, 241, 0.12) 100%);
+  box-shadow: inset 0 0 12px rgba(56, 189, 248, 0.08);
+  border-left: 3px solid #38bdf8;
+  color: #ffffff;
+}
+
+/* ── Status Pill / Badge Base ────────────────────────── */
 .status-pill {
   display: inline-flex;
   align-items: center;
@@ -121,10 +187,34 @@ h6 {
   border: 1px solid #fde68a;
 }
 
+.status-pill.badge-danger {
+  background-color: #fee2e2;
+  color: #dc2626;
+  border: 1px solid #fca5a5;
+}
+
 .status-pill.badge-primary {
   background-color: #e0f2fe;
   color: #0284c7;
   border: 1px solid #bae6fd;
+}
+
+.status-pill.badge-info {
+  background-color: #e0f2fe;
+  color: #0369a1;
+  border: 1px solid #7dd3fc;
+}
+
+.status-pill.badge-indigo {
+  background-color: #eef2ff;
+  color: #4338ca;
+  border: 1px solid #c7d2fe;
+}
+
+.status-pill.badge-purple {
+  background-color: #ede9fe;
+  color: #7c3aed;
+  border: 1px solid #ddd6fe;
 }
 
 .status-pill.badge-secondary {
@@ -133,6 +223,7 @@ h6 {
   border: 1px solid #e2e8f0;
 }
 
+/* ── Interactive Element Defaults ────────────────────── */
 button,
 a,
 input,
@@ -147,10 +238,12 @@ a:focus-visible,
 input:focus-visible,
 select:focus-visible,
 textarea:focus-visible {
-  outline: 2px solid #0284c7;
-  outline-offset: 2px;
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.15);
+  border-color: #38bdf8;
 }
 
+/* ── Scrollbar ───────────────────────────────────────── */
 ::-webkit-scrollbar {
   height: 8px;
   width: 8px;

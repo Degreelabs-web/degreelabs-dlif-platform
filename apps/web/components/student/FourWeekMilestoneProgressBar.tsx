@@ -11,14 +11,14 @@ interface Props {
 
 export function FourWeekMilestoneProgressBar({ weeks, cohortName }: Props) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6 shadow-xs space-y-5">
+    <div className="card-custom space-y-5">
       {/* Header */}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between pb-3 border-b border-slate-100">
         <div>
-          <h2 className="text-lg font-bold text-slate-900">
+          <h2 className="text-xl font-bold text-slate-900">
             Discover 4-Week Program Progression
           </h2>
-          <p className="text-xs text-slate-500">
+          <p className="text-sm text-slate-500">
             8+ hours weekly output commitment required from each team member &bull; 3 sessions per week.
           </p>
         </div>
@@ -36,12 +36,12 @@ export function FourWeekMilestoneProgressBar({ weeks, cohortName }: Props) {
 
           // Card border and background styles matching DL_DISCOVER
           const cardStyle = isCurrent
-            ? "border-sky-500 bg-sky-50/40 ring-2 ring-sky-500/20 shadow-xs"
+            ? "border-sky-400 bg-[#e0f2fe]/40 ring-2 ring-sky-400/25 shadow-sm"
             : isPassed
             ? "border-emerald-300 bg-emerald-50/20"
             : isRevision
             ? "border-amber-400 bg-amber-50/30"
-            : "border-slate-200 bg-slate-50/40 opacity-90";
+            : "border-slate-200 bg-slate-50/40 opacity-80";
 
           const badgeBg = isCurrent
             ? "bg-sky-600 text-white"
@@ -84,7 +84,9 @@ export function FourWeekMilestoneProgressBar({ weeks, cohortName }: Props) {
                 </div>
 
                 {/* Named week title */}
-                <h3 className="font-extrabold text-slate-900 text-sm line-clamp-2 min-h-[40px] flex items-center">
+                <h3 className={`font-extrabold text-slate-900 text-base line-clamp-2 min-h-[40px] flex items-center ${
+                  isCurrent ? "text-sky-900" : ""
+                }`}>
                   {week.title}
                 </h3>
 

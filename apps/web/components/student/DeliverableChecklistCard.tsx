@@ -16,12 +16,12 @@ export function DeliverableChecklistCard({
   currentWeekNumber,
 }: Props) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6 shadow-xs space-y-4">
+    <div className="card-custom space-y-4">
       <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between pb-3 border-b border-slate-100">
         <div>
           <div className="flex items-center gap-2">
             <FileCheck className="h-5 w-5 text-sky-600" />
-            <h3 className="font-extrabold text-slate-900 text-base">
+            <h3 className="font-extrabold text-slate-900 text-lg">
               Week {currentWeekNumber} Deliverable Templates &amp; Dossiers
             </h3>
           </div>
@@ -49,7 +49,7 @@ export function DeliverableChecklistCard({
                 <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
                   {tpl.type}
                 </span>
-                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-sky-100 text-sky-800">
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-sky-100 text-sky-800 border border-sky-200">
                   {tpl.status}
                 </span>
               </div>

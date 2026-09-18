@@ -55,15 +55,15 @@ export function UpcomingSessionsCard({ sessions }: Props) {
   }, [nextSession?.scheduled_at]);
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6 shadow-xs flex flex-col justify-between h-full space-y-4">
+    <div className="card-custom flex flex-col justify-between h-full space-y-4">
       <div>
         {/* Header */}
         <div className="flex items-center justify-between pb-3 border-b border-slate-100">
           <div className="flex items-center gap-2">
             <h3 className="font-extrabold text-slate-900 text-base">Upcoming Sessions</h3>
           </div>
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-sky-100 text-sky-800 border border-sky-200">
-            <span className="h-1.5 w-1.5 rounded-full bg-sky-600 animate-ping" />
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-ping" />
             Live &amp; Working
           </span>
         </div>
@@ -119,6 +119,10 @@ export function UpcomingSessionsCard({ sessions }: Props) {
                       className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold ${
                         isGate
                           ? "bg-amber-100 text-amber-900 border border-amber-300"
+                          : s.session_type === "mentor_session"
+                          ? "bg-purple-100 text-purple-900 border border-purple-300"
+                          : s.session_type === "output_review"
+                          ? "bg-indigo-100 text-indigo-900 border border-indigo-300"
                           : "bg-sky-100 text-sky-900 border border-sky-200"
                       }`}
                     >
@@ -138,7 +142,7 @@ export function UpcomingSessionsCard({ sessions }: Props) {
                   <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">{s.focus}</p>
 
                   <div className="flex items-center justify-between pt-1">
-                    <span className="text-[11px] text-slate-500 font-medium">
+                    <span className="text-xs text-slate-500 font-medium">
                       Duration: {s.duration_minutes || 90} mins
                     </span>
                     {s.meeting_link ? (
@@ -146,7 +150,7 @@ export function UpcomingSessionsCard({ sessions }: Props) {
                         href={s.meeting_link}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-sky-300 bg-sky-50 text-xs font-bold text-sky-800 hover:bg-sky-100 transition-colors"
+                        className="btn-gradient-primary !py-1.5 !px-3 !text-xs"
                       >
                         <Video className="h-3.5 w-3.5" />
                         <span>Join Room</span>

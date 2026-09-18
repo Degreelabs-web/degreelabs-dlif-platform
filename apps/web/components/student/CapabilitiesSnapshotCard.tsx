@@ -9,12 +9,12 @@ interface Props {
 
 export function CapabilitiesSnapshotCard({ capabilities }: Props) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6 shadow-xs space-y-4">
+    <div className="card-custom space-y-4">
       <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between pb-3 border-b border-slate-100">
         <div>
           <div className="flex items-center gap-2">
             <Award className="h-5 w-5 text-sky-600" />
-            <h3 className="font-extrabold text-slate-900 text-base">
+            <h3 className="font-extrabold text-slate-900 text-lg">
               5 Core Capabilities Snapshot
             </h3>
           </div>
@@ -44,7 +44,7 @@ export function CapabilitiesSnapshotCard({ capabilities }: Props) {
                   </span>
                 </div>
 
-                <h4 className="font-bold text-xs text-slate-900 min-h-[32px] flex items-center">
+                <h4 className="font-bold text-sm text-slate-900 min-h-[32px] flex items-center">
                   {cap.name}
                 </h4>
 

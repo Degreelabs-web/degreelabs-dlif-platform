@@ -12,7 +12,7 @@ interface Props {
 
 export function AssignedChallengeCard({ challenge, metrics, mentor }: Props) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6 shadow-xs flex flex-col justify-between h-full space-y-5">
+    <div className="card-custom flex flex-col justify-between h-full space-y-5">
       <div>
         {/* Header */}
         <div className="flex items-center justify-between pb-3 border-b border-slate-100 gap-2">
@@ -40,8 +40,8 @@ export function AssignedChallengeCard({ challenge, metrics, mentor }: Props) {
               className="h-14 w-14 rounded-xl border border-slate-200 object-cover shadow-xs shrink-0"
             />
           ) : (
-            <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-slate-900 text-white font-black text-xl shadow-xs shrink-0">
-              <Building2 className="h-7 w-7 text-sky-400" />
+            <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-sky-900 text-white font-black text-xl shadow-sm shrink-0">
+              <Building2 className="h-7 w-7 text-sky-300" />
             </div>
           )}
 
@@ -66,10 +66,10 @@ export function AssignedChallengeCard({ challenge, metrics, mentor }: Props) {
 
         {/* Company Problem Statement Context */}
         <div className="mt-4 p-4 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1.5">
-          <p className="text-xs font-bold uppercase tracking-wider text-slate-700">
-            Company Problem Statement & Context:
+          <p className="text-sm font-bold uppercase tracking-wider text-slate-700">
+            Company Problem Statement &amp; Context:
           </p>
-          <p className="text-xs text-slate-600 leading-relaxed line-clamp-4">
+          <p className="text-sm text-slate-600 leading-relaxed line-clamp-4">
             {challenge.problem_statement}
           </p>
           {challenge.expected_outcome && (
