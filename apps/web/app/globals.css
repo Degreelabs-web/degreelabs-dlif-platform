@@ -1,16 +1,17 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f8fafc;
+  --background: #f7f6fc;
   --foreground: #0f172a;
 
-  /* ── Brand Palette (unchanged hex values) ── */
+  /* ── Brand Palette — vivid violet/coral/teal/pink identity ── */
   --dl-primary: #0f172a;
   --dl-secondary: #1e293b;
-  --dl-accent: #0284c7;
-  --dl-accent-hover: #0369a1;
-  --dl-accent-light: #e0f2fe;
-  --dl-accent-rgb: 2, 132, 199;          /* for rgba(var(--dl-accent-rgb), x) */
+  --dl-accent: #6d28d9;
+  --dl-accent-hover: #5b21b6;
+  --dl-accent-light: #ede4fc;
+  --dl-accent-rgb: 109, 40, 217;
+  /* for rgba(var(--dl-accent-rgb), x) */
   --dl-success: #059669;
   --dl-success-light: #d1fae5;
   --dl-warning: #d97706;
@@ -19,10 +20,19 @@
   --dl-danger-light: #fee2e2;
   --dl-purple: #7c3aed;
   --dl-purple-light: #ede9fe;
-  --dl-bg-main: #f8fafc;
+
+  /* Secondary brand accents used across cards, tags & badges */
+  --dl-coral: #f0653d;
+  --dl-coral-light: #fde7de;
+  --dl-teal: #0e9b8a;
+  --dl-teal-light: #daf4ee;
+  --dl-pink: #d6336c;
+  --dl-pink-light: #fce3ec;
+
+  --dl-bg-main: #f7f6fc;
   --dl-card-bg: #ffffff;
-  --dl-border: #e2e8f0;
-  --dl-border-subtle: #f1f5f9;
+  --dl-border: #e9e5f5;
+  --dl-border-subtle: #f1eef9;
   --dl-text-main: #0f172a;
   --dl-text-muted: #64748b;
   --dl-text-subtle: #94a3b8;
@@ -35,8 +45,8 @@
 
   /* ── Shadow Scale (from DL_DISCOVER style.css) ── */
   --dl-shadow-subtle: 0 1px 3px 0 rgba(0, 0, 0, 0.04), 0 1px 2px -1px rgba(0, 0, 0, 0.02);
-  --dl-shadow-card:   0 4px 12px -2px rgba(15, 23, 42, 0.06), 0 2px 4px -2px rgba(15, 23, 42, 0.04);
-  --dl-shadow-hover:  0 8px 24px -4px rgba(15, 23, 42, 0.10), 0 4px 8px -4px rgba(15, 23, 42, 0.06);
+  --dl-shadow-card: 0 4px 12px -2px rgba(15, 23, 42, 0.06), 0 2px 4px -2px rgba(15, 23, 42, 0.04);
+  --dl-shadow-hover: 0 8px 24px -4px rgba(15, 23, 42, 0.10), 0 4px 8px -4px rgba(15, 23, 42, 0.06);
 }
 
 @theme inline {
@@ -45,16 +55,16 @@
   --font-sans: var(--font-dm-sans);
   --font-display: var(--font-outfit);
   --font-mono: var(--font-geist-mono);
-  --color-brand-50: #f0f9ff;
-  --color-brand-100: #e0f2fe;
-  --color-brand-200: #bae6fd;
-  --color-brand-300: #7dd3fc;
-  --color-brand-400: #38bdf8;
-  --color-brand-500: #0284c7;
-  --color-brand-600: #0369a1;
-  --color-brand-700: #075985;
-  --color-brand-800: #0c4a6e;
-  --color-brand-900: #0f172a;
+  --color-brand-50: #f5f3ff;
+  --color-brand-100: #ede9fe;
+  --color-brand-200: #ddd6fe;
+  --color-brand-300: #c4b5fd;
+  --color-brand-400: #a78bfa;
+  --color-brand-500: #7c3aed;
+  --color-brand-600: #6d28d9;
+  --color-brand-700: #5b21b6;
+  --color-brand-800: #4c1d95;
+  --color-brand-900: #2e1065;
   --color-slate-50: #f8fafc;
   --color-slate-100: #f1f5f9;
   --color-slate-200: #e2e8f0;
@@ -114,7 +124,7 @@ h6 {
 }
 
 /* ── Primary Gradient CTA Button ─────────────────────── */
-/* sky-to-indigo gradient with glow shadow; reserved for primary actions only */
+/* violet-to-pink gradient with glow shadow; reserved for primary actions only */
 .btn-gradient-primary {
   display: inline-flex;
   align-items: center;
@@ -124,7 +134,7 @@ h6 {
   font-size: 0.875rem;
   font-weight: 700;
   color: #ffffff;
-  background: linear-gradient(135deg, #0284c7 0%, #6366f1 100%);
+  background: linear-gradient(135deg, #6d28d9 0%, #d6336c 100%);
   box-shadow: 0 4px 16px rgba(var(--dl-accent-rgb), 0.35);
   border: none;
   cursor: pointer;
@@ -145,21 +155,21 @@ h6 {
 
 .btn-gradient-primary:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.3), 0 4px 16px rgba(var(--dl-accent-rgb), 0.4);
+  box-shadow: 0 0 0 4px rgba(167, 139, 250, 0.35), 0 4px 16px rgba(var(--dl-accent-rgb), 0.4);
 }
 
 /* ── Sidebar Gradient ─────────────────────────────────── */
 /* Used on the aside sidebar element */
 .sidebar-gradient {
-  background: linear-gradient(180deg, #090e1a 0%, #0f172a 50%, #162032 100%);
+  background: linear-gradient(180deg, #150c2e 0%, #1e1042 50%, #2a1454 100%);
 }
 
 /* ── Active Nav Item Highlight ───────────────────────── */
 /* Applied to active link items inside the sidebar */
 .nav-item-active {
-  background: linear-gradient(90deg, rgba(56, 189, 248, 0.18) 0%, rgba(99, 102, 241, 0.12) 100%);
-  box-shadow: inset 0 0 12px rgba(56, 189, 248, 0.08);
-  border-left: 3px solid #38bdf8;
+  background: linear-gradient(90deg, rgba(167, 139, 250, 0.24) 0%, rgba(219, 39, 119, 0.16) 100%);
+  box-shadow: inset 0 0 12px rgba(167, 139, 250, 0.1);
+  border-left: 3px solid #a78bfa;
   color: #ffffff;
 }
 
@@ -194,21 +204,21 @@ h6 {
 }
 
 .status-pill.badge-primary {
-  background-color: #e0f2fe;
-  color: #0284c7;
-  border: 1px solid #bae6fd;
+  background-color: #ede4fc;
+  color: #6d28d9;
+  border: 1px solid #ddd6fe;
 }
 
 .status-pill.badge-info {
-  background-color: #e0f2fe;
-  color: #0369a1;
-  border: 1px solid #7dd3fc;
+  background-color: #daf4ee;
+  color: #0e9b8a;
+  border: 1px solid #99e6d9;
 }
 
 .status-pill.badge-indigo {
-  background-color: #eef2ff;
-  color: #4338ca;
-  border: 1px solid #c7d2fe;
+  background-color: #fce3ec;
+  color: #d6336c;
+  border: 1px solid #f7b8d0;
 }
 
 .status-pill.badge-purple {
@@ -239,8 +249,8 @@ input:focus-visible,
 select:focus-visible,
 textarea:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.15);
-  border-color: #38bdf8;
+  box-shadow: 0 0 0 4px rgba(167, 139, 250, 0.2);
+  border-color: #a78bfa;
 }
 
 /* ── Scrollbar ───────────────────────────────────────── */
@@ -258,4 +268,85 @@ textarea:focus-visible {
 
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
+}
+
+/* ── Standard Dashboard Utilities ────────────────────── */
+.page-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem; /* 24px */
+  padding-bottom: 3rem;
+  width: 100%;
+}
+
+.page-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--dl-border);
+}
+
+@media (min-width: 640px) {
+  .page-header {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
+.page-title {
+  font-family: var(--font-outfit), var(--font-dm-sans), sans-serif;
+  font-size: 1.625rem; /* 26px */
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--dl-text-main);
+  letter-spacing: -0.02em;
+}
+
+.section-title {
+  font-family: var(--font-outfit), var(--font-dm-sans), sans-serif;
+  font-size: 1.125rem; /* 18px */
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--dl-text-main);
+}
+
+.card-title {
+  font-family: var(--font-outfit), var(--font-dm-sans), sans-serif;
+  font-size: 1rem; /* 16px */
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--dl-text-main);
+}
+
+.stat-value {
+  font-family: var(--font-outfit), var(--font-dm-sans), sans-serif;
+  font-size: 1.625rem; /* 26px */
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--dl-text-main);
+}
+
+.text-muted-dl {
+  color: var(--dl-text-muted);
+  font-size: 0.875rem;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 3rem 1.5rem;
+  background: var(--dl-card-bg);
+  border: 1px dashed #cbd5e1;
+  border-radius: var(--dl-radius-lg);
+}
+
+.status-pill.badge-pink {
+  background-color: #fce3ec;
+  color: #d6336c;
+  border: 1px solid #f7b8d0;
 }

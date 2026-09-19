@@ -189,24 +189,27 @@ export default function Topbar({ role, onOpenNavigation }: TopbarProps) {
     const dim = size === "lg" ? "h-16 w-16 text-2xl" : "h-9 w-9 text-sm";
     return (
       <div
-        className={`relative flex shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 font-bold text-white shadow-md shadow-blue-500/20 overflow-hidden ${dim}`}
+        className={`relative shrink-0 rounded-xl p-[2px] shadow-md shadow-violet-500/20 ${dim}`}
+        style={{ background: "conic-gradient(from 200deg, #7C3AED, #F0653D, #0E9B8A, #7C3AED)" }}
       >
-        <span>{initials}</span>
-        {src && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={src}
-            alt={user?.full_name ?? "Profile"}
-            className="absolute inset-0 h-full w-full object-cover"
-            onError={(e) => { e.currentTarget.style.display = "none"; }}
-          />
-        )}
+        <div className="relative flex h-full w-full items-center justify-center rounded-[10px] bg-gradient-to-br from-brand-400 to-brand-600 font-bold text-white overflow-hidden">
+          <span>{initials}</span>
+          {src && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={src}
+              alt={user?.full_name ?? "Profile"}
+              className="absolute inset-0 h-full w-full object-cover"
+              onError={(e) => { e.currentTarget.style.display = "none"; }}
+            />
+          )}
+        </div>
       </div>
     );
   };
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-white/80 bg-white/85 px-4 shadow-sm shadow-blue-950/[0.03] backdrop-blur-xl sm:px-6 lg:h-20 lg:px-8">
+    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-white/80 bg-white/85 px-4 shadow-sm shadow-violet-950/[0.03] backdrop-blur-xl sm:px-6 lg:h-20 lg:px-8">
       <div className="flex min-w-0 items-center gap-3">
         <button
           type="button"
@@ -254,9 +257,9 @@ export default function Topbar({ role, onOpenNavigation }: TopbarProps) {
           </button>
 
           {profileOpen && user && (
-            <div className="absolute right-0 top-12 z-50 w-[min(24rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-blue-950/15">
+            <div className="absolute right-0 top-12 z-50 w-[min(24rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-violet-950/15">
               {/* Header */}
-              <div className="relative bg-gradient-to-br from-brand-50 via-white to-blue-50 px-5 py-4">
+              <div className="relative bg-gradient-to-br from-brand-50 via-white to-violet-50 px-5 py-4">
                 <button
                   type="button"
                   onClick={() => setProfileOpen(false)}

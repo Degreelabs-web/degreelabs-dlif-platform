@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { fetchStudentDashboard } from "@/lib/api/student_dashboard";
 import { StudentDashboardData } from "@/types/student_dashboard";
+import { PageHeader } from "@/components/student/ui";
 
 // Comprehensive fallback curriculum template data in case dashboard data is loading or offline
 const DEFAULT_TEMPLATES = [
@@ -281,7 +282,7 @@ function TemplatesContent() {
   useEffect(() => {
     fetchStudentDashboard()
       .then((data) => setDashboardData(data))
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   // Sync tab if URL changes
@@ -358,11 +359,10 @@ ${tpl.sections.map((s: string) => `### ${s}\n[Enter team working notes, primary 
   const currentWeekNumber = dashboardData?.team?.current_week || 1;
 
   return (
-    <div className="space-y-6 pb-12">
-      {/* ── Header ── */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-slate-200 pb-4">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
+    <div className="page-container">
+      <PageHeader
+        breadcrumbs={
+          <div className="flex items-center gap-2">
             <Link
               href="/student"
               className="inline-flex items-center gap-1 text-xs font-semibold text-slate-500 hover:text-slate-800 transition-colors"
@@ -371,38 +371,33 @@ ${tpl.sections.map((s: string) => `### ${s}\n[Enter team working notes, primary 
               <span>Back to Dashboard</span>
             </Link>
             <span className="text-xs text-slate-300">/</span>
-            <span className="text-xs font-semibold text-sky-600">Curriculum Templates</span>
+            <span className="text-xs font-semibold text-brand-600">Curriculum Templates</span>
           </div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 flex items-center gap-2.5">
-            <Layers className="h-6 w-6 text-sky-600" />
-            Session Templates &amp; Evidence Dossiers
-          </h1>
-          <p className="mt-1 text-sm text-slate-600 max-w-3xl">
-            Official DegreeLabs frameworks, diagnostic sheets, and strategy artifacts for each session.
-            Complete and attach these to satisfy your weekly quality gates.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2.5 shrink-0">
-          <Link
-            href="/student/materials"
-            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 shadow-xs hover:bg-slate-50 transition-colors"
-          >
-            <BookOpen className="h-4 w-4 text-slate-500" />
-            <span>Materials Library</span>
-          </Link>
-          <Link
-            href="/student/submissions"
-            className="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-slate-800 transition-colors"
-          >
-            <Send className="h-3.5 w-3.5" />
-            <span>Submit Evidence</span>
-          </Link>
-        </div>
-      </div>
+        }
+        title="Session Templates & Evidence Dossiers"
+        subtitle="Official DegreeLabs frameworks, diagnostic sheets, and strategy artifacts for each session."
+        action={
+          <div className="flex items-center gap-2">
+            <Link
+              href="/student/materials"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 shadow-xs hover:bg-slate-50 transition-colors"
+            >
+              <BookOpen className="h-4 w-4 text-slate-500" />
+              <span>Materials Library</span>
+            </Link>
+            <Link
+              href="/student/submissions"
+              className="btn-gradient-primary !py-2 !px-3.5 !text-xs"
+            >
+              <Send className="h-3.5 w-3.5" />
+              <span>Submit Evidence</span>
+            </Link>
+          </div>
+        }
+      />
 
       {/* ── Search & Filter Controls ── */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between rounded-2xl border border-slate-200 bg-white p-3 shadow-xs">
+      <div className="card-custom flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between p-3">
         {/* Week Filter Pills */}
         <div className="flex flex-wrap items-center gap-1">
           <button
@@ -410,7 +405,7 @@ ${tpl.sections.map((s: string) => `### ${s}\n[Enter team working notes, primary 
             onClick={() => setActiveTab("all")}
             className={`rounded-lg px-3 py-1.5 text-xs font-bold transition-all ${
               activeTab === "all"
-                ? "bg-slate-900 text-white shadow-xs"
+                ? "bg-brand-600 text-white shadow-xs"
                 : "text-slate-600 hover:bg-slate-100"
             }`}
           >
@@ -423,7 +418,7 @@ ${tpl.sections.map((s: string) => `### ${s}\n[Enter team working notes, primary 
               onClick={() => setActiveTab(w as number)}
               className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition-all ${
                 activeTab === w
-                  ? "bg-sky-600 text-white shadow-xs"
+                  ? "bg-brand-600 text-white shadow-xs"
                   : "text-slate-600 hover:bg-slate-100"
               }`}
             >
@@ -440,7 +435,7 @@ ${tpl.sections.map((s: string) => `### ${s}\n[Enter team working notes, primary 
             onClick={() => setActiveTab("living")}
             className={`rounded-lg px-3 py-1.5 text-xs font-bold transition-all ${
               activeTab === "living"
-                ? "bg-indigo-600 text-white shadow-xs"
+                ? "bg-brand-600 text-white shadow-xs"
                 : "text-slate-600 hover:bg-slate-100"
             }`}
           >
@@ -455,30 +450,30 @@ ${tpl.sections.map((s: string) => `### ${s}\n[Enter team working notes, primary 
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search templates or evidence..."
-            className="w-full rounded-xl border border-slate-200 bg-slate-50 py-1.5 pl-9 pr-3 text-xs text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
+            placeholder="Search templates or evidence…"
+            className="w-full rounded-xl border border-slate-200 bg-slate-50 py-1.5 pl-9 pr-3 text-xs text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
           />
         </div>
       </div>
 
       {/* ── Active Week Context Banner ── */}
       {typeof activeTab === "number" && (
-        <div className="rounded-2xl border border-sky-200 bg-gradient-to-r from-sky-50/80 via-blue-50/40 to-white p-4">
+        <div className="card-custom !p-4 bg-gradient-to-r from-violet-50/80 via-violet-50/40 to-white border-violet-200">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <div>
-              <span className="inline-block rounded-md bg-sky-100 px-2 py-0.5 text-[11px] font-bold text-sky-800 border border-sky-300">
+              <span className="inline-block rounded-md bg-violet-100 px-2 py-0.5 text-[11px] font-bold text-violet-800 border border-violet-300">
                 Week {activeTab} of 4 Focus
               </span>
-              <h2 className="mt-1 text-base font-bold text-slate-900">
-                {activeTab === 1 && "Discover the Real Problem (Strategic Question: 'What is really happening here?')"}
-                {activeTab === 2 && "Create Strategic Possibilities (Strategic Question: 'What could we choose to do?')"}
-                {activeTab === 3 && "Design the Strategy (Strategic Question: 'If this is our choice, how will it actually work?')"}
-                {activeTab === 4 && "Build the Case for Action (Strategic Question: 'Why should the company believe us?')"}
+              <h2 className="mt-1 text-sm font-bold text-slate-900">
+                {activeTab === 1 && "Discover the Real Problem — 'What is really happening here?'"}
+                {activeTab === 2 && "Create Strategic Possibilities — 'What could we choose to do?'"}
+                {activeTab === 3 && "Design the Strategy — 'If this is our choice, how will it work?'"}
+                {activeTab === 4 && "Build the Case for Action — 'Why should the company believe us?'"}
               </h2>
             </div>
             <Link
               href={`/student/submissions?week=${activeTab}`}
-              className="inline-flex items-center gap-1.5 self-start sm:self-center rounded-lg bg-sky-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-sky-500 transition-colors"
+              className="btn-gradient-primary !py-1.5 !px-3 !text-xs self-start sm:self-center"
             >
               <Send className="h-3 w-3" />
               <span>Turn in Week {activeTab} Output</span>
@@ -491,9 +486,9 @@ ${tpl.sections.map((s: string) => `### ${s}\n[Enter team working notes, primary 
       {(activeTab === "living" || activeTab === "all") && (
         <section className="space-y-3">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-bold uppercase tracking-wider text-indigo-900 flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-indigo-600" />
-              Living Master Dossiers (Continuous Weeks 1–4)
+            <h2 className="section-title flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-brand-600" />
+              <span>Living Master Dossiers (Continuous Weeks 1–4)</span>
             </h2>
             <span className="text-xs text-slate-500">Maintained across all sprints</span>
           </div>
@@ -502,24 +497,24 @@ ${tpl.sections.map((s: string) => `### ${s}\n[Enter team working notes, primary 
             {LIVING_MASTERS.map((lm) => (
               <div
                 key={lm.id}
-                className="flex flex-col justify-between rounded-2xl border border-indigo-200 bg-gradient-to-b from-indigo-50/50 to-white p-5 shadow-xs hover:shadow-md hover:border-indigo-300 transition-all"
+                className="card-custom flex flex-col justify-between"
               >
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <span className="rounded-md bg-indigo-100 px-2 py-0.5 text-[10px] font-bold text-indigo-800">
+                    <span className="status-pill badge-purple">
                       {lm.type}
                     </span>
-                    <span className="text-[10px] font-semibold text-indigo-600">{lm.scope}</span>
+                    <span className="text-[10px] font-semibold text-slate-500">{lm.scope}</span>
                   </div>
-                  <h3 className="text-sm font-bold text-slate-900 mb-1.5">{lm.name}</h3>
+                  <h3 className="card-title mb-1">{lm.name}</h3>
                   <p className="text-xs text-slate-600 leading-relaxed">{lm.description}</p>
                 </div>
 
-                <div className="mt-4 pt-3 border-t border-indigo-100 flex items-center justify-between">
+                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
                   <span className="text-[11px] text-slate-400">Team Repository</span>
                   <Link
                     href="/student/team"
-                    className="inline-flex items-center gap-1 text-xs font-bold text-indigo-700 hover:text-indigo-900 hover:underline"
+                    className="inline-flex items-center gap-1 text-xs font-bold text-brand-600 hover:text-brand-800 hover:underline"
                   >
                     <span>Open in Workspace</span>
                     <ExternalLink className="h-3 w-3" />
@@ -535,9 +530,9 @@ ${tpl.sections.map((s: string) => `### ${s}\n[Enter team working notes, primary 
       {activeTab !== "living" && (
         <section className="space-y-3">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
-              <FileCheck2 className="h-4 w-4 text-sky-600" />
-              Session Working Evidence Templates
+            <h2 className="section-title flex items-center gap-2">
+              <FileCheck2 className="h-4 w-4 text-brand-600" />
+              <span>Session Working Evidence Templates</span>
             </h2>
             <span className="text-xs text-slate-500">
               Showing {filteredTemplates.length} template(s)
@@ -545,7 +540,7 @@ ${tpl.sections.map((s: string) => `### ${s}\n[Enter team working notes, primary 
           </div>
 
           {filteredTemplates.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-12 text-center">
+            <div className="empty-state">
               <FileText className="mx-auto h-8 w-8 text-slate-300 mb-2" />
               <p className="text-sm font-semibold text-slate-700">No templates match your criteria</p>
               <button
@@ -554,7 +549,7 @@ ${tpl.sections.map((s: string) => `### ${s}\n[Enter team working notes, primary 
                   setActiveTab("all");
                   setSearchQuery("");
                 }}
-                className="mt-3 text-xs font-bold text-sky-600 hover:underline"
+                className="mt-3 text-xs font-bold text-brand-600 hover:underline"
               >
                 Reset filters
               </button>
@@ -566,10 +561,8 @@ ${tpl.sections.map((s: string) => `### ${s}\n[Enter team working notes, primary 
                 return (
                   <div
                     key={tpl.id}
-                    className={`flex flex-col justify-between rounded-2xl border p-5 shadow-xs transition-all hover:shadow-md ${
-                      isGate
-                        ? "border-amber-200 bg-gradient-to-b from-amber-50/40 via-white to-white hover:border-amber-300"
-                        : "border-slate-200 bg-white hover:border-sky-300"
+                    className={`card-custom flex flex-col justify-between ${
+                      isGate ? "border-amber-300 bg-amber-50/20" : ""
                     }`}
                   >
                     <div>
@@ -579,24 +572,22 @@ ${tpl.sections.map((s: string) => `### ${s}\n[Enter team working notes, primary 
                           Week {tpl.week_number} • Session {tpl.session_number}
                         </span>
                         <span
-                          className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-bold ${
-                            isGate
-                              ? "bg-amber-100 text-amber-900 border border-amber-300"
-                              : "bg-sky-100 text-sky-800 border border-sky-200"
+                          className={`status-pill ${
+                            isGate ? "badge-warning" : "badge-primary"
                           }`}
                         >
-                          {isGate && <ShieldCheck className="h-3 w-3 text-amber-700" />}
+                          {isGate && <ShieldCheck className="h-3 w-3 mr-1" />}
                           {tpl.type}
                         </span>
                       </div>
 
                       {/* Title */}
-                      <h3 className="text-sm font-bold text-slate-900 mb-1.5 leading-snug">
+                      <h3 className="card-title mb-1.5 leading-snug">
                         {tpl.name}
                       </h3>
 
                       {/* Description */}
-                      <p className="text-xs text-slate-600 leading-relaxed mb-3">
+                      <p className="text-xs text-slate-600 leading-relaxed mb-3 line-clamp-2">
                         {tpl.description}
                       </p>
 
@@ -606,7 +597,7 @@ ${tpl.sections.map((s: string) => `### ${s}\n[Enter team working notes, primary 
                           <CheckCircle2 className="h-3 w-3 text-emerald-600" />
                           <span>Required Output:</span>
                         </p>
-                        <p className="text-slate-600 leading-normal">{tpl.required_evidence}</p>
+                        <p className="text-slate-600 leading-normal line-clamp-2">{tpl.required_evidence}</p>
                       </div>
                     </div>
 
@@ -615,10 +606,10 @@ ${tpl.sections.map((s: string) => `### ${s}\n[Enter team working notes, primary 
                       <button
                         type="button"
                         onClick={() => setSelectedTemplate(tpl)}
-                        className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-colors"
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
                       >
                         <FileText className="h-3.5 w-3.5 text-slate-500" />
-                        <span>Preview Spec</span>
+                        <span>Preview</span>
                       </button>
 
                       <div className="flex items-center gap-1">
@@ -626,15 +617,15 @@ ${tpl.sections.map((s: string) => `### ${s}\n[Enter team working notes, primary 
                           type="button"
                           onClick={() => handleDownloadMarkdown(tpl)}
                           title="Download starter markdown"
-                          className="inline-flex items-center gap-1 rounded-lg bg-sky-50 border border-sky-200 px-2.5 py-1.5 text-xs font-semibold text-sky-700 hover:bg-sky-100 transition-colors"
+                          className="inline-flex items-center gap-1 rounded-lg bg-brand-50 border border-brand-200 px-2.5 py-1.5 text-xs font-semibold text-brand-700 hover:bg-brand-100 transition-colors"
                         >
                           <Download className="h-3.5 w-3.5" />
-                          <span>Get .md</span>
+                          <span>.md</span>
                         </button>
                         <Link
                           href={`/student/submissions?task=${tpl.id}`}
                           title="Submit evidence for this session"
-                          className="inline-flex items-center gap-1 rounded-lg bg-slate-900 px-2.5 py-1.5 text-xs font-bold text-white hover:bg-slate-800 transition-colors shadow-xs"
+                          className="btn-gradient-primary !py-1.5 !px-2.5 !text-xs"
                         >
                           <Send className="h-3 w-3" />
                           <span>Turn in</span>
@@ -651,7 +642,7 @@ ${tpl.sections.map((s: string) => `### ${s}\n[Enter team working notes, primary 
 
       {/* ── Template Spec Modal ── */}
       {selectedTemplate && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-150">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs animate-in fade-in duration-150">
           <div
             className="relative w-full max-w-xl max-h-[85vh] flex flex-col rounded-2xl border border-slate-200 bg-white shadow-2xl overflow-hidden"
             onClick={(e) => e.stopPropagation()}
@@ -659,7 +650,7 @@ ${tpl.sections.map((s: string) => `### ${s}\n[Enter team working notes, primary 
             {/* Modal Header */}
             <div className="flex items-start justify-between gap-3 border-b border-slate-100 p-5">
               <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-100 text-sky-600">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600">
                   <FileSpreadsheet className="h-5 w-5" />
                 </div>
                 <div>
@@ -667,7 +658,7 @@ ${tpl.sections.map((s: string) => `### ${s}\n[Enter team working notes, primary 
                     <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
                       Week {selectedTemplate.week_number} • Session {selectedTemplate.session_number}
                     </span>
-                    <span className="rounded-md bg-sky-100 px-2 py-0.5 text-[10px] font-bold text-sky-800">
+                    <span className="status-pill badge-primary">
                       {selectedTemplate.type}
                     </span>
                   </div>
@@ -691,14 +682,14 @@ ${tpl.sections.map((s: string) => `### ${s}\n[Enter team working notes, primary 
                 <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-1">
                   Scope &amp; Intent
                 </h3>
-                <p className="text-sm text-slate-600 leading-relaxed">
+                <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
                   {selectedTemplate.description}
                 </p>
               </div>
 
-              <div className="rounded-xl border border-sky-200 bg-sky-50/60 p-3.5 text-xs text-sky-900">
+              <div className="rounded-xl border border-brand-200 bg-brand-50/50 p-3.5 text-xs text-brand-900">
                 <p className="font-bold mb-1 flex items-center gap-1.5">
-                  <CheckCircle2 className="h-3.5 w-3.5 text-sky-700" />
+                  <CheckCircle2 className="h-3.5 w-3.5 text-brand-700" />
                   Required Working Evidence
                 </p>
                 <p className="text-slate-700 leading-relaxed">
@@ -731,7 +722,7 @@ ${tpl.sections.map((s: string) => `### ${s}\n[Enter team working notes, primary 
               <button
                 type="button"
                 onClick={() => handleCopyMarkdown(selectedTemplate)}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 shadow-xs hover:bg-slate-50 transition-colors"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 shadow-xs hover:bg-slate-50 transition-colors"
               >
                 {copied ? (
                   <>
@@ -750,14 +741,14 @@ ${tpl.sections.map((s: string) => `### ${s}\n[Enter team working notes, primary 
                 <button
                   type="button"
                   onClick={() => handleDownloadMarkdown(selectedTemplate)}
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-sky-600 px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-sky-500 transition-colors"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors shadow-xs"
                 >
                   <Download className="h-3.5 w-3.5" />
-                  <span>Download .md Spec</span>
+                  <span>Download .md</span>
                 </button>
                 <Link
                   href={`/student/submissions?task=${selectedTemplate.id}`}
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-slate-800 transition-colors"
+                  className="btn-gradient-primary !py-2 !px-3.5 !text-xs"
                 >
                   <Send className="h-3.5 w-3.5" />
                   <span>Submit Work</span>
@@ -777,8 +768,8 @@ export default function StudentTemplatesPage() {
       fallback={
         <div className="flex h-96 items-center justify-center">
           <div className="flex flex-col items-center gap-3 text-sm text-slate-500">
-            <div className="h-8 w-8 animate-spin rounded-full border-3 border-sky-600 border-t-transparent" />
-            <span className="font-medium text-slate-700">Loading Session Templates...</span>
+            <div className="h-8 w-8 animate-spin rounded-full border-3 border-brand-600 border-t-transparent" />
+            <span className="font-medium text-slate-700">Loading Session Templates…</span>
           </div>
         </div>
       }

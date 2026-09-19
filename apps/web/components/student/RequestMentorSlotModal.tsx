@@ -111,12 +111,12 @@ export function RequestMentorSlotModal({
 
         {/* Header */}
         <div className="flex items-start gap-3.5 pb-4 border-b border-slate-100">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-sky-100 text-sky-600">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-violet-100 text-violet-600">
             <Video className="h-6 w-6" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="inline-flex items-center rounded-full bg-sky-50 px-2 py-0.5 text-[11px] font-bold text-sky-700 border border-sky-200">
+              <span className="inline-flex items-center rounded-full bg-violet-50 px-2 py-0.5 text-[11px] font-bold text-violet-700 border border-violet-200">
                 Lead Exclusive
               </span>
               <span className="text-xs text-slate-500">{teamName}</span>
@@ -153,7 +153,7 @@ export function RequestMentorSlotModal({
             {/* Preferred Date */}
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1.5">
-                <Calendar className="h-3.5 w-3.5 text-sky-600" />
+                <Calendar className="h-3.5 w-3.5 text-violet-600" />
                 <span>Preferred Date</span>
               </label>
               <input
@@ -162,7 +162,7 @@ export function RequestMentorSlotModal({
                 value={preferredDate}
                 onChange={(e) => setPreferredDate(e.target.value)}
                 required
-                className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-xs focus:border-sky-500 focus:outline-hidden focus:ring-2 focus:ring-sky-500/20"
+                className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-xs focus:border-violet-500 focus:outline-hidden focus:ring-2 focus:ring-violet-500/20"
               />
             </div>
 
@@ -170,7 +170,7 @@ export function RequestMentorSlotModal({
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1.5">
-                  <Clock className="h-3.5 w-3.5 text-sky-600" />
+                  <Clock className="h-3.5 w-3.5 text-violet-600" />
                   <span>Start Window</span>
                 </label>
                 <input
@@ -178,7 +178,7 @@ export function RequestMentorSlotModal({
                   value={preferredTimeStart}
                   onChange={(e) => setPreferredTimeStart(e.target.value)}
                   required
-                  className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-xs focus:border-sky-500 focus:outline-hidden focus:ring-2 focus:ring-sky-500/20"
+                  className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-xs focus:border-violet-500 focus:outline-hidden focus:ring-2 focus:ring-violet-500/20"
                 />
               </div>
 
@@ -192,7 +192,7 @@ export function RequestMentorSlotModal({
                   value={preferredTimeEnd}
                   onChange={(e) => setPreferredTimeEnd(e.target.value)}
                   required
-                  className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-xs focus:border-sky-500 focus:outline-hidden focus:ring-2 focus:ring-sky-500/20"
+                  className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-xs focus:border-violet-500 focus:outline-hidden focus:ring-2 focus:ring-violet-500/20"
                 />
               </div>
             </div>
@@ -200,7 +200,7 @@ export function RequestMentorSlotModal({
             {/* Topic & Agenda */}
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1.5">
-                <MessageSquare className="h-3.5 w-3.5 text-sky-600" />
+                <MessageSquare className="h-3.5 w-3.5 text-violet-600" />
                 <span>Consultation Topic &amp; Focus Questions</span>
               </label>
               <textarea
@@ -209,7 +209,7 @@ export function RequestMentorSlotModal({
                 onChange={(e) => setTopic(e.target.value)}
                 placeholder="e.g., We need guidance on validating our supply chain root cause analysis and framing strategic choices for Week 2 deliverables..."
                 required
-                className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 shadow-xs focus:border-sky-500 focus:outline-hidden focus:ring-2 focus:ring-sky-500/20"
+                className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 shadow-xs focus:border-violet-500 focus:outline-hidden focus:ring-2 focus:ring-violet-500/20"
               />
               <p className="mt-1 text-[11px] text-slate-400">
                 Be specific so the program administrator can match an appropriately specialized mentor.
@@ -234,7 +234,7 @@ export function RequestMentorSlotModal({
               <button
                 type="submit"
                 disabled={loading}
-                className="inline-flex items-center gap-2 rounded-xl bg-sky-600 px-5 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-sky-500 disabled:opacity-50 transition-colors"
+                className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-5 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-violet-500 disabled:opacity-50 transition-colors"
               >
                 {loading ? (
                   <>

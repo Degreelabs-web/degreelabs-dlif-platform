@@ -13,7 +13,7 @@ import { FourWeekMilestoneProgressBar } from "@/components/student/FourWeekMiles
 import { AssignedChallengeCard } from "@/components/student/AssignedChallengeCard";
 import { UpcomingSessionsCard } from "@/components/student/UpcomingSessionsCard";
 import { CapabilitiesSnapshotCard } from "@/components/student/CapabilitiesSnapshotCard";
-import { DeliverableChecklistCard } from "@/components/student/DeliverableChecklistCard";
+
 
 import { UserRound, ChevronDown, ChevronUp, ShieldCheck, GraduationCap, Mail, Building2, BookOpen } from "lucide-react";
 
@@ -54,9 +54,9 @@ export default function StudentDashboardPage() {
       <div className="flex h-96 items-center justify-center">
         <div className="flex flex-col items-center gap-4 text-sm text-slate-500">
           <div className="relative h-12 w-12">
-            <div className="h-12 w-12 animate-spin rounded-full border-4 border-sky-100 border-t-sky-600" />
+            <div className="h-12 w-12 animate-spin rounded-full border-4 border-violet-100 border-t-violet-600" />
             <div className="absolute inset-0 flex items-center justify-center">
-              <GraduationCap className="h-5 w-5 text-sky-600" />
+              <GraduationCap className="h-5 w-5 text-violet-600" />
             </div>
           </div>
           <div className="text-center">
@@ -133,12 +133,7 @@ export default function StudentDashboardPage() {
       {/* 5. Capabilities Snapshot */}
       <CapabilitiesSnapshotCard capabilities={dashboardData.capabilities} />
 
-      {/* 6. Week Deliverable Templates */}
-      <DeliverableChecklistCard
-        templates={dashboardData.templates}
-        ongoingDeliverables={dashboardData.ongoing_deliverables}
-        currentWeekNumber={team.current_week}
-      />
+
 
       {/* 7. Collapsible Profile & Credential Section */}
       <div className="card-custom overflow-hidden !p-0">
@@ -148,8 +143,8 @@ export default function StudentDashboardPage() {
           className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-slate-50/80 transition-colors"
         >
           <div className="flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-100">
-              <UserRound className="h-4 w-4 text-sky-700" />
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-100">
+              <UserRound className="h-4 w-4 text-violet-700" />
             </div>
             <div>
               <span className="text-sm font-bold text-slate-900">

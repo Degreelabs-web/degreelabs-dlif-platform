@@ -255,8 +255,8 @@ function LoginForm() {
               setError(null);
             }}
             className={`flex items-center justify-center gap-1.5 rounded-lg py-2 transition ${activeTab === "student"
-                ? "bg-white text-brand-700 shadow-sm ring-1 ring-brand-100"
-                : "text-slate-600 hover:bg-white/50 hover:text-brand-700"
+              ? "bg-white text-brand-700 shadow-sm ring-1 ring-brand-100"
+              : "text-slate-600 hover:bg-white/50 hover:text-brand-700"
               }`}
           >
             <UsersRound className="h-3.5 w-3.5" />
@@ -270,8 +270,8 @@ function LoginForm() {
               setError(null);
             }}
             className={`flex items-center justify-center gap-1.5 rounded-lg py-2 transition ${activeTab === "mentor"
-                ? "bg-white text-brand-700 shadow-sm ring-1 ring-brand-100"
-                : "text-slate-600 hover:bg-white/50 hover:text-brand-700"
+              ? "bg-white text-brand-700 shadow-sm ring-1 ring-brand-100"
+              : "text-slate-600 hover:bg-white/50 hover:text-brand-700"
               }`}
           >
             <UserRound className="h-3.5 w-3.5" />
@@ -285,8 +285,8 @@ function LoginForm() {
               setError(null);
             }}
             className={`flex items-center justify-center gap-1.5 rounded-lg py-2 transition ${activeTab === "admin"
-                ? "bg-white text-brand-700 shadow-sm ring-1 ring-brand-100"
-                : "text-slate-600 hover:bg-white/50 hover:text-brand-700"
+              ? "bg-white text-brand-700 shadow-sm ring-1 ring-brand-100"
+              : "text-slate-600 hover:bg-white/50 hover:text-brand-700"
               }`}
           >
             <ShieldCheck className="h-3.5 w-3.5" />
@@ -310,7 +310,7 @@ function LoginForm() {
       )}
 
       {/* Main Form Card */}
-      <div className="space-y-5 rounded-3xl border border-white bg-white/95 p-6 shadow-xl shadow-blue-950/[0.08] ring-1 ring-brand-100/80 sm:p-8">
+      <div className="space-y-5 rounded-3xl border border-white bg-white/95 p-6 shadow-xl shadow-violet-950/[0.08] ring-1 ring-brand-100/80 sm:p-8">
         {step === "credentials" ? (
           /* STEP 1: CREDENTIALS FORM */
           <form onSubmit={(e) => handleLogin(e)} className="space-y-4">
@@ -355,7 +355,7 @@ function LoginForm() {
             <button
               type="submit"
               disabled={loading}
-              className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-500 to-brand-600 py-3.5 text-sm font-bold text-white shadow-lg shadow-blue-500/20 hover:-translate-y-0.5 hover:shadow-xl disabled:translate-y-0 disabled:opacity-50"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-500 to-brand-600 py-3.5 text-sm font-bold text-white shadow-lg shadow-violet-500/20 hover:-translate-y-0.5 hover:shadow-xl disabled:translate-y-0 disabled:opacity-50"
             >
               {loading ? (
                 <>
@@ -405,7 +405,7 @@ function LoginForm() {
               <button
                 type="submit"
                 disabled={loading || twoFactorCode.trim().length < 6}
-                className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-500 to-brand-600 py-3.5 text-sm font-bold text-white shadow-lg shadow-blue-500/20 hover:-translate-y-0.5 disabled:translate-y-0 disabled:opacity-50"
+                className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-500 to-brand-600 py-3.5 text-sm font-bold text-white shadow-lg shadow-violet-500/20 hover:-translate-y-0.5 disabled:translate-y-0 disabled:opacity-50"
               >
                 {loading ? (
                   <>
@@ -470,7 +470,7 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[radial-gradient(circle_at_top_left,_#dff3ff_0%,_transparent_38%),radial-gradient(circle_at_bottom_right,_#e2eaff_0%,_transparent_36%),linear-gradient(135deg,#f8fbff_0%,#f1f7ff_100%)] px-4 py-10 sm:px-6">
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[radial-gradient(circle_at_top_left,_#ede4fc_0%,_transparent_38%),radial-gradient(circle_at_bottom_right,_#fde7de_0%,_transparent_36%),linear-gradient(135deg,#f9f7fd_0%,#f5f2fc_100%)] px-4 py-10 sm:px-6">
       <div className="pointer-events-none absolute left-[8%] top-[12%] h-44 w-44 rounded-full bg-brand-400/10 blur-3xl" />
       <div className="pointer-events-none absolute bottom-[8%] right-[10%] h-56 w-56 rounded-full bg-brand-500/10 blur-3xl" />
       <Suspense

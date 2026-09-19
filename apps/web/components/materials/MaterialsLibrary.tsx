@@ -1,20 +1,181 @@
 "use client";
+
 import { useEffect, useMemo, useState } from "react";
-import { BookOpen, ExternalLink, FileText, Search, Download, Star } from "lucide-react";
+import { BookOpen, ExternalLink, FileText, Search, Download, Star, Loader2 } from "lucide-react";
 import { getMaterialAccess, getMentorMaterials, getStudentMaterials, Material } from "@/lib/api/materials";
 import { useToast } from "@/components/ui/ToastProvider";
+import { PageHeader, SectionCard, StatusBadge, EmptyState } from "@/components/student/ui";
 
 export function MaterialsLibrary({ role }: { role: "student" | "mentor" }) {
- const { notify } = useToast();
- const [items,setItems]=useState<Material[]>([]),[loading,setLoading]=useState(true),[error,setError]=useState(""),[search,setSearch]=useState(""),[category,setCategory]=useState(""),[opening,setOpening]=useState<string | null>(null);
- const title=role==="student"?"Student Centric Materials":"Mentor Resources";
- const subtitle=role==="student"?"Resources, templates, recordings and learning material available for your fellowship.":"Resources and guides available to support your mentoring journey.";
- const load=async()=>{try{setLoading(true);setError(""); const data=role==="student"?await getStudentMaterials():await getMentorMaterials();setItems(data.items)}catch(e){setError((e as Error).message)}finally{setLoading(false)}};
- useEffect(()=>{void load()},[role]);
- const categories=useMemo(()=>[...new Set(items.map(x=>x.category).filter(Boolean) as string[])], [items]);
- const visible=items.filter(x=>(!category||x.category===category)&&`${x.title} ${x.description??""}`.toLowerCase().includes(search.toLowerCase()));
- const open=async(material:Material)=>{try{setOpening(material.id);const access=await getMaterialAccess(role,material.id);if(role==="student"&&access.student_access_mode==="download_editable_copy"&&!material.external_url){const link=document.createElement("a");link.href=access.url;link.download=access.filename||"material";link.rel="noopener";document.body.appendChild(link);link.click();link.remove();notify("Your editable copy is downloading.");}else{window.open(access.url,"_blank","noopener,noreferrer")}}catch(e){notify(`Unable to open material: ${(e as Error).message}`,"error")}finally{setOpening(null)}};
- return <div className="space-y-6"><div><p className="text-sm font-medium text-slate-500">{role==="student"?"Student Portal":"Mentor Portal"}</p><h1 className="text-2xl font-bold tracking-tight text-slate-900">{title}</h1><p className="mt-1 text-sm text-slate-600">{subtitle}</p></div>
- <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row"><label className="flex flex-1 items-center gap-2 rounded-lg border border-slate-200 px-3"><Search className="h-4 w-4 text-slate-400"/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search materials" className="h-10 w-full outline-none"/></label><select value={category} onChange={e=>setCategory(e.target.value)} className="rounded-lg border border-slate-200 px-3 text-sm"><option value="">All categories</option>{categories.map(x=><option key={x}>{x}</option>)}</select></div>
- {loading?<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{[1,2,3].map(x=><div key={x} className="h-48 animate-pulse rounded-2xl bg-slate-200"/>)}</div>:error?<div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</div>:visible.length===0?<div className="rounded-2xl border border-dashed border-slate-300 bg-white p-12 text-center"><BookOpen className="mx-auto h-10 w-10 text-slate-400"/><h2 className="mt-3 font-semibold">No materials are available for you yet.</h2></div>:<div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{visible.map(m=><article key={m.id} className="flex min-h-52 flex-col rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><div className="flex items-start justify-between"><span className="rounded-xl bg-blue-50 p-3 text-blue-600"><FileText className="h-5 w-5"/></span>{m.is_featured&&<Star className="h-5 w-5 fill-amber-400 text-amber-400"/>}</div><h2 className="mt-4 font-semibold text-slate-900">{m.title}</h2><p className="mt-2 line-clamp-3 text-sm text-slate-600">{m.description||"Learning resource"}</p><div className="mt-auto flex items-center justify-between pt-4"><span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs text-slate-600">{m.category||m.material_type}</span><button onClick={()=>void open(m)} disabled={opening===m.id} className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-60">{m.external_url?<ExternalLink className="h-4 w-4"/>:<Download className="h-4 w-4"/>}{opening===m.id?"Opening…":m.external_url?"Open":"View"}</button></div></article>)}</div>}</div>
+  const { notify } = useToast();
+  const [items, setItems] = useState<Material[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [search, setSearch] = useState("");
+  const [category, setCategory] = useState("");
+  const [opening, setOpening] = useState<string | null>(null);
+
+  const title = role === "student" ? "Fellowship Materials" : "Mentor Resources";
+  const subtitle =
+    role === "student"
+      ? "Templates, guides, and learning references for your fellowship."
+      : "Resources and playbooks to support your mentoring journey.";
+
+  const load = async () => {
+    try {
+      setLoading(true);
+      setError("");
+      const data = role === "student" ? await getStudentMaterials() : await getMentorMaterials();
+      setItems(data.items);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void load();
+  }, [role]);
+
+  const categories = useMemo(
+    () => [...new Set(items.map((x) => x.category).filter(Boolean) as string[])],
+    [items]
+  );
+
+  const visible = items.filter(
+    (x) =>
+      (!category || x.category === category) &&
+      `${x.title} ${x.description ?? ""}`.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const open = async (material: Material) => {
+    try {
+      setOpening(material.id);
+      const access = await getMaterialAccess(role, material.id);
+      if (
+        role === "student" &&
+        access.student_access_mode === "download_editable_copy" &&
+        !material.external_url
+      ) {
+        const link = document.createElement("a");
+        link.href = access.url;
+        link.download = access.filename || "material";
+        link.rel = "noopener";
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        notify("Your editable copy is downloading.");
+      } else {
+        window.open(access.url, "_blank", "noopener,noreferrer");
+      }
+    } catch (e) {
+      notify(`Unable to open material: ${(e as Error).message}`, "error");
+    } finally {
+      setOpening(null);
+    }
+  };
+
+  return (
+    <div className="page-container">
+      <PageHeader
+        badge={
+          <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+            {role === "student" ? "Curriculum Resources" : "Mentor Guides"}
+          </span>
+        }
+        title={title}
+        subtitle={subtitle}
+      />
+
+      {/* Filter Toolbar */}
+      <div className="card-custom flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+        <label className="flex flex-1 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-1.5 focus-within:ring-2 focus-within:ring-brand-500">
+          <Search className="h-4 w-4 text-slate-400 shrink-0" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search materials…"
+            className="w-full text-xs outline-none bg-transparent"
+          />
+        </label>
+        <select
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
+          className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 outline-none focus:ring-2 focus:ring-brand-500"
+        >
+          <option value="">All categories</option>
+          {categories.map((x) => (
+            <option key={x} value={x}>
+              {x}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {loading ? (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {[1, 2, 3].map((x) => (
+            <div key={x} className="card-custom h-48 animate-pulse bg-slate-100" />
+          ))}
+        </div>
+      ) : error ? (
+        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-xs text-red-700">
+          {error}
+        </div>
+      ) : visible.length === 0 ? (
+        <EmptyState
+          icon={<BookOpen className="h-6 w-6" />}
+          headline="No materials found"
+          description="Try adjusting your search query or category filter."
+        />
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {visible.map((m) => (
+            <SectionCard
+              key={m.id}
+              className="h-full"
+              headerAction={
+                m.is_featured ? (
+                  <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
+                ) : undefined
+              }
+              badge={
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-50 text-brand-700">
+                  <FileText className="h-4 w-4" />
+                </span>
+              }
+              footerAction={
+                <div className="flex items-center justify-between">
+                  <StatusBadge variant="secondary">
+                    {m.category || m.material_type}
+                  </StatusBadge>
+                  <button
+                    type="button"
+                    onClick={() => void open(m)}
+                    disabled={opening === m.id}
+                    className="btn-gradient-primary !py-1.5 !px-3 !text-xs disabled:opacity-60"
+                  >
+                    {opening === m.id ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : m.external_url ? (
+                      <ExternalLink className="h-3.5 w-3.5" />
+                    ) : (
+                      <Download className="h-3.5 w-3.5" />
+                    )}
+                    <span>{opening === m.id ? "Opening…" : m.external_url ? "Open" : "Download"}</span>
+                  </button>
+                </div>
+              }
+            >
+              <h3 className="card-title line-clamp-1">{m.title}</h3>
+              <p className="mt-1.5 line-clamp-3 text-xs leading-relaxed text-slate-600">
+                {m.description || "Learning resource"}
+              </p>
+            </SectionCard>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }

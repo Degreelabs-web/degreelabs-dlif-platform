@@ -16,32 +16,32 @@ export function NextActionBanner({ action }: Props) {
   const containerStyle = isWarning
     ? "border-amber-400/80 bg-gradient-to-r from-amber-50/90 via-orange-50/40 to-white"
     : isGate
-    ? "border-indigo-400/80 bg-gradient-to-r from-indigo-50/90 via-sky-50/40 to-white"
-    : "border-sky-400/80 bg-gradient-to-r from-sky-50/90 via-blue-50/30 to-white";
+      ? "border-fuchsia-400/80 bg-gradient-to-r from-fuchsia-50/90 via-violet-50/40 to-white"
+      : "border-[#f0653d]/80 bg-gradient-to-r from-[#fde7de]/90 via-orange-50/30 to-white";
 
   const iconBg = isWarning
     ? "bg-amber-600 text-white"
     : isGate
-    ? "bg-indigo-600 text-white"
-    : "bg-sky-600 text-white";
+      ? "bg-fuchsia-600 text-white"
+      : "bg-[#f0653d] text-white";
 
   const badgeText = isWarning
     ? "Action Required • Quality Gate Revision"
     : isGate
-    ? "Quality Gate Milestone • Formal Review Ahead"
-    : "Recommended Next Action";
+      ? "Quality Gate Milestone • Formal Review Ahead"
+      : "Recommended Next Action";
 
   const badgeClass = isWarning
     ? "bg-amber-100 text-amber-900 border-amber-300"
     : isGate
-    ? "bg-indigo-100 text-indigo-900 border-indigo-300"
-    : "bg-sky-100 text-sky-900 border-sky-300";
+      ? "bg-fuchsia-100 text-fuchsia-900 border-fuchsia-300"
+      : "bg-[#fde7de] text-[#9a3412] border-[#fbd0bc]";
 
   const buttonClass = isWarning
     ? "inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-bold shadow-sm transition-colors bg-amber-600 hover:bg-amber-500 text-white"
     : isGate
-    ? "inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-bold shadow-sm transition-colors bg-indigo-600 hover:bg-indigo-500 text-white"
-    : "btn-gradient-primary";
+      ? "inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-bold shadow-sm transition-colors bg-fuchsia-600 hover:bg-fuchsia-500 text-white"
+      : "btn-gradient-primary";
 
   return (
     <div className={`rounded-xl border-2 p-5 shadow-xs transition-all ${containerStyle}`}>

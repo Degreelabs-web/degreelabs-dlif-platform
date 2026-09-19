@@ -11,8 +11,7 @@ import {
   Loader2,
   X,
   Send,
-  ExternalLink,
-  GitBranch,
+  ArrowRight,
 } from "lucide-react";
 import { getStoredUser } from "@/lib/api/auth";
 import { fetchStudentPortalContext } from "@/lib/api/fellowship";
@@ -23,6 +22,7 @@ import {
   Submission,
   StudentPortalContext,
 } from "@/types/fellowship";
+import { PageHeader, SectionCard, StatusBadge, EmptyState } from "@/components/student/ui";
 
 export default function StudentSubmissionsPage() {
   const [context, setContext] = useState<StudentPortalContext | null>(null);
@@ -55,8 +55,6 @@ export default function StudentSubmissionsPage() {
         }
 
         if (ctx.cohort?.id) {
-          // The API derives the accessible cohort from the signed-in user. Do not
-          // trust a client-provided cohort id when loading a student's task list.
           const sessionsData = await fetchSessions();
           const taskGroups = await Promise.all(
             sessionsData.map((session) => fetchSessionTasks(session.id))
@@ -93,7 +91,6 @@ export default function StudentSubmissionsPage() {
       const user = getStoredUser();
       const submittedBy = user?.id || "00000000-0000-0000-0000-000000000000";
 
-      // If no session task exists yet, use a fallback task ID
       let taskId = formData.task_id;
       if (!taskId) {
         if (tasks.length > 0) {
@@ -125,94 +122,97 @@ export default function StudentSubmissionsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+    <div className="page-container">
+      <PageHeader
+        badge={
+          <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
             Sprint Deliverables
-          </p>
-          <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-900">
-            Team Submissions
-          </h1>
-          <p className="mt-1 text-sm text-slate-600">
-            Turn in project milestones, code repositories, architecture artifacts, and review evaluations.
-          </p>
-        </div>
-
-        <button
-          onClick={() => setIsModalOpen(true)}
-          disabled={!context?.team}
-          className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:opacity-50"
-        >
-          <PlusCircle className="h-4 w-4" />
-          Submit Deliverable
-        </button>
-      </div>
+          </span>
+        }
+        title="Team Submissions"
+        subtitle="Turn in milestone evidence packs and inspect evaluator review outcomes."
+        action={
+          <button
+            type="button"
+            onClick={() => setIsModalOpen(true)}
+            disabled={!context?.team}
+            className="btn-gradient-primary disabled:opacity-50"
+          >
+            <PlusCircle className="h-4 w-4" />
+            <span>Submit Deliverable</span>
+          </button>
+        }
+      />
 
       {loading ? (
-        <div className="flex min-h-[300px] items-center justify-center rounded-2xl border border-slate-200 bg-white">
+        <div className="card-custom flex min-h-[280px] items-center justify-center">
           <div className="flex items-center gap-3 text-slate-500">
-            <Loader2 className="h-6 w-6 animate-spin text-slate-900" />
-            <span className="text-sm font-medium">Loading deliverables history...</span>
+            <Loader2 className="h-6 w-6 animate-spin text-brand-600" />
+            <span className="text-sm font-medium">Loading deliverables history…</span>
           </div>
         </div>
       ) : !context?.team ? (
-        <div className="rounded-2xl border border-slate-200 bg-white p-12 text-center shadow-sm">
-          <FileText className="mx-auto h-12 w-12 text-slate-300" />
-          <h3 className="mt-3 text-base font-bold text-slate-900">
-            No Team Assigned
-          </h3>
-          <p className="mt-1 text-sm text-slate-500">
-            Deliverables are submitted cooperatively as a squad once your team is formed.
-          </p>
-        </div>
+        <EmptyState
+          icon={<FileText className="h-6 w-6" />}
+          headline="No Team Assigned"
+          description="Deliverables are submitted cooperatively as a squad once your team is formed."
+        />
       ) : submissions.length === 0 ? (
-        <div className="rounded-2xl border border-slate-200 bg-white p-12 text-center shadow-sm">
-          <FileText className="mx-auto h-12 w-12 text-slate-300" />
-          <h3 className="mt-3 text-base font-bold text-slate-900">
-            No submissions turned in yet
-          </h3>
-          <p className="mt-1 text-sm text-slate-500">
-            Ready to share your squad's milestone? Submit your first deliverable for mentor feedback.
-          </p>
-          <button
-            onClick={() => setIsModalOpen(true)}
-            className="mt-4 inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
-          >
-            <PlusCircle className="h-4 w-4" />
-            Submit First Deliverable
-          </button>
-        </div>
+        <EmptyState
+          icon={<FileText className="h-6 w-6" />}
+          headline="No submissions turned in yet"
+          description="Ready to share your squad's milestone? Submit your first deliverable for mentor feedback."
+          action={
+            <button
+              type="button"
+              onClick={() => setIsModalOpen(true)}
+              className="btn-gradient-primary !py-2 !px-4 !text-xs"
+            >
+              <PlusCircle className="h-3.5 w-3.5" />
+              <span>Submit Deliverable</span>
+            </button>
+          }
+        />
       ) : (
         <div className="space-y-4">
           {submissions.map((sub) => (
-            <div
+            <SectionCard
               key={sub.id}
-              className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:border-slate-300"
+              footerAction={
+                <div className="flex items-center justify-between text-xs text-slate-500">
+                  <span>Squad: {context.team?.name}</span>
+                  <Link
+                    href="/student/feedback"
+                    className="font-semibold text-brand-600 hover:text-brand-700 hover:underline inline-flex items-center gap-1"
+                  >
+                    <span>View Feedback</span>
+                    <ArrowRight className="h-3 w-3" />
+                  </Link>
+                </div>
+              }
             >
               <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2.5">
                   <span className="font-mono text-sm font-bold text-slate-900">
                     #{sub.id.slice(0, 8)}
                   </span>
-                  <span className="inline-flex items-center rounded-md bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-700">
-                    Version {sub.latest_version?.version_number || 1}
-                  </span>
+                  <StatusBadge variant="secondary">
+                    v{sub.latest_version?.version_number || 1}
+                  </StatusBadge>
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <span
-                    className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ${
+                  <StatusBadge
+                    variant={
                       sub.status === "accepted"
-                        ? "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-600/20"
+                        ? "success"
                         : sub.status === "changes_requested"
-                        ? "bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-600/20"
-                        : "bg-indigo-50 text-indigo-700 ring-1 ring-inset ring-indigo-600/20"
-                    }`}
+                          ? "warning"
+                          : "primary"
+                    }
                   >
                     {sub.status.replace("_", " ")}
-                  </span>
+                  </StatusBadge>
 
                   <span className="text-xs text-slate-400">
                     {new Date(sub.created_at).toLocaleDateString()}
@@ -221,42 +221,30 @@ export default function StudentSubmissionsPage() {
               </div>
 
               {sub.latest_version?.content && (
-                <div className="mt-4 rounded-xl bg-slate-50 p-4 text-xs text-slate-700 whitespace-pre-wrap leading-relaxed border border-slate-100">
+                <div className="mt-3 rounded-xl bg-slate-50 p-3.5 text-xs text-slate-700 whitespace-pre-wrap leading-relaxed border border-slate-100">
                   {sub.latest_version.content}
                 </div>
               )}
-
-              <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3">
-                <span className="text-xs text-slate-500">
-                  Squad: {context.team?.name}
-                </span>
-
-                <Link
-                  href="/student/feedback"
-                  className="inline-flex items-center gap-1 text-xs font-semibold text-slate-900 hover:underline"
-                >
-                  View Review Feedback →
-                </Link>
-              </div>
-            </div>
+            </SectionCard>
           ))}
         </div>
       )}
 
       {/* Submit Deliverable Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-xs">
           <div className="relative max-h-[calc(100dvh-2rem)] w-full max-w-lg overflow-y-auto rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div>
-                <h2 className="text-lg font-bold text-slate-900">
+                <h2 className="text-base font-bold text-slate-900">
                   Submit Project Deliverable
                 </h2>
                 <p className="text-xs text-slate-500">
-                  Turn in your squad&apos;s code repo, demo links, and documentation.
+                  Provide repository URLs, working artifacts, and notes.
                 </p>
               </div>
               <button
+                type="button"
                 onClick={() => setIsModalOpen(false)}
                 className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
               >
@@ -265,14 +253,14 @@ export default function StudentSubmissionsPage() {
             </div>
 
             {formError && (
-              <div className="mt-4 flex items-center gap-2 rounded-xl bg-rose-50 p-3 text-xs text-rose-700">
+              <div className="mt-3 flex items-center gap-2 rounded-xl bg-rose-50 p-3 text-xs text-rose-700">
                 <AlertCircle className="h-4 w-4 shrink-0" />
                 <span>{formError}</span>
               </div>
             )}
 
             {formSuccess && (
-              <div className="mt-4 flex items-center gap-2 rounded-xl bg-emerald-50 p-3 text-xs text-emerald-700">
+              <div className="mt-3 flex items-center gap-2 rounded-xl bg-emerald-50 p-3 text-xs text-emerald-700">
                 <CheckCircle2 className="h-4 w-4 shrink-0" />
                 <span>{formSuccess}</span>
               </div>
@@ -281,7 +269,7 @@ export default function StudentSubmissionsPage() {
             <form onSubmit={handleSubmitDeliverable} className="mt-4 space-y-4">
               {tasks.length > 0 && (
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700">
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
                     Associated Milestone Task *
                   </label>
                   <select
@@ -290,7 +278,7 @@ export default function StudentSubmissionsPage() {
                     onChange={(e) =>
                       setFormData({ ...formData, task_id: e.target.value })
                     }
-                    className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900"
+                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500"
                   >
                     {tasks.map((t) => (
                       <option key={t.id} value={t.id}>
@@ -302,36 +290,36 @@ export default function StudentSubmissionsPage() {
               )}
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700">
-                  Artifact Deliverable & Links *
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Artifact Deliverable &amp; Links *
                 </label>
                 <textarea
                   required
                   rows={4}
-                  placeholder="Provide your GitHub repository URL, hosted demo link, architecture diagram URL, and sprint reflection notes..."
+                  placeholder="Provide repository URL, document link, and sprint evidence summary…"
                   value={formData.content}
                   onChange={(e) =>
                     setFormData({ ...formData, content: e.target.value })
                   }
-                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900"
+                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500"
                 />
               </div>
 
-              <div className="mt-6 flex justify-end gap-3 pt-2">
+              <div className="flex justify-end gap-2.5 pt-2 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                  className="rounded-lg border border-slate-200 px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-slate-800 disabled:opacity-50"
+                  className="btn-gradient-primary !py-2 !px-4 !text-xs disabled:opacity-50"
                 >
-                  {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
-                  Turn in Deliverable
+                  {submitting && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                  <span>Turn in Deliverable</span>
                 </button>
               </div>
             </form>

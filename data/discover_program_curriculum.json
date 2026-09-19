@@ -6,10 +6,26 @@
   "sessions_per_week": 3,
   "team_size": 5,
   "credential_pathway": [
-    { "code": "READINESS", "name": "UKM Competency Readiness Certificate", "status": "completed" },
-    { "code": "DISCOVER", "name": "Certificate in Problem Analysis & Solution Architecture", "status": "active" },
-    { "code": "VALIDATE", "name": "Certificate in Venture Validation & Proof-of-Concept", "status": "locked" },
-    { "code": "GROW", "name": "Fellowship Venture Scale Certification", "status": "locked" }
+    {
+      "code": "READINESS",
+      "name": "UKM Competency Readiness Certificate",
+      "status": "completed"
+    },
+    {
+      "code": "DISCOVER",
+      "name": "Certificate in Problem Analysis & Solution Architecture",
+      "status": "active"
+    },
+    {
+      "code": "VALIDATE",
+      "name": "Certificate in Venture Validation & Proof-of-Concept",
+      "status": "locked"
+    },
+    {
+      "code": "GROW",
+      "name": "Fellowship Venture Scale Certification",
+      "status": "locked"
+    }
   ],
   "capabilities": [
     {
@@ -95,10 +111,38 @@
         }
       ],
       "templates": [
-        { "id": "t-1", "name": "Company Context & Challenge Sheet", "type": "Core Template", "status": "ready", "url": "", "description": "Decode the company brief — map revenue model, operational drivers, and the commercial stakes of the challenge." },
-        { "id": "t-2", "name": "Workflow + Stakeholder Map", "type": "Core Template", "status": "ready", "url": "", "description": "Visualise end-to-end workflows, identify friction points, and plot all stakeholders with their interests and influence." },
-        { "id": "t-3", "name": "Evidence / Assumption / Unknowns Log", "type": "Living Document", "status": "active", "url": "", "description": "Continuously track what you know (evidence), what you believe (assumptions), and what you still need to prove (unknowns)." },
-        { "id": "t-4", "name": "Problem Framing + Outcome Definition", "type": "Gate Deliverable", "status": "ready", "url": "", "description": "Synthesise root causes into a bounded, evidence-supported problem statement with measurable outcome targets." }
+        {
+          "id": "t-1",
+          "name": "Company Context & Challenge Sheet",
+          "type": "Core Template",
+          "status": "ready",
+          "url": "",
+          "description": "Decode the company brief — map revenue model, operational drivers, and the commercial stakes of the challenge."
+        },
+        {
+          "id": "t-2",
+          "name": "Workflow + Stakeholder Map",
+          "type": "Core Template",
+          "status": "ready",
+          "url": "",
+          "description": "Visualise end-to-end workflows, identify friction points, and plot all stakeholders with their interests and influence."
+        },
+        {
+          "id": "t-3",
+          "name": "Evidence / Assumption / Unknowns Log",
+          "type": "Living Document",
+          "status": "active",
+          "url": "",
+          "description": "Continuously track what you know (evidence), what you believe (assumptions), and what you still need to prove (unknowns)."
+        },
+        {
+          "id": "t-4",
+          "name": "Problem Framing + Outcome Definition",
+          "type": "Gate Deliverable",
+          "status": "ready",
+          "url": "",
+          "description": "Synthesise root causes into a bounded, evidence-supported problem statement with measurable outcome targets."
+        }
       ]
     },
     {
@@ -142,9 +186,24 @@
         }
       ],
       "templates": [
-        { "id": "t-5", "name": "Strategic Possibilities Canvas", "type": "Core Template", "status": "upcoming" },
-        { "id": "t-6", "name": "WWHTBT + Barrier-to-Belief Test", "type": "Core Template", "status": "upcoming" },
-        { "id": "t-7", "name": "Strategic Choice / Decision Record", "type": "Gate Deliverable", "status": "upcoming" }
+        {
+          "id": "t-5",
+          "name": "Strategic Possibilities Canvas",
+          "type": "Core Template",
+          "status": "upcoming"
+        },
+        {
+          "id": "t-6",
+          "name": "WWHTBT + Barrier-to-Belief Test",
+          "type": "Core Template",
+          "status": "upcoming"
+        },
+        {
+          "id": "t-7",
+          "name": "Strategic Choice / Decision Record",
+          "type": "Gate Deliverable",
+          "status": "upcoming"
+        }
       ]
     },
     {
@@ -188,9 +247,24 @@
         }
       ],
       "templates": [
-        { "id": "t-8", "name": "Integrated Strategy Choices", "type": "Core Template", "status": "upcoming" },
-        { "id": "t-9", "name": "Execution Architecture + Roadmap", "type": "Core Template", "status": "upcoming" },
-        { "id": "t-10", "name": "Dependencies, Risks + Success Measures", "type": "Gate Deliverable", "status": "upcoming" }
+        {
+          "id": "t-8",
+          "name": "Integrated Strategy Choices",
+          "type": "Core Template",
+          "status": "upcoming"
+        },
+        {
+          "id": "t-9",
+          "name": "Execution Architecture + Roadmap",
+          "type": "Core Template",
+          "status": "upcoming"
+        },
+        {
+          "id": "t-10",
+          "name": "Dependencies, Risks + Success Measures",
+          "type": "Gate Deliverable",
+          "status": "upcoming"
+        }
       ]
     },
     {
@@ -234,22 +308,63 @@
         }
       ],
       "templates": [
-        { "id": "t-11", "name": "Executive Proposal Template", "type": "Core Template", "status": "upcoming" },
-        { "id": "t-12", "name": "Company Presentation Master", "type": "Core Template", "status": "upcoming" },
-        { "id": "t-13", "name": "Strategic Design Portfolio (Master)", "type": "Ongoing Master Document", "status": "active" }
+        {
+          "id": "t-11",
+          "name": "Executive Proposal Template",
+          "type": "Core Template",
+          "status": "upcoming"
+        },
+        {
+          "id": "t-12",
+          "name": "Company Presentation Master",
+          "type": "Core Template",
+          "status": "upcoming"
+        },
+        {
+          "id": "t-13",
+          "name": "Strategic Design Portfolio (Master)",
+          "type": "Ongoing Master Document",
+          "status": "active"
+        }
       ]
     }
   ],
   "ongoing_deliverables": [
-    { "id": "t-13", "name": "Strategic Design Portfolio", "scope": "Weeks 1–4 Ongoing Master Dossier" },
-    { "id": "t-3", "name": "Evidence / Assumption / Unknowns Log", "scope": "Continuous Working Evidence Tracker" }
+    {
+      "id": "t-13",
+      "name": "Strategic Design Portfolio",
+      "scope": "Weeks 1–4 Ongoing Master Dossier"
+    },
+    {
+      "id": "t-3",
+      "name": "Evidence / Assumption / Unknowns Log",
+      "scope": "Continuous Working Evidence Tracker"
+    }
   ],
   "roles": [
-    { "role": "Fellows", "description": "Student fellows working collaboratively in teams of 5." },
-    { "role": "Dedicated Team Mentor", "description": "Guides weekly deliverables, checks progress, and provides core feedback." },
-    { "role": "Specialist Mentor", "description": "Subject matter experts brought in for domain/technical depth as-needed." },
-    { "role": "Facilitator", "description": "Conducts cohort sessions, workshops, and enforces sprint rituals." },
-    { "role": "Company Challenge Owner", "description": "Industry sponsor defining the real challenge and evaluating final proposals." },
-    { "role": "DegreeLabs Program Team", "description": "Oversees cohort execution, standards, quality gates, and certification." }
+    {
+      "role": "Fellows",
+      "description": "Student fellows working collaboratively in teams of 5."
+    },
+    {
+      "role": "Dedicated Team Mentor",
+      "description": "Guides weekly deliverables, checks progress, and provides core feedback."
+    },
+    {
+      "role": "Specialist Mentor",
+      "description": "Subject matter experts brought in for domain/technical depth as-needed."
+    },
+    {
+      "role": "Facilitator",
+      "description": "Conducts cohort sessions, workshops, and enforces sprint rituals."
+    },
+    {
+      "role": "Company Challenge Owner",
+      "description": "Industry sponsor defining the real challenge and evaluating final proposals."
+    },
+    {
+      "role": "DegreeLabs Program Team",
+      "description": "Oversees cohort execution, standards, quality gates, and certification."
+    }
   ]
 }

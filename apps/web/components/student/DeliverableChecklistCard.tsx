@@ -20,7 +20,7 @@ export function DeliverableChecklistCard({
       <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between pb-3 border-b border-slate-100">
         <div>
           <div className="flex items-center gap-2">
-            <FileCheck className="h-5 w-5 text-sky-600" />
+            <FileCheck className="h-5 w-5 text-violet-600" />
             <h3 className="font-extrabold text-slate-900 text-lg">
               Week {currentWeekNumber} Deliverable Templates &amp; Dossiers
             </h3>
@@ -31,7 +31,7 @@ export function DeliverableChecklistCard({
         </div>
         <Link
           href={`/student/templates?week=${currentWeekNumber}`}
-          className="inline-flex items-center gap-1 text-xs font-bold text-sky-700 hover:text-sky-900 hover:underline"
+          className="inline-flex items-center gap-1 text-xs font-bold text-violet-700 hover:text-violet-900 hover:underline"
         >
           <span>All 12 Core Templates</span>
           <ArrowUpRight className="h-3.5 w-3.5" />
@@ -42,14 +42,14 @@ export function DeliverableChecklistCard({
         {templates.map((tpl) => (
           <div
             key={tpl.id}
-            className="rounded-xl border border-slate-200/80 bg-slate-50/50 p-3.5 flex flex-col justify-between hover:bg-white hover:border-sky-300 hover:shadow-xs transition-all"
+            className="rounded-xl border border-slate-200/80 bg-slate-50/50 p-3.5 flex flex-col justify-between hover:bg-white hover:border-violet-300 hover:shadow-xs transition-all"
           >
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
                   {tpl.type}
                 </span>
-                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-sky-100 text-sky-800 border border-sky-200">
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-violet-100 text-violet-800 border border-violet-200">
                   {tpl.status}
                 </span>
               </div>
@@ -63,7 +63,7 @@ export function DeliverableChecklistCard({
               <button
                 type="button"
                 onClick={() => alert(`Opening template: ${tpl.name}`)}
-                className="inline-flex items-center gap-1 text-[11px] font-semibold text-sky-600 hover:text-sky-800"
+                className="inline-flex items-center gap-1 text-[11px] font-semibold text-violet-600 hover:text-violet-800"
               >
                 <Download className="h-3 w-3" />
                 <span>Open</span>
@@ -76,14 +76,14 @@ export function DeliverableChecklistCard({
         {ongoingDeliverables.map((od) => (
           <div
             key={od.id}
-            className="rounded-xl border border-indigo-200 bg-indigo-50/40 p-3.5 flex flex-col justify-between"
+            className="rounded-xl border border-fuchsia-200 bg-fuchsia-50/40 p-3.5 flex flex-col justify-between"
           >
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-700">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-fuchsia-700">
                   Living Master
                 </span>
-                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-indigo-100 text-indigo-800">
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-fuchsia-100 text-fuchsia-800">
                   Continuous
                 </span>
               </div>
@@ -93,11 +93,11 @@ export function DeliverableChecklistCard({
               <p className="text-[10px] text-slate-500 mt-1">{od.scope}</p>
             </div>
 
-            <div className="pt-3 mt-2 border-t border-indigo-200/60 flex items-center justify-between">
-              <span className="text-[10px] text-indigo-600 font-medium">Weeks 1–4</span>
+            <div className="pt-3 mt-2 border-t border-fuchsia-200/60 flex items-center justify-between">
+              <span className="text-[10px] text-fuchsia-600 font-medium">Weeks 1–4</span>
               <Link
                 href="/student/deliverables"
-                className="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-700 hover:underline"
+                className="inline-flex items-center gap-1 text-[11px] font-bold text-fuchsia-700 hover:underline"
               >
                 <span>Access</span>
                 <ArrowUpRight className="h-3 w-3" />

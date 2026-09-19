@@ -239,7 +239,7 @@ export default function StudentTeamWorkspacePage() {
     return (
       <div className="flex h-96 items-center justify-center">
         <div className="flex flex-col items-center gap-3 text-sm text-slate-500">
-          <div className="h-8 w-8 animate-spin rounded-full border-3 border-sky-600 border-t-transparent" />
+          <div className="h-8 w-8 animate-spin rounded-full border-3 border-violet-600 border-t-transparent" />
           <span className="font-medium text-slate-700">Loading Team Workspace...</span>
         </div>
       </div>
@@ -256,8 +256,8 @@ export default function StudentTeamWorkspacePage() {
   const rawMembers = (context?.team?.members && context.team.members.length > 0)
     ? context.team.members
     : (dashboardData?.team?.members && dashboardData.team.members.length > 0)
-    ? dashboardData.team.members
-    : [
+      ? dashboardData.team.members
+      : [
         { name: "Midhun Krishna", role: "Fellow Lead" },
         { name: "Pranav Madan Shekhar", role: "Member" },
         { name: "Samatha Test Student", role: "Member" },
@@ -336,13 +336,12 @@ export default function StudentTeamWorkspacePage() {
       {/* Mentor Slot Request Status Banner */}
       {existingSlotRequest && (
         <div
-          className={`flex items-start gap-3 rounded-xl border px-4 py-3 text-sm ${
-            existingSlotRequest.status === "approved"
+          className={`flex items-start gap-3 rounded-xl border px-4 py-3 text-sm ${existingSlotRequest.status === "approved"
               ? "border-emerald-200 bg-emerald-50 text-emerald-800"
               : existingSlotRequest.status === "declined"
-              ? "border-red-200 bg-red-50 text-red-800"
-              : "border-amber-200 bg-amber-50 text-amber-800"
-          }`}
+                ? "border-red-200 bg-red-50 text-red-800"
+                : "border-amber-200 bg-amber-50 text-amber-800"
+            }`}
         >
           {existingSlotRequest.status === "approved" ? (
             <CheckCircle2 className="h-5 w-5 shrink-0 mt-0.5 text-emerald-600" />
@@ -356,8 +355,8 @@ export default function StudentTeamWorkspacePage() {
               {existingSlotRequest.status === "approved"
                 ? "Mentor Slot Approved!"
                 : existingSlotRequest.status === "declined"
-                ? "Mentor Slot Request Declined"
-                : "Mentor Slot Request Pending Review"}
+                  ? "Mentor Slot Request Declined"
+                  : "Mentor Slot Request Pending Review"}
             </p>
             <p className="mt-0.5 text-xs opacity-80">
               {existingSlotRequest.status === "approved" && existingSlotRequest.meet_link ? (
@@ -370,8 +369,7 @@ export default function StudentTeamWorkspacePage() {
               ) : existingSlotRequest.status === "declined" ? (
                 existingSlotRequest.admin_note || "Admin has declined the request. You may submit a new request."
               ) : (
-                `Request submitted on ${
-                  existingSlotRequest.created_at?.slice(0, 10) || "—"
+                `Request submitted on ${existingSlotRequest.created_at?.slice(0, 10) || "—"
                 }. The DLIF admin will respond shortly.`
               )}
             </p>
@@ -421,10 +419,10 @@ export default function StudentTeamWorkspacePage() {
             <button
               type="button"
               onClick={() => setMentorSlotModalOpen(true)}
-              className="inline-flex items-center gap-2 rounded-lg border border-sky-300 bg-sky-50 px-3.5 py-2.5 text-xs sm:text-sm font-semibold text-sky-800 shadow-xs hover:bg-sky-100 transition-colors"
+              className="inline-flex items-center gap-2 rounded-lg border border-violet-300 bg-violet-50 px-3.5 py-2.5 text-xs sm:text-sm font-semibold text-violet-800 shadow-xs hover:bg-violet-100 transition-colors"
               title="Request a mentor consultation slot for your team"
             >
-              <Video className="h-4 w-4 text-sky-600" />
+              <Video className="h-4 w-4 text-violet-600" />
               <span>Request Mentor Slot</span>
             </button>
           ) : (
@@ -440,7 +438,7 @@ export default function StudentTeamWorkspacePage() {
           )}
           <Link
             href={`/student/deliverables?week=${currentWeek}`}
-            className="inline-flex items-center gap-2 rounded-lg bg-sky-600 px-4 py-2.5 text-xs sm:text-sm font-semibold text-white shadow-sm hover:bg-sky-500 transition-colors"
+            className="inline-flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2.5 text-xs sm:text-sm font-semibold text-white shadow-sm hover:bg-violet-500 transition-colors"
           >
             <FileText className="h-4 w-4" />
             <span>Week {currentWeek} Output</span>
@@ -452,7 +450,7 @@ export default function StudentTeamWorkspacePage() {
       <div className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6 shadow-xs space-y-4">
         <div className="flex items-center justify-between pb-3 border-b border-slate-100">
           <h3 className="font-extrabold text-slate-900 text-base flex items-center gap-2">
-            <Users className="h-5 w-5 text-sky-600" />
+            <Users className="h-5 w-5 text-violet-600" />
             <span>Team Composition (5 Cross-Functional Disciplines)</span>
           </h3>
           <span className="rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-700">
@@ -470,9 +468,9 @@ export default function StudentTeamWorkspacePage() {
                 key={idx}
                 type="button"
                 onClick={() => setSelectedMember(member)}
-                className="flex flex-col items-center text-center rounded-xl border border-slate-100 bg-slate-50/70 p-4 shadow-xs hover:bg-white hover:border-sky-300 hover:shadow-md transition-all cursor-pointer group text-left w-full focus:outline-none focus:ring-2 focus:ring-sky-500"
+                className="flex flex-col items-center text-center rounded-xl border border-slate-100 bg-slate-50/70 p-4 shadow-xs hover:bg-white hover:border-violet-300 hover:shadow-md transition-all cursor-pointer group text-left w-full focus:outline-none focus:ring-2 focus:ring-violet-500"
               >
-                <div className="relative flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-sky-400 to-indigo-600 font-bold text-lg text-white shadow-xs mb-3 overflow-hidden ring-2 ring-transparent group-hover:ring-sky-400 transition-all">
+                <div className="relative flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-violet-400 to-fuchsia-600 font-bold text-lg text-white shadow-xs mb-3 overflow-hidden ring-2 ring-transparent group-hover:ring-violet-400 transition-all">
                   <span>{initial}</span>
                   {photo && (
                     // eslint-disable-next-line @next/next/no-img-element
@@ -505,16 +503,16 @@ export default function StudentTeamWorkspacePage() {
                     />
                   )}
                 </div>
-                <h4 className="font-bold text-slate-900 text-xs min-h-[32px] flex items-center justify-center group-hover:text-sky-700 transition-colors">
+                <h4 className="font-bold text-slate-900 text-xs min-h-[32px] flex items-center justify-center group-hover:text-violet-700 transition-colors">
                   {member.name}
                 </h4>
-                <span className="mt-1 inline-block rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-bold text-sky-800 border border-sky-200">
+                <span className="mt-1 inline-block rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-bold text-violet-800 border border-violet-200">
                   {member.role}
                 </span>
                 <p className="mt-2 text-[11px] text-slate-500 line-clamp-2 leading-tight">
                   {member.discipline}
                 </p>
-                <span className="mt-2 text-[10px] font-semibold text-sky-600 opacity-0 group-hover:opacity-100 transition-opacity">
+                <span className="mt-2 text-[10px] font-semibold text-violet-600 opacity-0 group-hover:opacity-100 transition-opacity">
                   View Profile &rarr;
                 </span>
               </button>
@@ -532,7 +530,7 @@ export default function StudentTeamWorkspacePage() {
               <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between pb-3 border-b border-slate-100">
                 <div>
                   <h3 className="font-extrabold text-slate-900 text-base flex items-center gap-2">
-                    <FileText className="h-5 w-5 text-sky-600" />
+                    <FileText className="h-5 w-5 text-violet-600" />
                     <span>Live Team Scratchpad (Week {currentWeek})</span>
                   </h3>
                   <p className="text-xs text-slate-500">
@@ -551,20 +549,20 @@ export default function StudentTeamWorkspacePage() {
                   value={scratchpadContent}
                   onChange={(e) => setScratchpadContent(e.target.value)}
                   rows={14}
-                  className="w-full rounded-xl border border-slate-200 bg-[#FAFBFD] p-4 font-mono text-xs text-slate-800 leading-relaxed shadow-inner focus:bg-white focus:outline-none focus:ring-2 focus:ring-sky-500/30"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 p-4 font-mono text-xs text-slate-800 leading-relaxed shadow-inner focus:bg-white focus:outline-none focus:ring-2 focus:ring-violet-500/30"
                   placeholder="Draft hypothesis notes, interview insights, and evidence formulas here..."
                 />
 
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between pt-1">
                   <span className="flex items-center gap-1.5 text-xs text-slate-500">
-                    <Info className="h-4 w-4 text-sky-600 shrink-0" />
+                    <Info className="h-4 w-4 text-violet-600 shrink-0" />
                     <span>Visible to all 5 team members and assigned mentor.</span>
                   </span>
 
                   <button
                     type="submit"
                     disabled={saveStatus === "saving"}
-                    className="inline-flex items-center justify-center gap-2 rounded-lg bg-sky-600 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-sky-500 transition-colors disabled:opacity-50"
+                    className="inline-flex items-center justify-center gap-2 rounded-lg bg-violet-600 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-violet-500 transition-colors disabled:opacity-50"
                   >
                     {saveStatus === "saving" ? (
                       <span>Saving...</span>
@@ -617,7 +615,7 @@ export default function StudentTeamWorkspacePage() {
                 <h4 className="font-bold text-slate-900 text-sm truncate">
                   {mentor?.full_name || "Dedicated Industry Mentor"}
                 </h4>
-                <p className="text-xs font-semibold text-sky-700 truncate">
+                <p className="text-xs font-semibold text-violet-700 truncate">
                   {mentor?.designation || "Senior Enterprise Advisor"}
                 </p>
                 <p className="text-[11px] text-slate-500 truncate">
@@ -635,24 +633,24 @@ export default function StudentTeamWorkspacePage() {
               <div className="space-y-3">
                 <div className="space-y-1.5 pb-3 border-b border-slate-100">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="inline-block rounded bg-sky-100 px-2 py-0.5 text-[10px] font-bold text-sky-800 border border-sky-200">
+                    <span className="inline-block rounded bg-violet-100 px-2 py-0.5 text-[10px] font-bold text-violet-800 border border-violet-200">
                       Problem Bounding &amp; Scope
                     </span>
                     <span className="text-[10px] text-slate-400">Recent Sync</span>
                   </div>
-                  <p className="p-3 rounded-lg bg-slate-50 border-l-4 border-sky-600 text-xs italic text-slate-700 leading-relaxed">
+                  <p className="p-3 rounded-lg bg-slate-50 border-l-4 border-violet-600 text-xs italic text-slate-700 leading-relaxed">
                     &ldquo;Ensure your Problem Framing Pack clearly isolates root operational causes before drafting solution vectors. Test if freight latency is systemic or carrier-specific.&rdquo;
                   </p>
                 </div>
 
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="inline-block rounded bg-indigo-100 px-2 py-0.5 text-[10px] font-bold text-indigo-800 border border-indigo-200">
+                    <span className="inline-block rounded bg-fuchsia-100 px-2 py-0.5 text-[10px] font-bold text-fuchsia-800 border border-fuchsia-200">
                       WWHTBT Barrier-to-Belief
                     </span>
                     <span className="text-[10px] text-slate-400">Week 2 Prep</span>
                   </div>
-                  <p className="p-3 rounded-lg bg-slate-50 border-l-4 border-indigo-600 text-xs italic text-slate-700 leading-relaxed">
+                  <p className="p-3 rounded-lg bg-slate-50 border-l-4 border-fuchsia-600 text-xs italic text-slate-700 leading-relaxed">
                     &ldquo;For Week 2 choices, remember a preferred idea is not a strategy. You must demonstrate at least 3 distinct alternatives with What Would Have to Be True tests.&rdquo;
                   </p>
                 </div>
@@ -697,7 +695,7 @@ export default function StudentTeamWorkspacePage() {
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
-            <div className="relative border-b border-slate-200 bg-gradient-to-br from-slate-50 via-white to-sky-50/50 p-6 sm:p-8">
+            <div className="relative border-b border-slate-200 bg-gradient-to-br from-slate-50 via-white to-violet-50/50 p-6 sm:p-8">
               <button
                 type="button"
                 onClick={() => setSelectedMember(null)}
@@ -712,7 +710,7 @@ export default function StudentTeamWorkspacePage() {
                   const modalFallback = getLocalStudentFallback(selectedMember.roll_no, selectedMember.name);
                   const modalPhoto = resolveStudentPhotoUrl(selectedMember.photo_url) || modalFallback;
                   return (
-                    <div className="relative flex h-20 w-20 sm:h-24 sm:w-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-sky-500 to-indigo-700 text-2xl font-bold text-white shadow-lg ring-4 ring-white">
+                    <div className="relative flex h-20 w-20 sm:h-24 sm:w-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-700 text-2xl font-bold text-white shadow-lg ring-4 ring-white">
                       <span>{studentInitials(selectedMember.name)}</span>
                       {modalPhoto && (
                         // eslint-disable-next-line @next/next/no-img-element
@@ -754,24 +752,23 @@ export default function StudentTeamWorkspacePage() {
                       {selectedMember.name}
                     </h2>
                     <span
-                      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ring-1 ring-inset ${
-                        selectedMember.status === "active"
+                      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ring-1 ring-inset ${selectedMember.status === "active"
                           ? "bg-emerald-50 text-emerald-700 ring-emerald-600/20"
                           : "bg-slate-100 text-slate-700 ring-slate-600/20"
-                      }`}
+                        }`}
                     >
                       <span className="h-1.5 w-1.5 rounded-full bg-current" />
                       {selectedMember.status || "Active"}
                     </span>
-                    <span className="inline-flex items-center rounded-lg bg-sky-50 px-2.5 py-0.5 text-xs font-semibold text-sky-700 ring-1 ring-inset ring-sky-600/20">
+                    <span className="inline-flex items-center rounded-lg bg-violet-50 px-2.5 py-0.5 text-xs font-semibold text-violet-700 ring-1 ring-inset ring-violet-600/20">
                       {selectedMember.batch_name || cohortName}
                     </span>
-                    <span className="inline-flex items-center rounded-lg bg-indigo-50 px-2.5 py-0.5 text-xs font-semibold text-indigo-700 ring-1 ring-inset ring-indigo-600/20">
+                    <span className="inline-flex items-center rounded-lg bg-fuchsia-50 px-2.5 py-0.5 text-xs font-semibold text-fuchsia-700 ring-1 ring-inset ring-fuchsia-600/20">
                       {selectedMember.role}
                     </span>
                   </div>
 
-                  <p className="mt-1.5 font-mono text-xs font-semibold text-sky-700">
+                  <p className="mt-1.5 font-mono text-xs font-semibold text-violet-700">
                     Roll No: {selectedMember.roll_no || "—"}
                   </p>
 
@@ -790,7 +787,7 @@ export default function StudentTeamWorkspacePage() {
               {/* Academic & Enrollment Information */}
               <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-5">
                 <h3 className="flex items-center gap-2 text-sm font-bold text-slate-900">
-                  <GraduationCap className="h-4 w-4 text-sky-600" />
+                  <GraduationCap className="h-4 w-4 text-violet-600" />
                   Academic &amp; Enrollment Information
                 </h3>
                 <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -820,7 +817,7 @@ export default function StudentTeamWorkspacePage() {
                   </div>
                   <div>
                     <span className="text-xs font-medium text-slate-500">Batch Assigned</span>
-                    <p className="mt-0.5 text-sm font-semibold text-sky-700">
+                    <p className="mt-0.5 text-sm font-semibold text-violet-700">
                       {selectedMember.batch_name || cohortName || "Unassigned"}
                     </p>
                   </div>
@@ -830,7 +827,7 @@ export default function StudentTeamWorkspacePage() {
               {/* Personal & Contact Info (with Proper Alignment, No Identity/Verification) */}
               <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
                 <h3 className="flex items-center gap-2 text-sm font-bold text-slate-900 pb-3 border-b border-slate-100">
-                  <UserIcon className="h-4 w-4 text-sky-600" />
+                  <UserIcon className="h-4 w-4 text-violet-600" />
                   Personal &amp; Contact Info
                 </h3>
                 <div className="mt-4 grid gap-4 sm:grid-cols-2">
@@ -841,7 +838,7 @@ export default function StudentTeamWorkspacePage() {
                       {selectedMember.email ? (
                         <a
                           href={`mailto:${selectedMember.email}`}
-                          className="font-semibold text-sky-700 hover:underline truncate block text-xs sm:text-sm"
+                          className="font-semibold text-violet-700 hover:underline truncate block text-xs sm:text-sm"
                         >
                           {selectedMember.email}
                         </a>
@@ -875,7 +872,7 @@ export default function StudentTeamWorkspacePage() {
                     <Briefcase className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
                     <div>
                       <span className="block text-xs font-medium text-slate-500">Fellowship Role &amp; Focus</span>
-                      <span className="font-semibold text-sky-800 text-xs sm:text-sm">
+                      <span className="font-semibold text-violet-800 text-xs sm:text-sm">
                         {selectedMember.role} &bull; {selectedMember.discipline}
                       </span>
                     </div>
@@ -971,8 +968,8 @@ export default function StudentTeamWorkspacePage() {
               >
                 {slotActionLoading ? (
                   <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
                   </svg>
                 ) : <X className="h-4 w-4" />}
                 Yes, Cancel It
@@ -1071,7 +1068,7 @@ function EditSlotModal({
 
           <div>
             <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1.5">
-              <Calendar className="h-3.5 w-3.5 text-sky-600" />
+              <Calendar className="h-3.5 w-3.5 text-violet-600" />
               <span>Preferred Date</span>
             </label>
             <input
@@ -1080,14 +1077,14 @@ function EditSlotModal({
               value={date}
               onChange={(e) => setDate(e.target.value)}
               required
-              className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-xs focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
+              className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-xs focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500/20"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1.5">
-                <Clock className="h-3.5 w-3.5 text-sky-600" />
+                <Clock className="h-3.5 w-3.5 text-violet-600" />
                 <span>Start Window</span>
               </label>
               <input
@@ -1095,7 +1092,7 @@ function EditSlotModal({
                 value={startTime}
                 onChange={(e) => setStartTime(e.target.value)}
                 required
-                className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm shadow-xs focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
+                className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm shadow-xs focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500/20"
               />
             </div>
             <div>
@@ -1108,14 +1105,14 @@ function EditSlotModal({
                 value={endTime}
                 onChange={(e) => setEndTime(e.target.value)}
                 required
-                className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm shadow-xs focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
+                className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm shadow-xs focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500/20"
               />
             </div>
           </div>
 
           <div>
             <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1.5">
-              <MessageSquare className="h-3.5 w-3.5 text-sky-600" />
+              <MessageSquare className="h-3.5 w-3.5 text-violet-600" />
               <span>Consultation Topic &amp; Focus Questions</span>
             </label>
             <textarea
@@ -1123,7 +1120,7 @@ function EditSlotModal({
               value={topic}
               onChange={(e) => setTopic(e.target.value)}
               required
-              className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 shadow-xs focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
+              className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 shadow-xs focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500/20"
             />
           </div>
 
@@ -1143,8 +1140,8 @@ function EditSlotModal({
             >
               {loading ? (
                 <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
                 </svg>
               ) : <Check className="h-4 w-4" />}
               Save Changes

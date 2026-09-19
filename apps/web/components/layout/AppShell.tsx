@@ -13,7 +13,7 @@ type AppShellProps = {
   role: "student" | "mentor" | "admin";
 };
 
-const subscribeToHydration = () => () => {};
+const subscribeToHydration = () => () => { };
 
 export default function AppShell({ children, role }: AppShellProps) {
   const router = useRouter();
@@ -74,14 +74,14 @@ export default function AppShell({ children, role }: AppShellProps) {
       .catch(() => {
         // Network failure — keep using the cached session
       });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hydrated]);
 
   // Loading / verifying state
   if (!isAuthorized) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top,_#dff1ff,_#f5f9ff_48%)]">
-        <div className="flex flex-col items-center gap-3 rounded-2xl border border-white/80 bg-white/85 px-8 py-7 shadow-xl shadow-blue-950/5 backdrop-blur">
+      <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top,_#ede4fc,_#f7f6fc_48%)]">
+        <div className="flex flex-col items-center gap-3 rounded-2xl border border-white/80 bg-white/85 px-8 py-7 shadow-xl shadow-violet-950/5 backdrop-blur">
           <Loader2 className="h-8 w-8 animate-spin text-brand-500" />
           <p className="text-sm font-medium text-slate-600">
             Verifying authentication &amp; credentials...
@@ -92,7 +92,7 @@ export default function AppShell({ children, role }: AppShellProps) {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[linear-gradient(135deg,#f8fbff_0%,#f2f7ff_52%,#f8fbff_100%)]">
+    <div className="flex h-screen overflow-hidden bg-[linear-gradient(135deg,#f9f7fd_0%,#f5f2fc_52%,#fdf5f2_100%)]">
       <Sidebar
         role={role}
         open={mobileNavigationOpen}

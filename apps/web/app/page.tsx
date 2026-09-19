@@ -40,7 +40,7 @@ export default function Home() {
 
           <Link
             href="/login"
-            className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-blue-950/10 hover:-translate-y-0.5 hover:bg-brand-600"
+            className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-violet-950/10 hover:-translate-y-0.5 hover:bg-brand-600"
           >
             <LogIn className="h-4 w-4" />
             Sign in
@@ -71,7 +71,7 @@ export default function Home() {
           <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
             <Link
               href="/login?role=student"
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-500 to-brand-600 px-5 py-3.5 text-sm font-bold text-white shadow-xl shadow-blue-500/20 hover:-translate-y-0.5"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-500 to-brand-600 px-5 py-3.5 text-sm font-bold text-white shadow-xl shadow-violet-500/20 hover:-translate-y-0.5"
             >
               <UsersRound className="h-4 w-4" />
               Enter student portal
@@ -113,7 +113,7 @@ export default function Home() {
 
         <div className="relative mx-auto w-full max-w-lg">
           <div className="absolute -inset-5 rounded-[2.25rem] bg-gradient-to-br from-brand-300/30 to-brand-600/20 blur-2xl" />
-          <div className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-slate-900 p-6 shadow-2xl shadow-blue-950/25 sm:p-8">
+          <div className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-slate-900 p-6 shadow-2xl shadow-violet-950/25 sm:p-8">
             <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-brand-400/20 blur-3xl" />
             <div className="relative flex items-center justify-between">
               <div>
@@ -135,12 +135,12 @@ export default function Home() {
                   key={stage.label}
                   className="group flex items-center gap-4 rounded-2xl border border-white/10 bg-white/[0.06] p-4 hover:-translate-y-0.5 hover:bg-white/[0.1]"
                 >
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 text-sm font-extrabold text-white shadow-lg shadow-blue-950/20">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 text-sm font-extrabold text-white shadow-lg shadow-violet-950/20">
                     {index + 1}
                   </div>
                   <div>
                     <h3 className="font-bold text-white">{stage.label}</h3>
-                    <p className="mt-0.5 text-sm text-blue-100/65">
+                    <p className="mt-0.5 text-sm text-violet-100/65">
                       {stage.description}
                     </p>
                   </div>
@@ -149,7 +149,7 @@ export default function Home() {
             </div>
 
             <div className="relative mt-6 rounded-2xl bg-gradient-to-r from-brand-500 to-brand-400 p-[1px]">
-              <div className="rounded-[15px] bg-slate-900/90 px-4 py-3 text-center text-sm font-semibold text-blue-50">
+              <div className="rounded-[15px] bg-slate-900/90 px-4 py-3 text-center text-sm font-semibold text-violet-50">
                 Capability that can be seen, reviewed, and trusted.
               </div>
             </div>

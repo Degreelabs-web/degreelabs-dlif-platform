@@ -13,29 +13,50 @@ export function StudentDashboardHeader({ data }: Props) {
   const currentSession = data.team.current_session || 1;
 
   return (
-    <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between pb-4 border-b border-slate-200/80">
-      <div>
+    <div
+      className="relative flex flex-col gap-4 overflow-hidden rounded-2xl p-5 sm:p-6 md:flex-row md:items-center md:justify-between"
+      style={{ background: "linear-gradient(120deg, #2a1454 0%, #4c1d95 45%, #7c2d12 100%)" }}
+    >
+      {/* Decorative accent circles */}
+      <div
+        className="pointer-events-none absolute -right-10 -top-14 h-40 w-40 rounded-full"
+        style={{ background: "radial-gradient(circle, rgba(240,101,61,0.4), transparent 70%)" }}
+        aria-hidden="true"
+      />
+      <div
+        className="pointer-events-none absolute -bottom-16 left-1/3 h-36 w-36 rounded-full"
+        style={{ background: "radial-gradient(circle, rgba(14,155,138,0.3), transparent 70%)" }}
+        aria-hidden="true"
+      />
+
+      <div className="relative">
         <div className="flex flex-wrap items-center gap-2 mb-2.5">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-slate-900 text-white shadow-sm">
-            <Sparkles className="h-3 w-3 text-sky-400" />
+          <span
+            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold text-white shadow-sm"
+            style={{ background: "linear-gradient(135deg, #7c3aed, #d6336c)" }}
+          >
+            <Sparkles className="h-3 w-3 text-white" />
             Week {currentWeek} of 4
           </span>
-          <span className="text-sm font-medium text-slate-500">
+          <span className="text-sm font-medium text-violet-200/80">
             &bull; {data.team.name}
           </span>
-          <span className="text-sm font-medium text-slate-400">
-            &bull; Session {currentSession} of 12
+          <span
+            className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold text-white shadow-sm"
+            style={{ background: "linear-gradient(135deg, #f0653d, #d6336c)" }}
+          >
+            Session {currentSession} of 12
           </span>
         </div>
-        <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900">
+        <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white">
           Welcome back, {data.student.full_name} 👋
         </h1>
-        <p className="mt-1.5 text-base text-slate-600 max-w-3xl leading-relaxed">
+        <p className="mt-1.5 text-base text-violet-100/80 max-w-3xl leading-relaxed">
           Track your team&apos;s Discover progress, weekly deliverables, upcoming sessions, and mentor engagements.
         </p>
       </div>
 
-      <div className="flex items-center gap-3 shrink-0">
+      <div className="relative flex items-center gap-3 shrink-0">
         <Link
           href={`/student/deliverables?week=${currentWeek}`}
           className="btn-gradient-primary"
@@ -45,9 +66,9 @@ export function StudentDashboardHeader({ data }: Props) {
         </Link>
         <Link
           href="/student/team"
-          className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 hover:border-slate-400 hover:shadow-md transition-all"
+          className="inline-flex items-center gap-2 rounded-lg border border-white/20 bg-white/10 px-4 py-2.5 text-sm font-semibold text-white shadow-sm backdrop-blur-sm hover:bg-white/20 transition-all"
         >
-          <Users className="h-4 w-4 text-slate-500" />
+          <Users className="h-4 w-4 text-white" />
           <span>Team Workspace</span>
         </Link>
       </div>

@@ -55,13 +55,10 @@ export function UpcomingSessionsCard({ sessions }: Props) {
   }, [nextSession?.scheduled_at]);
 
   return (
-    <div className="card-custom flex flex-col justify-between h-full space-y-4 !p-5 sm:!p-6 bg-gradient-to-b from-white via-slate-50/30 to-white shadow-xs hover:shadow-md transition-all relative overflow-hidden">
-      {/* Top subtle gradient accent */}
-      <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 via-sky-500 to-indigo-600" />
-
+    <div className="card-custom flex flex-col justify-between h-full space-y-4">
       <div>
         {/* Header */}
-        <div className="flex items-center justify-between pb-3 border-b border-slate-200/80">
+        <div className="flex items-center justify-between pb-3 border-b border-slate-100">
           <div className="flex items-center gap-2">
             <h3 className="font-extrabold text-slate-900 text-base">Upcoming Sessions</h3>
           </div>
@@ -73,9 +70,17 @@ export function UpcomingSessionsCard({ sessions }: Props) {
 
         {/* Real-time Countdown Banner */}
         {nextSession && (
-          <div className="mt-4 p-3 rounded-xl bg-slate-900 text-white flex items-center justify-between shadow-xs">
-            <div className="flex items-center gap-2.5">
-              <Clock className="h-4 w-4 text-sky-400 shrink-0" />
+          <div
+            className="relative mt-4 p-3 rounded-xl text-white flex items-center justify-between shadow-xs overflow-hidden"
+            style={{ background: "linear-gradient(135deg, #241348, #5b21b6 60%, #9333ea)" }}
+          >
+            <div
+              className="pointer-events-none absolute -right-6 -top-8 h-24 w-24 rounded-full"
+              style={{ background: "radial-gradient(circle, rgba(240,101,61,0.35), transparent 70%)" }}
+              aria-hidden="true"
+            />
+            <div className="relative flex items-center gap-2.5">
+              <Clock className="h-4 w-4 text-violet-300 shrink-0" />
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
                   Next Session Countdown
@@ -86,25 +91,25 @@ export function UpcomingSessionsCard({ sessions }: Props) {
               </div>
             </div>
 
-            <div className="flex items-center gap-1.5 font-mono font-bold text-xs">
-              <div className="px-1.5 py-1 rounded bg-slate-800 text-center min-w-[28px]">
+            <div className="relative flex items-center gap-1.5 font-mono font-bold text-xs">
+              <div className="px-1.5 py-1 rounded bg-white/10 text-center min-w-[28px]">
                 <span>{timeLeft.days}</span>
-                <span className="text-[8px] block font-sans text-slate-400">d</span>
+                <span className="text-[8px] block font-sans text-violet-300">d</span>
               </div>
               <span>:</span>
-              <div className="px-1.5 py-1 rounded bg-slate-800 text-center min-w-[28px]">
+              <div className="px-1.5 py-1 rounded bg-white/10 text-center min-w-[28px]">
                 <span>{String(timeLeft.hours).padStart(2, "0")}</span>
-                <span className="text-[8px] block font-sans text-slate-400">h</span>
+                <span className="text-[8px] block font-sans text-violet-300">h</span>
               </div>
               <span>:</span>
-              <div className="px-1.5 py-1 rounded bg-slate-800 text-center min-w-[28px]">
+              <div className="px-1.5 py-1 rounded bg-white/10 text-center min-w-[28px]">
                 <span>{String(timeLeft.minutes).padStart(2, "0")}</span>
-                <span className="text-[8px] block font-sans text-slate-400">m</span>
+                <span className="text-[8px] block font-sans text-violet-300">m</span>
               </div>
               <span>:</span>
-              <div className="px-1.5 py-1 rounded bg-slate-800 text-center min-w-[28px] text-sky-400">
+              <div className="px-1.5 py-1 rounded bg-white/10 text-center min-w-[28px] text-[#f0653d]">
                 <span>{String(timeLeft.seconds).padStart(2, "0")}</span>
-                <span className="text-[8px] block font-sans text-slate-400">s</span>
+                <span className="text-[8px] block font-sans text-violet-300">s</span>
               </div>
             </div>
           </div>
@@ -119,15 +124,14 @@ export function UpcomingSessionsCard({ sessions }: Props) {
                 <div key={s.session_number} className="py-3.5 space-y-2">
                   <div className="flex items-center justify-between gap-2">
                     <span
-                      className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold ${
-                        isGate
+                      className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold ${isGate
                           ? "bg-amber-100 text-amber-900 border border-amber-300"
                           : s.session_type === "mentor_session"
-                          ? "bg-purple-100 text-purple-900 border border-purple-300"
-                          : s.session_type === "output_review"
-                          ? "bg-indigo-100 text-indigo-900 border border-indigo-300"
-                          : "bg-sky-100 text-sky-900 border border-sky-200"
-                      }`}
+                            ? "bg-purple-100 text-purple-900 border border-purple-300"
+                            : s.session_type === "output_review"
+                              ? "bg-fuchsia-100 text-fuchsia-900 border border-fuchsia-300"
+                              : "bg-violet-100 text-violet-900 border border-violet-200"
+                        }`}
                     >
                       {isGate && <ShieldAlert className="h-3 w-3" />}
                       Session {s.session_number} &bull; {s.type_label}
@@ -181,7 +185,7 @@ export function UpcomingSessionsCard({ sessions }: Props) {
       <div className="pt-3 border-t border-slate-100 text-center">
         <Link
           href="/student/sessions"
-          className="inline-flex items-center gap-1 text-xs font-bold text-sky-700 hover:text-sky-900 hover:underline"
+          className="inline-flex items-center gap-1 text-xs font-bold text-violet-700 hover:text-violet-900 hover:underline"
         >
           <span>View Complete 12-Session Schedule</span>
           <ArrowRight className="h-3.5 w-3.5" />
