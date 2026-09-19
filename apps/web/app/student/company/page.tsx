@@ -8,12 +8,12 @@ import {
   ExternalLink,
   Users,
   ShieldCheck,
-  CheckCircle2,
   ArrowRight,
   Compass,
   Briefcase,
   Award,
   Loader2,
+  Quote,
 } from "lucide-react";
 import { fetchStudentPortalContext } from "@/lib/api/fellowship";
 import { fetchStudentDashboard } from "@/lib/api/student_dashboard";
@@ -87,134 +87,231 @@ export default function StudentCompanyPage() {
   const logoUrl = company.logo_url ?? "";
   const journeyStages = company.public_journey_stages || [];
   const referenceChallengeAreas = company.reference_challenge_areas || [];
+  const sponsorInitials = founderSponsor
+    .split(" ")
+    .filter(Boolean)
+    .map((part) => part[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+
+  const highlights = [
+    {
+      label: "Corporate Sponsor",
+      value: founderSponsor || "—",
+      sub: founderTitle,
+      icon: Award,
+    },
+    {
+      label: "Assigned Squad",
+      value: team?.name || "—",
+      sub: "Your fellowship squad",
+      icon: Users,
+    },
+    {
+      label: "Operating Stages",
+      value: journeyStages.length ? String(journeyStages.length) : "—",
+      sub: "Journey touchpoints",
+      icon: Compass,
+    },
+    {
+      label: "Assigned Challenge",
+      value: project?.challenge_area || project?.code || "—",
+      sub: project?.title ? "Assigned to your squad" : "",
+      icon: Briefcase,
+    },
+  ];
+
+  const secondaryButton =
+    "inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 shadow-xs transition-colors hover:!border-brand-300 hover:text-brand-700";
 
   return (
     <div className="page-container">
       <PageHeader
         badge={
-          <div className="flex flex-wrap items-center gap-1.5">
-            <StatusBadge variant="primary">Assigned Enterprise Partner</StatusBadge>
-            {accreditation && (
-              <StatusBadge variant="warning" icon={<ShieldCheck className="h-3 w-3" />}>
-                {accreditation}
-              </StatusBadge>
-            )}
-          </div>
+          <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+            Enterprise Partner
+          </span>
         }
-        title={companyName}
-        subtitle={tagline ? `“${tagline}” — Enterprise sponsor for your fellowship squad.` : "Enterprise sponsor for your fellowship squad."}
-        action={
-          <div className="flex items-center gap-2">
-            <Link
-              href="/student/project"
-              className="btn-gradient-primary !py-2 !px-3.5 !text-xs"
-            >
-              <Briefcase className="h-3.5 w-3.5" />
-              <span>Assigned Challenge</span>
-            </Link>
-            <Link
-              href="/student/team"
-              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 shadow-xs hover:bg-slate-50 transition-colors"
-            >
-              <Users className="h-3.5 w-3.5" />
-              <span>Squad</span>
-            </Link>
-          </div>
-        }
+        title="Assigned Company"
+        subtitle="The organisation sponsoring your squad's challenge and guiding the real-world context of your work."
       />
 
-      <div className="grid gap-6 lg:grid-cols-12">
-        {/* Left 8 Cols: Enterprise Overview & Flow */}
-        <div className="lg:col-span-8 space-y-6">
-          {/* Enterprise Profile */}
-          <SectionCard
-            title="Enterprise Profile &amp; Mission"
-            icon={<Building2 className="h-5 w-5" />}
-            badge={category ? <StatusBadge variant="secondary">{category}</StatusBadge> : undefined}
-          >
-            <div className="space-y-4">
-              <div className="p-4 rounded-xl bg-slate-50 border-l-4 border-brand-600">
-                <p className="text-xs sm:text-sm text-slate-800 leading-relaxed font-medium">
-                  {profile}
-                </p>
+      {/* ───────── Company Hero ───────── */}
+      <div className="card-custom !p-0 overflow-hidden">
+        {/* Cover banner */}
+        <div className="relative h-36 overflow-hidden bg-gradient-to-r from-brand-800 via-brand-600 to-fuchsia-500 sm:h-44">
+          <div className="absolute -right-16 -top-24 h-72 w-72 rounded-full bg-white/10" />
+          <div className="absolute right-44 top-12 h-44 w-44 rounded-full bg-white/10" />
+          <div className="absolute inset-0 opacity-40 [background-image:radial-gradient(rgba(255,255,255,0.35)_1px,transparent_1px)] [background-size:20px_20px]" />
+
+          <div className="absolute right-5 top-5 flex flex-wrap justify-end gap-2 sm:right-8 sm:top-6">
+            <span className="hidden items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-white ring-1 ring-inset ring-white/30 backdrop-blur sm:inline-flex">
+              <Building2 className="h-3 w-3" />
+              Assigned Enterprise Partner
+            </span>
+            {accreditation && (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-white ring-1 ring-inset ring-white/30 backdrop-blur">
+                <ShieldCheck className="h-3 w-3" />
+                {accreditation}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Logo + identity */}
+        <div className="px-6 pb-7 sm:px-8">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:gap-8">
+            {/* Logo tile */}
+            <div className="relative z-10 -mt-20 shrink-0 sm:-mt-24">
+              <div className="flex h-44 w-44 items-center justify-center rounded-3xl border-4 !border-white bg-white p-3 shadow-xl shadow-slate-900/10 ring-1 ring-slate-200 sm:h-56 sm:w-56 sm:p-4">
+                {logoUrl && !companyLogoFailed ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={logoUrl}
+                    alt={`${companyName} logo`}
+                    onError={() => setCompanyLogoFailed(true)}
+                    className="h-full w-full object-contain"
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center rounded-2xl bg-gradient-to-br from-brand-600 to-fuchsia-600 text-6xl font-black text-white">
+                    {companyName.charAt(0).toUpperCase()}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Name, tagline, actions */}
+            <div className="min-w-0 flex-1 space-y-4 lg:pt-6">
+              <div className="space-y-2">
+                {category && (
+                  <p className="text-xs font-bold uppercase tracking-[0.14em] text-brand-700">
+                    {category}
+                  </p>
+                )}
+                <div className="flex flex-wrap items-center gap-3">
+                  <h2 className="text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl lg:text-5xl">
+                    {companyName}
+                  </h2>
+                  <StatusBadge variant="success">Active Partner</StatusBadge>
+                </div>
+                {tagline && (
+                  <p className="text-base font-medium italic text-slate-500 sm:text-lg">
+                    &ldquo;{tagline}&rdquo;
+                  </p>
+                )}
               </div>
 
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-slate-100 text-xs text-slate-600">
-                <div className="flex items-center gap-2">
-                  <span className="font-bold text-slate-900">Corporate Sponsor:</span>
-                  <span className="rounded-md bg-slate-100 px-2 py-0.5 font-semibold text-slate-800">
-                    {founderSponsor} {founderTitle ? `(${founderTitle})` : ""}
-                  </span>
-                </div>
+              <div className="flex flex-wrap gap-2.5">
+                <Link href="/student/project" className="btn-gradient-primary !py-2 !px-4 !text-xs">
+                  <Briefcase className="h-3.5 w-3.5" />
+                  <span>Assigned Challenge</span>
+                </Link>
+                <Link href="/student/team" className={secondaryButton}>
+                  <Users className="h-3.5 w-3.5" />
+                  <span>My Squad</span>
+                </Link>
                 {website && (
-                  <a
-                    href={website}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-1 text-xs font-semibold text-brand-600 hover:underline"
-                  >
+                  <a href={website} target="_blank" rel="noreferrer" className={secondaryButton}>
                     <Globe className="h-3.5 w-3.5" />
-                    <span>Company Website</span>
+                    <span>Website</span>
                     <ExternalLink className="h-3 w-3" />
                   </a>
                 )}
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* Highlights strip */}
+        <div className="grid grid-cols-1 gap-x-6 gap-y-4 border-t border-slate-100 bg-slate-50/60 px-6 py-5 sm:grid-cols-2 sm:px-8 lg:grid-cols-4">
+          {highlights.map(({ label, value, sub, icon: Icon }) => (
+            <div key={label} className="flex items-center gap-3">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white text-brand-600 shadow-xs ring-1 ring-slate-200">
+                <Icon className="h-5 w-5" />
+              </span>
+              <div className="min-w-0">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                  {label}
+                </p>
+                <p className="truncate text-sm font-bold text-slate-900">{value}</p>
+                {sub && <p className="truncate text-xs text-slate-500">{sub}</p>}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ───────── Content grid ───────── */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 lg:items-start">
+        {/* Left: story, flow, challenge */}
+        <div className="min-w-0 space-y-6 lg:col-span-7">
+          {/* About */}
+          <SectionCard
+            title="About the Company"
+            icon={<Building2 className="h-5 w-5" />}
+          >
+            <div className="relative rounded-2xl border border-l-4 !border-l-brand-600 bg-gradient-to-r from-violet-50/70 to-white p-5">
+              <Quote className="mb-2 h-5 w-5 text-brand-500" />
+              <p className="text-sm font-medium leading-relaxed text-slate-800 sm:text-[15px]">
+                {profile || "A company profile has not been added yet."}
+              </p>
+            </div>
           </SectionCard>
 
-          {/* Operating Flow / Journey Stages */}
+          {/* Operating flow */}
           {journeyStages.length > 0 && (
             <SectionCard
-              title="Public Care Coordination Stages (Operating Flow)"
-              icon={<Compass className="h-5 w-5 text-teal-600" />}
-              description={`${journeyStages.length} core touchpoints across patient journey`}
+              title="Operating Flow"
+              icon={<Compass className="h-5 w-5" />}
+              description={`${journeyStages.length} core touchpoints across the customer journey`}
             >
-              <div className="grid grid-cols-1 sm:grid-cols-5 gap-2.5 pt-1">
+              <ol className="grid gap-5 pt-2 sm:grid-cols-5 sm:gap-2">
                 {journeyStages.map((stageName, idx) => {
                   const isFocus =
                     stageName === "VIL Issue" ||
                     stageName === "Visa Processing" ||
                     stageName === "Travel & Treatment";
+                  const isLast = idx === journeyStages.length - 1;
                   return (
-                    <div
-                      key={stageName}
-                      className={`relative rounded-xl p-3 text-center border transition-all ${
-                        isFocus
-                          ? "border-brand-300 bg-brand-50/40 shadow-xs"
-                          : "border-slate-200 bg-slate-50/60"
-                      }`}
-                    >
-                      <div className="text-[10px] font-extrabold text-slate-400 mb-0.5">
-                        STAGE 0{idx + 1}
-                      </div>
-                      <div className="font-bold text-xs text-slate-900 mb-1">
-                        {stageName}
-                      </div>
-                      {isFocus && (
-                        <StatusBadge variant="primary" className="!text-[9px] !px-1.5 !py-0">
-                          Sprint Focus
-                        </StatusBadge>
+                    <li key={stageName} className="relative flex items-start gap-3 sm:flex-col sm:items-center sm:gap-2.5 sm:text-center">
+                      {!isLast && (
+                        <span
+                          className={`absolute left-[19px] top-10 h-[calc(100%+0.75rem)] w-0.5 sm:left-1/2 sm:top-[19px] sm:h-0.5 sm:w-full ${isFocus ? "bg-brand-300" : "bg-slate-200"
+                            }`}
+                        />
                       )}
-                    </div>
+                      <span
+                        className={`relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-extrabold ${isFocus
+                          ? "bg-gradient-to-br from-brand-600 to-fuchsia-600 text-white shadow-md shadow-brand-600/30"
+                          : "border border-slate-200 bg-white text-slate-500"
+                          }`}
+                      >
+                        {idx + 1}
+                      </span>
+                      <div className="min-w-0 sm:px-1">
+                        <p className="text-xs font-bold leading-snug text-slate-900">{stageName}</p>
+                        {isFocus && (
+                          <StatusBadge variant="primary" className="mt-1.5 !px-2 !py-0 !text-[9px]">
+                            Sprint Focus
+                          </StatusBadge>
+                        )}
+                      </div>
+                    </li>
                   );
                 })}
-              </div>
+              </ol>
             </SectionCard>
           )}
 
-          {/* Assigned Project Concise Briefing (Deduplicated — details live in /student/project) */}
+          {/* Assigned challenge (details live in /student/project) */}
           {project && (
             <SectionCard
-              title={`Assigned Challenge: ${project.title}`}
+              title="Your Assigned Challenge"
               icon={<Briefcase className="h-5 w-5" />}
-              badge={
-                project.challenge_area ? (
-                  <StatusBadge variant="primary">{project.challenge_area}</StatusBadge>
-                ) : undefined
-              }
               footerAction={
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-slate-400">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-xs font-medium text-slate-400">
                     Code: {project.code || "DISCOVER"}
                   </span>
                   <Link
@@ -227,26 +324,34 @@ export default function StudentCompanyPage() {
                 </div>
               }
             >
-              <p className="text-xs sm:text-sm text-slate-700 leading-relaxed font-medium">
+              {project.challenge_area && (
+                <StatusBadge variant="primary" className="mb-2">
+                  {project.challenge_area}
+                </StatusBadge>
+              )}
+              <h4 className="text-base font-bold text-slate-900">{project.title}</h4>
+              <p className="mt-1.5 line-clamp-4 text-xs font-medium leading-relaxed text-slate-600 sm:text-sm">
                 {project.description || project.challenge_statement}
               </p>
             </SectionCard>
           )}
 
-          {/* Reference Challenge Areas */}
+          {/* Reference tracks */}
           {referenceChallengeAreas.length > 0 && (
             <SectionCard
               title="Additional Approved Challenge Tracks"
               description="Future cohort tracks approved by leadership (not assigned to your squad)"
             >
-              <div className="grid sm:grid-cols-2 gap-2.5">
+              <div className="grid gap-2.5 sm:grid-cols-2">
                 {referenceChallengeAreas.map((area) => (
                   <div
                     key={area}
-                    className="rounded-xl border border-slate-200 bg-slate-50/50 p-3 flex items-center justify-between"
+                    className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50/60 px-4 py-3"
                   >
-                    <span className="text-xs font-bold text-slate-800">{area}</span>
-                    <span className="text-[10px] font-semibold text-slate-400">Unassigned Reference</span>
+                    <span className="text-sm font-bold text-slate-800">{area}</span>
+                    <span className="shrink-0 rounded-full bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-400 ring-1 ring-slate-200">
+                      Reference
+                    </span>
                   </div>
                 ))}
               </div>
@@ -254,47 +359,41 @@ export default function StudentCompanyPage() {
           )}
         </div>
 
-        {/* Right 4 Cols: Brand & Mentorship Attribution */}
-        <div className="lg:col-span-4 space-y-6">
-          {/* Brand & Partner Summary */}
-          <SectionCard>
-            <div className="text-center pb-4 border-b border-slate-100">
-              <div className="flex justify-center mb-3">
-                {logoUrl && !companyLogoFailed ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={logoUrl}
-                    alt={companyName}
-                    onError={() => setCompanyLogoFailed(true)}
-                    className="h-16 max-w-[180px] object-contain p-2 rounded-xl border border-slate-100 shadow-xs"
-                  />
-                ) : (
-                  <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-600 to-fuchsia-600 text-white font-black text-xl shadow-xs">
-                    {companyName.charAt(0).toUpperCase()}
-                  </div>
-                )}
+        {/* Right: sponsor, brand, mentor */}
+        <div className="min-w-0 space-y-6 lg:col-span-5 lg:sticky lg:top-6 lg:self-start">
+          {/* Sponsor */}
+          {founderSponsor && (
+            <SectionCard title="Corporate Sponsor" icon={<Award className="h-4 w-4" />}>
+              <div className="flex items-center gap-3.5">
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-600 to-fuchsia-600 text-lg font-bold text-white shadow-md shadow-brand-600/20">
+                  {sponsorInitials}
+                </div>
+                <div className="min-w-0">
+                  <h4 className="truncate text-base font-bold text-slate-900">{founderSponsor}</h4>
+                  <p className="truncate text-xs font-medium text-slate-500">
+                    {[founderTitle, companyName].filter(Boolean).join(" · ")}
+                  </p>
+                </div>
               </div>
-              <h4 className="text-base font-bold text-slate-900">{companyName}</h4>
-              {category && <p className="text-xs text-slate-500 mt-0.5">{category}</p>}
-            </div>
+              {website && (
+                <a
+                  href={website}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-4 inline-flex w-full items-center justify-between rounded-xl border border-slate-200 bg-slate-50/70 px-4 py-2.5 text-xs font-semibold text-brand-700 transition-colors hover:!border-brand-300 hover:bg-brand-50"
+                >
+                  <span className="inline-flex items-center gap-2">
+                    <Globe className="h-3.5 w-3.5" />
+                    Company Website
+                  </span>
+                  <ExternalLink className="h-3.5 w-3.5" />
+                </a>
+              )}
+            </SectionCard>
+          )}
 
-            <div className="space-y-2.5 text-xs pt-3">
-              <div className="flex items-center justify-between">
-                <span className="text-slate-500">Partner Status:</span>
-                <StatusBadge variant="success">Active Partner</StatusBadge>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-slate-500">Assigned Squad:</span>
-                <span className="font-semibold text-slate-800">{team?.name || "—"}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-slate-500">Lead Sponsor:</span>
-                <span className="font-semibold text-slate-800">{founderSponsor || "—"}</span>
-              </div>
-            </div>
-          </SectionCard>
 
-          {/* Dedicated Mentor Attribution (Deduplicated — full bio at /student/mentor) */}
+          {/* Mentor (full bio lives at /student/mentor) */}
           {mentor && (
             <SectionCard
               title="Dedicated Mentor"
@@ -302,31 +401,29 @@ export default function StudentCompanyPage() {
               footerAction={
                 <Link
                   href="/student/mentor"
-                  className="inline-flex items-center gap-1 text-xs font-bold text-brand-600 hover:underline w-full justify-between"
+                  className="inline-flex w-full items-center justify-between text-xs font-bold text-brand-600 hover:underline"
                 >
                   <span>View Mentor Profile &amp; Contact</span>
                   <ArrowRight className="h-3 w-3" />
                 </Link>
               }
             >
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3.5">
                 {mentor.headshot_url ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={mentor.headshot_url}
                     alt={mentor.full_name}
-                    className="h-11 w-11 rounded-xl object-cover border border-slate-200"
+                    className="h-14 w-14 shrink-0 rounded-2xl border border-slate-200 object-cover object-center"
                   />
                 ) : (
-                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-600 text-white font-bold text-sm">
+                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-brand-600 text-lg font-bold text-white">
                     {mentor.full_name?.charAt(0) || "M"}
                   </div>
                 )}
                 <div className="min-w-0 flex-1">
-                  <h4 className="text-xs font-bold text-slate-900 truncate">
-                    {mentor.full_name}
-                  </h4>
-                  <p className="text-[11px] text-slate-500 truncate">
+                  <h4 className="truncate text-sm font-bold text-slate-900">{mentor.full_name}</h4>
+                  <p className="truncate text-xs text-slate-500">
                     {mentor.designation || "Industry Mentor"}
                   </p>
                 </div>

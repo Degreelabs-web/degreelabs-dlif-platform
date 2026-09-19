@@ -337,10 +337,10 @@ export default function StudentTeamWorkspacePage() {
       {existingSlotRequest && (
         <div
           className={`flex items-start gap-3 rounded-xl border px-4 py-3 text-sm ${existingSlotRequest.status === "approved"
-              ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-              : existingSlotRequest.status === "declined"
-                ? "border-red-200 bg-red-50 text-red-800"
-                : "border-amber-200 bg-amber-50 text-amber-800"
+            ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+            : existingSlotRequest.status === "declined"
+              ? "border-red-200 bg-red-50 text-red-800"
+              : "border-amber-200 bg-amber-50 text-amber-800"
             }`}
         >
           {existingSlotRequest.status === "approved" ? (
@@ -691,11 +691,11 @@ export default function StudentTeamWorkspacePage() {
           onClick={() => setSelectedMember(null)}
         >
           <div
-            className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl bg-white shadow-2xl border border-slate-200"
+            className="relative flex w-full max-w-2xl max-h-[calc(100dvh-2rem)] flex-col overflow-hidden rounded-3xl bg-white shadow-2xl border border-slate-200"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
-            <div className="relative border-b border-slate-200 bg-gradient-to-br from-slate-50 via-white to-violet-50/50 p-6 sm:p-8">
+            <div className="relative shrink-0 border-b border-slate-200 bg-gradient-to-br from-slate-50 via-white to-violet-50/50 p-6 sm:p-8">
               <button
                 type="button"
                 onClick={() => setSelectedMember(null)}
@@ -705,12 +705,12 @@ export default function StudentTeamWorkspacePage() {
                 <X className="h-5 w-5" />
               </button>
 
-              <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
+              <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
                 {(() => {
                   const modalFallback = getLocalStudentFallback(selectedMember.roll_no, selectedMember.name);
                   const modalPhoto = resolveStudentPhotoUrl(selectedMember.photo_url) || modalFallback;
                   return (
-                    <div className="relative flex h-20 w-20 sm:h-24 sm:w-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-700 text-2xl font-bold text-white shadow-lg ring-4 ring-white">
+                    <div className="relative flex h-24 w-24 sm:h-28 sm:w-28 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-700 text-2xl font-bold text-white shadow-lg ring-2 ring-white">
                       <span>{studentInitials(selectedMember.name)}</span>
                       {modalPhoto && (
                         // eslint-disable-next-line @next/next/no-img-element
@@ -739,7 +739,7 @@ export default function StudentTeamWorkspacePage() {
                             }
                             e.currentTarget.style.display = "none";
                           }}
-                          className="absolute inset-0 h-full w-full object-cover"
+                          className="absolute inset-0 h-full w-full object-cover object-top"
                         />
                       )}
                     </div>
@@ -753,8 +753,8 @@ export default function StudentTeamWorkspacePage() {
                     </h2>
                     <span
                       className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ring-1 ring-inset ${selectedMember.status === "active"
-                          ? "bg-emerald-50 text-emerald-700 ring-emerald-600/20"
-                          : "bg-slate-100 text-slate-700 ring-slate-600/20"
+                        ? "bg-emerald-50 text-emerald-700 ring-emerald-600/20"
+                        : "bg-slate-100 text-slate-700 ring-slate-600/20"
                         }`}
                     >
                       <span className="h-1.5 w-1.5 rounded-full bg-current" />
@@ -783,7 +783,7 @@ export default function StudentTeamWorkspacePage() {
             </div>
 
             {/* Modal Body */}
-            <div className="space-y-6 p-6 sm:p-8">
+            <div className="min-h-0 flex-1 space-y-6 overflow-y-auto p-6 sm:p-8">
               {/* Academic & Enrollment Information */}
               <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-5">
                 <h3 className="flex items-center gap-2 text-sm font-bold text-slate-900">
@@ -882,7 +882,7 @@ export default function StudentTeamWorkspacePage() {
             </div>
 
             {/* Modal Footer */}
-            <div className="flex items-center justify-end gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4 rounded-b-3xl">
+            <div className="flex shrink-0 items-center justify-end gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4">
               <button
                 type="button"
                 onClick={() => setSelectedMember(null)}
