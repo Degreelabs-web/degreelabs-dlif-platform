@@ -55,10 +55,13 @@ export function UpcomingSessionsCard({ sessions }: Props) {
   }, [nextSession?.scheduled_at]);
 
   return (
-    <div className="card-custom flex flex-col justify-between h-full space-y-4">
+    <div className="card-custom flex flex-col justify-between h-full space-y-4 !p-5 sm:!p-6 bg-gradient-to-b from-white via-slate-50/30 to-white shadow-xs hover:shadow-md transition-all relative overflow-hidden">
+      {/* Top subtle gradient accent */}
+      <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 via-sky-500 to-indigo-600" />
+
       <div>
         {/* Header */}
-        <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div className="flex items-center justify-between pb-3 border-b border-slate-200/80">
           <div className="flex items-center gap-2">
             <h3 className="font-extrabold text-slate-900 text-base">Upcoming Sessions</h3>
           </div>
