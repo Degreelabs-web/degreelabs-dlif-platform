@@ -7,6 +7,7 @@ import {
   Send,
   ShieldAlert,
   ShieldCheck,
+  ArrowRight,
   ArrowLeft,
   Layers,
   Loader2,
@@ -97,16 +98,18 @@ function DeliverablesContent() {
           const isPassed = w?.gate_status === "passed";
           const isRevision = w?.gate_status === "revision_required";
           const isCurrent = wnum === currentWeek;
+          const isLocked = !isPassed && !isCurrent && wnum > currentWeek;
 
           return (
             <Link
               key={wnum}
               href={`/student/deliverables?week=${wnum}`}
-              className={`card-custom flex flex-col justify-between !p-4 transition-all ${
-                isSelected
+              className={`group card-custom flex cursor-pointer flex-col justify-between !p-4 transition-all hover:-translate-y-0.5 hover:shadow-lg hover:border-brand-300 ${isSelected
                   ? "border-brand-500 ring-2 ring-brand-500/20 shadow-xs bg-brand-50/20"
-                  : ""
-              }`}
+                  : isLocked
+                    ? "opacity-70"
+                    : ""
+                }`}
             >
               <div className="flex items-center justify-between mb-2">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
@@ -135,6 +138,10 @@ function DeliverablesContent() {
               <h3 className="text-sm font-bold text-slate-900 leading-snug line-clamp-2">
                 {w?.output_title || `Week ${wnum} Output Pack`}
               </h3>
+              <span className="mt-2.5 inline-flex items-center gap-1 text-[11px] font-bold text-brand-600 opacity-70 transition-opacity group-hover:opacity-100">
+                {isCurrent ? "Open this week" : "View details"}
+                <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
+              </span>
             </Link>
           );
         })}

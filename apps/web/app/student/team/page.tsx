@@ -11,10 +11,7 @@ import {
   Calendar,
   Clock,
   MessageSquare,
-  ShieldCheck,
-  Sparkles,
   Info,
-  Building2,
   Mail,
   Check,
   X,
@@ -23,6 +20,7 @@ import {
   User as UserIcon,
   Briefcase,
   AlertCircle,
+  Loader2,
 } from "lucide-react";
 import { RequestMentorSlotModal } from "@/components/student/RequestMentorSlotModal";
 import {
@@ -31,6 +29,12 @@ import {
   cancelMentorSlot,
   MentorSlotRequest,
 } from "@/lib/api/mentor_slots";
+import { getStoredUser } from "@/lib/api/auth";
+import { fetchStudentPortalContext } from "@/lib/api/fellowship";
+import { fetchStudentDashboard } from "@/lib/api/student_dashboard";
+import { StudentPortalContext } from "@/types/fellowship";
+import { StudentDashboardData } from "@/types/student_dashboard";
+import { PageHeader, StatusBadge } from "@/components/student/ui";
 
 interface TeamMemberProfile {
   student_id: string;
@@ -103,11 +107,6 @@ function getLocalStudentFallback(rollNo?: string | null, name?: string | null): 
   }
   return null;
 }
-import { getStoredUser } from "@/lib/api/auth";
-import { fetchStudentPortalContext } from "@/lib/api/fellowship";
-import { fetchStudentDashboard } from "@/lib/api/student_dashboard";
-import { StudentPortalContext } from "@/types/fellowship";
-import { StudentDashboardData } from "@/types/student_dashboard";
 
 const DEFAULT_DISCIPLINES = [
   "Business Architecture & Market Modeling",
@@ -140,6 +139,9 @@ function isTeamLeadRole(role?: string, isTeamLead?: boolean): boolean {
   const r = (role || "").toLowerCase().trim();
   return r === "fellow lead" || r === "lead" || r === "team_lead" || r === "leader";
 }
+
+const fieldClass =
+  "w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-xs placeholder:text-slate-400";
 
 export default function StudentTeamWorkspacePage() {
   const [context, setContext] = useState<StudentPortalContext | null>(null);
@@ -237,9 +239,9 @@ export default function StudentTeamWorkspacePage() {
 
   if (loading) {
     return (
-      <div className="flex h-96 items-center justify-center">
+      <div className="card-custom flex min-h-[280px] items-center justify-center">
         <div className="flex flex-col items-center gap-3 text-sm text-slate-500">
-          <div className="h-8 w-8 animate-spin rounded-full border-3 border-violet-600 border-t-transparent" />
+          <Loader2 className="h-6 w-6 animate-spin text-brand-600" />
           <span className="font-medium text-slate-700">Loading Team Workspace...</span>
         </div>
       </div>
@@ -332,26 +334,28 @@ export default function StudentTeamWorkspacePage() {
   ];
 
   return (
-    <div className="space-y-6 pb-12">
+    <div className="page-container">
       {/* Mentor Slot Request Status Banner */}
       {existingSlotRequest && (
         <div
-          className={`flex items-start gap-3 rounded-xl border px-4 py-3 text-sm ${existingSlotRequest.status === "approved"
-            ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+          className={`flex items-start gap-3.5 rounded-2xl px-5 py-4 text-sm ring-1 ${existingSlotRequest.status === "approved"
+            ? "bg-emerald-50 text-emerald-800 ring-emerald-200"
             : existingSlotRequest.status === "declined"
-              ? "border-red-200 bg-red-50 text-red-800"
-              : "border-amber-200 bg-amber-50 text-amber-800"
+              ? "bg-red-50 text-red-800 ring-red-200"
+              : "bg-amber-50 text-amber-800 ring-amber-200"
             }`}
         >
-          {existingSlotRequest.status === "approved" ? (
-            <CheckCircle2 className="h-5 w-5 shrink-0 mt-0.5 text-emerald-600" />
-          ) : existingSlotRequest.status === "declined" ? (
-            <X className="h-5 w-5 shrink-0 mt-0.5 text-red-500" />
-          ) : (
-            <AlertCircle className="h-5 w-5 shrink-0 mt-0.5 text-amber-600" />
-          )}
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/80 shadow-xs ring-1 ring-black/5">
+            {existingSlotRequest.status === "approved" ? (
+              <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+            ) : existingSlotRequest.status === "declined" ? (
+              <X className="h-5 w-5 text-red-500" />
+            ) : (
+              <AlertCircle className="h-5 w-5 text-amber-600" />
+            )}
+          </span>
           <div className="min-w-0 flex-1">
-            <p className="font-semibold">
+            <p className="font-bold">
               {existingSlotRequest.status === "approved"
                 ? "Mentor Slot Approved!"
                 : existingSlotRequest.status === "declined"
@@ -379,14 +383,14 @@ export default function StudentTeamWorkspacePage() {
               <button
                 type="button"
                 onClick={() => { setSlotActionError(null); setEditSlotOpen(true); }}
-                className="rounded-lg border border-amber-400 bg-amber-100 px-3 py-1.5 text-xs font-bold text-amber-900 hover:bg-amber-200 transition-colors"
+                className="rounded-lg bg-white px-3.5 py-1.5 text-xs font-bold text-amber-900 shadow-xs ring-1 ring-amber-300 transition-colors hover:bg-amber-100"
               >
                 Edit
               </button>
               <button
                 type="button"
                 onClick={() => { setSlotActionError(null); setCancelConfirmOpen(true); }}
-                className="rounded-lg border border-red-300 bg-red-50 px-3 py-1.5 text-xs font-bold text-red-700 hover:bg-red-100 transition-colors"
+                className="rounded-lg bg-white px-3.5 py-1.5 text-xs font-bold text-red-700 shadow-xs ring-1 ring-red-300 transition-colors hover:bg-red-50"
               >
                 Cancel Request
               </button>
@@ -396,261 +400,259 @@ export default function StudentTeamWorkspacePage() {
       )}
 
       {/* 1. Page Header (Matching DL_DISCOVER Team Workspace) */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between pb-2 border-b border-slate-200">
-        <div>
-          <div className="flex items-center gap-2 mb-2">
-            <span className="inline-flex items-center rounded-full bg-slate-900 px-3 py-1 text-xs font-bold text-white shadow-xs">
+      <PageHeader
+        badge={
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center rounded-full bg-gradient-to-r from-brand-700 to-brand-500 px-3 py-1 text-xs font-bold text-white shadow-xs">
               5-Member Team
             </span>
             <span className="text-xs font-medium text-slate-500">
               &bull; Multi-disciplinary Cohort
             </span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900">
-            {teamName} Workspace
-          </h1>
-          <p className="mt-1 text-sm text-slate-600 max-w-3xl">
-            Collaborative research scratchpad, member roster across disciplines, mentor engagements, and deliverables log.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-3 shrink-0">
-          {isCurrentUserTeamLead ? (
-            <button
-              type="button"
-              onClick={() => setMentorSlotModalOpen(true)}
-              className="inline-flex items-center gap-2 rounded-lg border border-violet-300 bg-violet-50 px-3.5 py-2.5 text-xs sm:text-sm font-semibold text-violet-800 shadow-xs hover:bg-violet-100 transition-colors"
-              title="Request a mentor consultation slot for your team"
+        }
+        title={`${teamName} Workspace`}
+        subtitle="Collaborative research scratchpad, member roster across disciplines, mentor engagements, and deliverables log."
+        action={
+          <div className="flex items-center gap-3">
+            {isCurrentUserTeamLead ? (
+              <button
+                type="button"
+                onClick={() => setMentorSlotModalOpen(true)}
+                className="inline-flex items-center gap-2 rounded-lg bg-brand-50 px-3.5 py-2.5 text-xs font-semibold text-brand-700 shadow-xs ring-1 ring-brand-200 transition-colors hover:bg-brand-100 sm:text-sm"
+                title="Request a mentor consultation slot for your team"
+              >
+                <Video className="h-4 w-4 text-brand-600" />
+                <span>Request Mentor Slot</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                disabled
+                className="inline-flex cursor-not-allowed items-center gap-2 rounded-lg bg-slate-50 px-3.5 py-2.5 text-xs font-semibold text-slate-400 shadow-xs ring-1 ring-slate-200 sm:text-sm"
+                title="Only the Team Lead can request a mentor slot"
+              >
+                <Video className="h-4 w-4 text-slate-300" />
+                <span>Request Mentor Slot</span>
+              </button>
+            )}
+            <Link
+              href={`/student/deliverables?week=${currentWeek}`}
+              className="btn-gradient-primary !py-2.5 !px-4 !text-xs sm:!text-sm"
             >
-              <Video className="h-4 w-4 text-violet-600" />
-              <span>Request Mentor Slot</span>
-            </button>
-          ) : (
-            <button
-              type="button"
-              disabled
-              className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-xs sm:text-sm font-semibold text-slate-400 shadow-xs cursor-not-allowed"
-              title="Only the Team Lead can request a mentor slot"
-            >
-              <Video className="h-4 w-4 text-slate-300" />
-              <span>Request Mentor Slot</span>
-            </button>
-          )}
-          <Link
-            href={`/student/deliverables?week=${currentWeek}`}
-            className="inline-flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2.5 text-xs sm:text-sm font-semibold text-white shadow-sm hover:bg-violet-500 transition-colors"
-          >
-            <FileText className="h-4 w-4" />
-            <span>Week {currentWeek} Output</span>
-          </Link>
-        </div>
-      </div>
+              <FileText className="h-4 w-4" />
+              <span>Week {currentWeek} Output</span>
+            </Link>
+          </div>
+        }
+      />
 
       {/* 2. 5-Member Team Roster Card (DL_DISCOVER Team Composition) */}
-      <div className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6 shadow-xs space-y-4">
-        <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-          <h3 className="font-extrabold text-slate-900 text-base flex items-center gap-2">
-            <Users className="h-5 w-5 text-violet-600" />
-            <span>Team Composition (5 Cross-Functional Disciplines)</span>
-          </h3>
-          <span className="rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-700">
-            {cohortName}
-          </span>
-        </div>
+      <div className="card-custom !p-0 overflow-hidden">
+        <div className="h-1.5 bg-gradient-to-r from-brand-800 via-brand-600 to-fuchsia-500" />
+        <div className="space-y-5 p-5 sm:p-6">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
+            <h3 className="card-title flex items-center gap-3">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600 ring-1 ring-brand-100">
+                <Users className="h-[18px] w-[18px]" />
+              </span>
+              <span>Team Composition (5 Cross-Functional Disciplines)</span>
+            </h3>
+            <span className="rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700 ring-1 ring-brand-100">
+              {cohortName}
+            </span>
+          </div>
 
-        <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
-          {members.map((member, idx) => {
-            const initial = studentInitials(member.name);
-            const fallbackPhoto = getLocalStudentFallback(member.roll_no, member.name);
-            const photo = resolveStudentPhotoUrl(member.photo_url) || fallbackPhoto;
-            return (
-              <button
-                key={idx}
-                type="button"
-                onClick={() => setSelectedMember(member)}
-                className="flex flex-col items-center text-center rounded-xl border border-slate-100 bg-slate-50/70 p-4 shadow-xs hover:bg-white hover:border-violet-300 hover:shadow-md transition-all cursor-pointer group text-left w-full focus:outline-none focus:ring-2 focus:ring-violet-500"
-              >
-                <div className="relative flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-violet-400 to-fuchsia-600 font-bold text-lg text-white shadow-xs mb-3 overflow-hidden ring-2 ring-transparent group-hover:ring-violet-400 transition-all">
-                  <span>{initial}</span>
-                  {photo && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={photo}
-                      alt={member.name}
-                      crossOrigin="anonymous"
-                      onError={(e) => {
-                        const current = e.currentTarget.src;
-                        if (fallbackPhoto && !current.includes(fallbackPhoto)) {
-                          e.currentTarget.src = fallbackPhoto;
-                          return;
-                        }
-                        if (current.includes("lh3.googleusercontent.com/d/")) {
-                          const fileId = current.split("/d/")[1]?.split(/[?=&]/)[0];
-                          if (fileId) {
-                            e.currentTarget.src = `https://drive.google.com/thumbnail?id=${fileId}&sz=w800`;
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
+            {members.map((member, idx) => {
+              const initial = studentInitials(member.name);
+              const fallbackPhoto = getLocalStudentFallback(member.roll_no, member.name);
+              const photo = resolveStudentPhotoUrl(member.photo_url) || fallbackPhoto;
+              return (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => setSelectedMember(member)}
+                  className="group flex w-full cursor-pointer flex-col items-center rounded-2xl bg-slate-50/70 p-5 text-center shadow-xs ring-1 ring-slate-200/80 transition-all hover:-translate-y-0.5 hover:bg-white hover:shadow-lg hover:ring-brand-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+                >
+                  <div className="relative mb-3.5 flex h-20 w-20 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-brand-400 to-fuchsia-600 text-xl font-bold text-white shadow-md ring-4 ring-white transition-all group-hover:ring-brand-200">
+                    <span>{initial}</span>
+                    {photo && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={photo}
+                        alt={member.name}
+                        crossOrigin="anonymous"
+                        onError={(e) => {
+                          const current = e.currentTarget.src;
+                          if (fallbackPhoto && !current.includes(fallbackPhoto)) {
+                            e.currentTarget.src = fallbackPhoto;
                             return;
                           }
-                        } else if (current.includes("drive.google.com/thumbnail")) {
-                          const fileId = new URL(current).searchParams.get("id");
-                          if (fileId) {
-                            e.currentTarget.src = `https://drive.google.com/uc?export=view&id=${fileId}`;
-                            return;
+                          if (current.includes("lh3.googleusercontent.com/d/")) {
+                            const fileId = current.split("/d/")[1]?.split(/[?=&]/)[0];
+                            if (fileId) {
+                              e.currentTarget.src = `https://drive.google.com/thumbnail?id=${fileId}&sz=w800`;
+                              return;
+                            }
+                          } else if (current.includes("drive.google.com/thumbnail")) {
+                            const fileId = new URL(current).searchParams.get("id");
+                            if (fileId) {
+                              e.currentTarget.src = `https://drive.google.com/uc?export=view&id=${fileId}`;
+                              return;
+                            }
                           }
-                        }
-                        e.currentTarget.style.display = "none";
-                      }}
-                      className="absolute inset-0 h-full w-full object-cover"
-                    />
-                  )}
-                </div>
-                <h4 className="font-bold text-slate-900 text-xs min-h-[32px] flex items-center justify-center group-hover:text-violet-700 transition-colors">
-                  {member.name}
-                </h4>
-                <span className="mt-1 inline-block rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-bold text-violet-800 border border-violet-200">
-                  {member.role}
-                </span>
-                <p className="mt-2 text-[11px] text-slate-500 line-clamp-2 leading-tight">
-                  {member.discipline}
-                </p>
-                <span className="mt-2 text-[10px] font-semibold text-violet-600 opacity-0 group-hover:opacity-100 transition-opacity">
-                  View Profile &rarr;
-                </span>
-              </button>
-            );
-          })}
+                          e.currentTarget.style.display = "none";
+                        }}
+                        className="absolute inset-0 h-full w-full object-cover object-top"
+                      />
+                    )}
+                  </div>
+                  <h4 className="flex min-h-[40px] items-center justify-center text-sm font-bold leading-snug text-slate-900 transition-colors group-hover:text-brand-700">
+                    {member.name}
+                  </h4>
+                  <span className="mt-1.5 inline-block rounded-full bg-brand-50 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-brand-700 ring-1 ring-brand-200">
+                    {member.role}
+                  </span>
+                  <p className="mt-3 line-clamp-2 text-[11px] leading-snug text-slate-500">
+                    {member.discipline}
+                  </p>
+                  <span className="mt-2 text-[10px] font-semibold text-brand-600 opacity-0 transition-opacity group-hover:opacity-100">
+                    View Profile &rarr;
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 
       {/* 3. Main Grid: Scratchpad (Left 7 cols) + Mentor & Outputs (Right 5 cols) */}
-      <div className="grid gap-6 lg:grid-cols-12">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
         {/* Left Column: Live Team Scratchpad */}
-        <div className="lg:col-span-7">
-          <div className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6 shadow-xs flex flex-col justify-between h-full space-y-4">
-            <div>
-              <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between pb-3 border-b border-slate-100">
+        <div className="min-w-0 lg:col-span-7">
+          <div className="card-custom flex h-full flex-col">
+            <div className="flex flex-col gap-2 border-b border-slate-100 pb-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-start gap-3">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600 ring-1 ring-brand-100">
+                  <FileText className="h-[18px] w-[18px]" />
+                </span>
                 <div>
-                  <h3 className="font-extrabold text-slate-900 text-base flex items-center gap-2">
-                    <FileText className="h-5 w-5 text-violet-600" />
-                    <span>Live Team Scratchpad (Week {currentWeek})</span>
-                  </h3>
-                  <p className="text-xs text-slate-500">
+                  <h3 className="card-title">Live Team Scratchpad (Week {currentWeek})</h3>
+                  <p className="mt-0.5 text-xs text-slate-500">
                     Collaborative workspace for research notes, data schemas, and draft hypotheses.
                   </p>
                 </div>
-                {lastSaved && (
-                  <span className="self-start sm:self-auto text-[11px] font-medium text-slate-500 bg-slate-50 border border-slate-200 px-2 py-1 rounded">
-                    {lastSaved}
-                  </span>
-                )}
               </div>
-
-              <form onSubmit={handleSaveScratchpad} className="mt-4 space-y-4">
-                <textarea
-                  value={scratchpadContent}
-                  onChange={(e) => setScratchpadContent(e.target.value)}
-                  rows={14}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 p-4 font-mono text-xs text-slate-800 leading-relaxed shadow-inner focus:bg-white focus:outline-none focus:ring-2 focus:ring-violet-500/30"
-                  placeholder="Draft hypothesis notes, interview insights, and evidence formulas here..."
-                />
-
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between pt-1">
-                  <span className="flex items-center gap-1.5 text-xs text-slate-500">
-                    <Info className="h-4 w-4 text-violet-600 shrink-0" />
-                    <span>Visible to all 5 team members and assigned mentor.</span>
-                  </span>
-
-                  <button
-                    type="submit"
-                    disabled={saveStatus === "saving"}
-                    className="inline-flex items-center justify-center gap-2 rounded-lg bg-violet-600 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-violet-500 transition-colors disabled:opacity-50"
-                  >
-                    {saveStatus === "saving" ? (
-                      <span>Saving...</span>
-                    ) : saveStatus === "saved" ? (
-                      <>
-                        <Check className="h-3.5 w-3.5" />
-                        <span>Saved!</span>
-                      </>
-                    ) : (
-                      <>
-                        <Save className="h-3.5 w-3.5" />
-                        <span>Save Scratchpad</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-              </form>
+              {lastSaved && (
+                <span className="self-start rounded-full bg-slate-50 px-3 py-1 text-[11px] font-medium text-slate-500 ring-1 ring-slate-200 sm:self-auto">
+                  {lastSaved}
+                </span>
+              )}
             </div>
+
+            <form onSubmit={handleSaveScratchpad} className="mt-4 flex flex-1 flex-col gap-4">
+              <textarea
+                value={scratchpadContent}
+                onChange={(e) => setScratchpadContent(e.target.value)}
+                rows={14}
+                className="min-h-[320px] w-full flex-1 resize-y rounded-2xl border border-slate-200 bg-slate-50/80 p-5 font-mono text-xs leading-relaxed text-slate-800 shadow-inner"
+                placeholder="Draft hypothesis notes, interview insights, and evidence formulas here..."
+              />
+
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <span className="flex items-center gap-1.5 text-xs text-slate-500">
+                  <Info className="h-4 w-4 shrink-0 text-brand-600" />
+                  <span>Visible to all 5 team members and assigned mentor.</span>
+                </span>
+
+                <button
+                  type="submit"
+                  disabled={saveStatus === "saving"}
+                  className="btn-gradient-primary !py-2 !px-4 !text-xs justify-center disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {saveStatus === "saving" ? (
+                    <span>Saving...</span>
+                  ) : saveStatus === "saved" ? (
+                    <>
+                      <Check className="h-3.5 w-3.5" />
+                      <span>Saved!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Save className="h-3.5 w-3.5" />
+                      <span>Save Scratchpad</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
 
         {/* Right Column: Assigned Mentor Card + Team Output History */}
-        <div className="lg:col-span-5 space-y-6">
+        <div className="flex min-w-0 flex-col gap-6 lg:col-span-5">
           {/* Assigned Mentor Card */}
-          <div className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6 shadow-xs space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <h3 className="font-extrabold text-slate-900 text-sm">
-                Assigned Team Mentor
-              </h3>
-              <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800 border border-emerald-200">
-                Active
-              </span>
+          <div className="card-custom space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h3 className="card-title">Assigned Team Mentor</h3>
+              <StatusBadge variant="success">Active</StatusBadge>
             </div>
 
-            <div className="flex items-center gap-3 p-3.5 rounded-xl bg-slate-50 border border-slate-200/80">
+            <div className="flex items-center gap-3.5 rounded-2xl bg-slate-50/80 p-4 ring-1 ring-slate-200/70">
               {mentor?.headshot_url && !mentorHeadshotFailed ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={mentor.headshot_url}
                   alt={mentor.full_name || "Mentor"}
                   onError={() => setMentorHeadshotFailed(true)}
-                  className="h-12 w-12 shrink-0 rounded-xl object-cover border border-slate-200 shadow-xs"
+                  className="h-14 w-14 shrink-0 rounded-2xl object-cover object-center shadow-xs ring-1 ring-slate-200"
                 />
               ) : (
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-slate-900 font-bold text-base text-white">
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-600 to-fuchsia-600 text-lg font-bold text-white shadow-md shadow-brand-600/20">
                   {mentor?.full_name ? mentor.full_name.charAt(0) : "M"}
                 </div>
               )}
               <div className="min-w-0 flex-1">
-                <h4 className="font-bold text-slate-900 text-sm truncate">
+                <h4 className="truncate text-sm font-bold text-slate-900">
                   {mentor?.full_name || "Dedicated Industry Mentor"}
                 </h4>
-                <p className="text-xs font-semibold text-violet-700 truncate">
+                <p className="truncate text-xs font-semibold text-brand-700">
                   {mentor?.designation || "Senior Enterprise Advisor"}
                 </p>
-                <p className="text-[11px] text-slate-500 truncate">
+                <p className="truncate text-[11px] text-slate-500">
                   {mentor?.company_name || "DegreeLabs Mentor Council"}
                 </p>
               </div>
             </div>
 
             {/* Mentor Notes Feed */}
-            <div className="space-y-2">
-              <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+            <div className="space-y-3">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900">
                 Mentor Session Feedback &amp; Guidance:
               </h4>
 
-              <div className="space-y-3">
-                <div className="space-y-1.5 pb-3 border-b border-slate-100">
+              <div className="space-y-4">
+                <div className="space-y-2 border-b border-slate-100 pb-4">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="inline-block rounded bg-violet-100 px-2 py-0.5 text-[10px] font-bold text-violet-800 border border-violet-200">
+                    <span className="inline-block rounded-full bg-brand-50 px-2.5 py-0.5 text-[10px] font-bold text-brand-700 ring-1 ring-brand-200">
                       Problem Bounding &amp; Scope
                     </span>
                     <span className="text-[10px] text-slate-400">Recent Sync</span>
                   </div>
-                  <p className="p-3 rounded-lg bg-slate-50 border-l-4 border-violet-600 text-xs italic text-slate-700 leading-relaxed">
+                  <p className="rounded-xl border-l-4 !border-l-brand-600 bg-gradient-to-r from-violet-50/70 to-slate-50 p-3.5 text-xs italic leading-relaxed text-slate-700">
                     &ldquo;Ensure your Problem Framing Pack clearly isolates root operational causes before drafting solution vectors. Test if freight latency is systemic or carrier-specific.&rdquo;
                   </p>
                 </div>
 
-                <div className="space-y-1.5">
+                <div className="space-y-2">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="inline-block rounded bg-fuchsia-100 px-2 py-0.5 text-[10px] font-bold text-fuchsia-800 border border-fuchsia-200">
+                    <span className="inline-block rounded-full bg-fuchsia-50 px-2.5 py-0.5 text-[10px] font-bold text-fuchsia-700 ring-1 ring-fuchsia-200">
                       WWHTBT Barrier-to-Belief
                     </span>
                     <span className="text-[10px] text-slate-400">Week 2 Prep</span>
                   </div>
-                  <p className="p-3 rounded-lg bg-slate-50 border-l-4 border-fuchsia-600 text-xs italic text-slate-700 leading-relaxed">
+                  <p className="rounded-xl border-l-4 !border-l-fuchsia-600 bg-gradient-to-r from-fuchsia-50/70 to-slate-50 p-3.5 text-xs italic leading-relaxed text-slate-700">
                     &ldquo;For Week 2 choices, remember a preferred idea is not a strategy. You must demonstrate at least 3 distinct alternatives with What Would Have to Be True tests.&rdquo;
                   </p>
                 </div>
@@ -659,19 +661,20 @@ export default function StudentTeamWorkspacePage() {
           </div>
 
           {/* Team Output History Card */}
-          <div className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6 shadow-xs space-y-4">
-            <h3 className="font-extrabold text-slate-900 text-sm pb-2 border-b border-slate-100">
-              Team Output History
-            </h3>
+          <div className="card-custom space-y-3">
+            <h3 className="card-title border-b border-slate-100 pb-3">Team Output History</h3>
 
-            <div className="divide-y divide-slate-100">
+            <div className="space-y-2.5">
               {outputHistory.map((item) => (
-                <div key={item.week} className="py-3 flex items-center justify-between gap-2">
+                <div
+                  key={item.week}
+                  className="flex items-center justify-between gap-3 rounded-xl bg-slate-50/70 px-4 py-3 ring-1 ring-slate-100"
+                >
                   <div className="min-w-0 flex-1">
-                    <p className="font-bold text-xs text-slate-900 truncate" title={`Week ${item.week}: ${item.title}`}>
+                    <p className="line-clamp-2 text-xs font-bold leading-snug text-slate-900" title={`Week ${item.week}: ${item.title}`}>
                       Week {item.week}: {item.title}
                     </p>
-                    <p className="text-[11px] text-slate-400 mt-0.5">{item.submittedAt}</p>
+                    <p className="mt-0.5 text-[11px] text-slate-400">{item.submittedAt}</p>
                   </div>
                   <span className={`status-pill ${item.statusClass} shrink-0`}>
                     {item.status}
@@ -682,24 +685,25 @@ export default function StudentTeamWorkspacePage() {
           </div>
         </div>
       </div>
+
       {/* Team Member Profile Modal */}
       {selectedMember && (
         <div
           role="dialog"
           aria-modal="true"
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm animate-in fade-in duration-200"
           onClick={() => setSelectedMember(null)}
         >
           <div
-            className="relative flex w-full max-w-2xl max-h-[calc(100dvh-2rem)] flex-col overflow-hidden rounded-3xl bg-white shadow-2xl border border-slate-200"
+            className="relative flex max-h-[calc(100dvh-2rem)] w-full max-w-2xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl ring-1 ring-slate-200"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
-            <div className="relative shrink-0 border-b border-slate-200 bg-gradient-to-br from-slate-50 via-white to-violet-50/50 p-6 sm:p-8">
+            <div className="relative shrink-0 border-b border-slate-100 bg-gradient-to-br from-slate-50 via-white to-violet-50/60 p-6 sm:p-8">
               <button
                 type="button"
                 onClick={() => setSelectedMember(null)}
-                className="absolute right-5 top-5 rounded-full p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors cursor-pointer"
+                className="absolute right-5 top-5 cursor-pointer rounded-full p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
                 aria-label="Close modal"
               >
                 <X className="h-5 w-5" />
@@ -710,7 +714,7 @@ export default function StudentTeamWorkspacePage() {
                   const modalFallback = getLocalStudentFallback(selectedMember.roll_no, selectedMember.name);
                   const modalPhoto = resolveStudentPhotoUrl(selectedMember.photo_url) || modalFallback;
                   return (
-                    <div className="relative flex h-24 w-24 sm:h-28 sm:w-28 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-700 text-2xl font-bold text-white shadow-lg ring-2 ring-white">
+                    <div className="relative flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-brand-500 to-fuchsia-700 text-2xl font-bold text-white shadow-lg ring-4 ring-white sm:h-32 sm:w-32">
                       <span>{studentInitials(selectedMember.name)}</span>
                       {modalPhoto && (
                         // eslint-disable-next-line @next/next/no-img-element
@@ -748,34 +752,26 @@ export default function StudentTeamWorkspacePage() {
 
                 <div className="min-w-0 pr-10">
                   <div className="flex flex-wrap items-center gap-2">
-                    <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
+                    <h2 className="text-xl font-extrabold tracking-tight text-slate-900 sm:text-2xl">
                       {selectedMember.name}
                     </h2>
-                    <span
-                      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ring-1 ring-inset ${selectedMember.status === "active"
-                        ? "bg-emerald-50 text-emerald-700 ring-emerald-600/20"
-                        : "bg-slate-100 text-slate-700 ring-slate-600/20"
-                        }`}
-                    >
-                      <span className="h-1.5 w-1.5 rounded-full bg-current" />
+                    <StatusBadge variant={selectedMember.status === "active" ? "success" : "secondary"}>
                       {selectedMember.status || "Active"}
-                    </span>
-                    <span className="inline-flex items-center rounded-lg bg-violet-50 px-2.5 py-0.5 text-xs font-semibold text-violet-700 ring-1 ring-inset ring-violet-600/20">
-                      {selectedMember.batch_name || cohortName}
-                    </span>
-                    <span className="inline-flex items-center rounded-lg bg-fuchsia-50 px-2.5 py-0.5 text-xs font-semibold text-fuchsia-700 ring-1 ring-inset ring-fuchsia-600/20">
-                      {selectedMember.role}
-                    </span>
+                    </StatusBadge>
+                  </div>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <StatusBadge variant="primary">{selectedMember.batch_name || cohortName}</StatusBadge>
+                    <StatusBadge variant="pink">{selectedMember.role}</StatusBadge>
                   </div>
 
-                  <p className="mt-1.5 font-mono text-xs font-semibold text-violet-700">
+                  <p className="mt-2.5 font-mono text-xs font-semibold text-brand-700">
                     Roll No: {selectedMember.roll_no || "—"}
                   </p>
 
                   <p className="mt-1 text-sm font-medium text-slate-600">
                     {selectedMember.institution_name || "Partner Institution"}
                   </p>
-                  <p className="mt-0.5 text-xs text-slate-500 font-medium">
+                  <p className="mt-0.5 text-xs font-medium text-slate-500">
                     Assigned Discipline: <strong className="text-slate-700">{selectedMember.discipline}</strong>
                   </p>
                 </div>
@@ -783,41 +779,43 @@ export default function StudentTeamWorkspacePage() {
             </div>
 
             {/* Modal Body */}
-            <div className="min-h-0 flex-1 space-y-6 overflow-y-auto p-6 sm:p-8">
+            <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-6 sm:p-8">
               {/* Academic & Enrollment Information */}
-              <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-5">
-                <h3 className="flex items-center gap-2 text-sm font-bold text-slate-900">
-                  <GraduationCap className="h-4 w-4 text-violet-600" />
+              <div className="rounded-2xl bg-slate-50/70 p-5 ring-1 ring-slate-200/80">
+                <h3 className="flex items-center gap-2.5 text-sm font-bold text-slate-900">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-50 text-brand-600 ring-1 ring-brand-100">
+                    <GraduationCap className="h-4 w-4" />
+                  </span>
                   Academic &amp; Enrollment Information
                 </h3>
-                <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  <div>
+                <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  <div className="rounded-xl bg-white p-3.5 ring-1 ring-slate-200/70">
                     <span className="text-xs font-medium text-slate-500">Institution</span>
                     <p className="mt-0.5 text-sm font-semibold text-slate-800">
                       {selectedMember.institution_name || "—"}
                     </p>
                   </div>
-                  <div>
+                  <div className="rounded-xl bg-white p-3.5 ring-1 ring-slate-200/70">
                     <span className="text-xs font-medium text-slate-500">Course</span>
                     <p className="mt-0.5 text-sm font-semibold text-slate-800">
                       {selectedMember.course || "—"}
                     </p>
                   </div>
-                  <div>
+                  <div className="rounded-xl bg-white p-3.5 ring-1 ring-slate-200/70">
                     <span className="text-xs font-medium text-slate-500">Branch</span>
                     <p className="mt-0.5 text-sm font-semibold text-slate-800">
                       {selectedMember.branch || "—"}
                     </p>
                   </div>
-                  <div>
+                  <div className="rounded-xl bg-white p-3.5 ring-1 ring-slate-200/70">
                     <span className="text-xs font-medium text-slate-500">Current Year / Semester</span>
                     <p className="mt-0.5 text-sm font-semibold text-slate-800">
                       {selectedMember.current_year_semester || "—"}
                     </p>
                   </div>
-                  <div>
+                  <div className="rounded-xl bg-white p-3.5 ring-1 ring-slate-200/70">
                     <span className="text-xs font-medium text-slate-500">Batch Assigned</span>
-                    <p className="mt-0.5 text-sm font-semibold text-violet-700">
+                    <p className="mt-0.5 text-sm font-semibold text-brand-700">
                       {selectedMember.batch_name || cohortName || "Unassigned"}
                     </p>
                   </div>
@@ -825,54 +823,56 @@ export default function StudentTeamWorkspacePage() {
               </div>
 
               {/* Personal & Contact Info (with Proper Alignment, No Identity/Verification) */}
-              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
-                <h3 className="flex items-center gap-2 text-sm font-bold text-slate-900 pb-3 border-b border-slate-100">
-                  <UserIcon className="h-4 w-4 text-violet-600" />
+              <div className="rounded-2xl bg-white p-5 shadow-xs ring-1 ring-slate-200/80">
+                <h3 className="flex items-center gap-2.5 border-b border-slate-100 pb-3 text-sm font-bold text-slate-900">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-50 text-brand-600 ring-1 ring-brand-100">
+                    <UserIcon className="h-4 w-4" />
+                  </span>
                   Personal &amp; Contact Info
                 </h3>
-                <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                  <div className="flex items-start gap-3 text-sm p-3 rounded-xl bg-slate-50 border border-slate-100">
-                    <Mail className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <div className="flex items-start gap-3 rounded-xl bg-slate-50/80 p-3.5 text-sm ring-1 ring-slate-100">
+                    <Mail className="mt-0.5 h-4 w-4 shrink-0 text-brand-500" />
                     <div className="min-w-0">
                       <span className="block text-xs font-medium text-slate-500">Email Address</span>
                       {selectedMember.email ? (
                         <a
                           href={`mailto:${selectedMember.email}`}
-                          className="font-semibold text-violet-700 hover:underline truncate block text-xs sm:text-sm"
+                          className="block truncate text-xs font-semibold text-brand-700 hover:underline sm:text-sm"
                         >
                           {selectedMember.email}
                         </a>
                       ) : (
-                        <span className="font-semibold text-slate-700 text-xs sm:text-sm">Not provided</span>
+                        <span className="text-xs font-semibold text-slate-700 sm:text-sm">Not provided</span>
                       )}
                     </div>
                   </div>
 
-                  <div className="flex items-start gap-3 text-sm p-3 rounded-xl bg-slate-50 border border-slate-100">
-                    <Phone className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
+                  <div className="flex items-start gap-3 rounded-xl bg-slate-50/80 p-3.5 text-sm ring-1 ring-slate-100">
+                    <Phone className="mt-0.5 h-4 w-4 shrink-0 text-brand-500" />
                     <div>
                       <span className="block text-xs font-medium text-slate-500">WhatsApp / Phone</span>
-                      <span className="font-semibold text-slate-800 text-xs sm:text-sm">
+                      <span className="text-xs font-semibold text-slate-800 sm:text-sm">
                         {selectedMember.phone || "Not provided"}
                       </span>
                     </div>
                   </div>
 
-                  <div className="flex items-start gap-3 text-sm p-3 rounded-xl bg-slate-50 border border-slate-100">
-                    <UserIcon className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
+                  <div className="flex items-start gap-3 rounded-xl bg-slate-50/80 p-3.5 text-sm ring-1 ring-slate-100">
+                    <UserIcon className="mt-0.5 h-4 w-4 shrink-0 text-brand-500" />
                     <div>
                       <span className="block text-xs font-medium text-slate-500">Gender</span>
-                      <span className="font-semibold text-slate-800 text-xs sm:text-sm">
+                      <span className="text-xs font-semibold text-slate-800 sm:text-sm">
                         {selectedMember.gender || "Not specified"}
                       </span>
                     </div>
                   </div>
 
-                  <div className="flex items-start gap-3 text-sm p-3 rounded-xl bg-slate-50 border border-slate-100">
-                    <Briefcase className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
+                  <div className="flex items-start gap-3 rounded-xl bg-slate-50/80 p-3.5 text-sm ring-1 ring-slate-100">
+                    <Briefcase className="mt-0.5 h-4 w-4 shrink-0 text-brand-500" />
                     <div>
                       <span className="block text-xs font-medium text-slate-500">Fellowship Role &amp; Focus</span>
-                      <span className="font-semibold text-violet-800 text-xs sm:text-sm">
+                      <span className="text-xs font-semibold text-brand-800 sm:text-sm">
                         {selectedMember.role} &bull; {selectedMember.discipline}
                       </span>
                     </div>
@@ -882,11 +882,11 @@ export default function StudentTeamWorkspacePage() {
             </div>
 
             {/* Modal Footer */}
-            <div className="flex shrink-0 items-center justify-end gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4">
+            <div className="flex shrink-0 items-center justify-end gap-3 border-t border-slate-100 bg-slate-50 px-6 py-4">
               <button
                 type="button"
                 onClick={() => setSelectedMember(null)}
-                className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-xs sm:text-sm font-semibold text-slate-700 shadow-xs hover:bg-slate-50 transition-colors cursor-pointer"
+                className="cursor-pointer rounded-lg border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 shadow-xs transition-colors hover:bg-slate-50 sm:text-sm"
               >
                 Close
               </button>
@@ -922,20 +922,20 @@ export default function StudentTeamWorkspacePage() {
 
       {/* Cancel Confirm Dialog */}
       {cancelConfirmOpen && existingSlotRequest && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm">
-          <div className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-100 text-red-600">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-sm space-y-5 rounded-3xl bg-white p-6 shadow-2xl ring-1 ring-slate-200">
+            <div className="flex items-start gap-3.5">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-red-50 text-red-600 ring-1 ring-red-100">
                 <X className="h-5 w-5" />
               </div>
               <div>
                 <h3 className="text-base font-bold text-slate-900">Cancel Slot Request?</h3>
-                <p className="text-xs text-slate-500 mt-0.5">This will permanently delete your pending request. You can submit a new one anytime.</p>
+                <p className="mt-0.5 text-xs leading-relaxed text-slate-500">This will permanently delete your pending request. You can submit a new one anytime.</p>
               </div>
             </div>
             {slotActionError && (
-              <div className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700">
-                <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+              <div className="flex items-start gap-2 rounded-xl bg-red-50 p-3 text-xs text-red-700 ring-1 ring-red-100">
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
                 <span>{slotActionError}</span>
               </div>
             )}
@@ -944,7 +944,7 @@ export default function StudentTeamWorkspacePage() {
                 type="button"
                 onClick={() => setCancelConfirmOpen(false)}
                 disabled={slotActionLoading}
-                className="rounded-xl border border-slate-300 px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors disabled:opacity-50"
+                className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold text-slate-700 shadow-xs transition-colors hover:bg-slate-50 disabled:opacity-50"
               >
                 Keep Request
               </button>
@@ -964,7 +964,7 @@ export default function StudentTeamWorkspacePage() {
                     setSlotActionLoading(false);
                   }
                 }}
-                className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2 text-xs font-bold text-white hover:bg-red-500 disabled:opacity-50 transition-colors"
+                className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-xs font-bold text-white shadow-sm transition-colors hover:bg-red-500 disabled:opacity-50"
               >
                 {slotActionLoading ? (
                   <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
@@ -1035,108 +1035,115 @@ function EditSlotModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm animate-in fade-in duration-200">
       <div
-        className="relative w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 sm:p-7 shadow-2xl"
+        className="relative flex max-h-[calc(100dvh-2rem)] w-full max-w-lg flex-col overflow-hidden rounded-3xl bg-white shadow-2xl ring-1 ring-slate-200"
         onClick={(e) => e.stopPropagation()}
       >
-        <button
-          type="button"
-          onClick={onClose}
-          className="absolute right-4 top-4 rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 transition-colors"
-        >
-          <X className="h-5 w-5" />
-        </button>
-
-        <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-600">
-            <Video className="h-5 w-5" />
-          </div>
-          <div>
-            <h2 className="text-base font-bold text-slate-900">Edit Slot Request</h2>
-            <p className="text-xs text-slate-500">Update your preferred date, time, or consultation topic.</p>
+        {/* Header */}
+        <div className="shrink-0 border-b border-slate-100 bg-gradient-to-br from-slate-50 via-white to-violet-50/60 px-6 py-5 sm:px-7">
+          <div className="flex items-center gap-3.5">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-600 to-fuchsia-600 text-white shadow-md shadow-brand-600/25">
+              <Video className="h-5 w-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <h2 className="text-base font-bold text-slate-900">Edit Slot Request</h2>
+              <p className="text-xs text-slate-500">Update your preferred date, time, or consultation topic.</p>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
+              aria-label="Close"
+            >
+              <X className="h-5 w-5" />
+            </button>
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="mt-5 space-y-4">
-          {error && (
-            <div className="flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50/80 p-3 text-xs text-red-700">
-              <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-              <span>{error}</span>
-            </div>
-          )}
+        <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+          {/* Scrollable body */}
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-6 py-6 sm:px-7">
+            {error && (
+              <div className="flex items-start gap-2.5 rounded-xl bg-red-50 p-3 text-xs text-red-700 ring-1 ring-red-100">
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                <span>{error}</span>
+              </div>
+            )}
 
-          <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1.5">
-              <Calendar className="h-3.5 w-3.5 text-violet-600" />
-              <span>Preferred Date</span>
-            </label>
-            <input
-              type="date"
-              min={todayStr}
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              required
-              className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-xs focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500/20"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1.5">
-                <Clock className="h-3.5 w-3.5 text-violet-600" />
-                <span>Start Window</span>
+              <label className="mb-1.5 flex items-center gap-1.5 text-xs font-bold text-slate-700">
+                <Calendar className="h-3.5 w-3.5 text-brand-600" />
+                <span>Preferred Date</span>
               </label>
               <input
-                type="time"
-                value={startTime}
-                onChange={(e) => setStartTime(e.target.value)}
+                type="date"
+                min={todayStr}
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
                 required
-                className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm shadow-xs focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500/20"
+                className={fieldClass}
               />
             </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="mb-1.5 flex items-center gap-1.5 text-xs font-bold text-slate-700">
+                  <Clock className="h-3.5 w-3.5 text-brand-600" />
+                  <span>Start Window</span>
+                </label>
+                <input
+                  type="time"
+                  value={startTime}
+                  onChange={(e) => setStartTime(e.target.value)}
+                  required
+                  className={fieldClass}
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 flex items-center gap-1.5 text-xs font-bold text-slate-700">
+                  <Clock className="h-3.5 w-3.5 text-slate-400" />
+                  <span>End Window</span>
+                </label>
+                <input
+                  type="time"
+                  value={endTime}
+                  onChange={(e) => setEndTime(e.target.value)}
+                  required
+                  className={fieldClass}
+                />
+              </div>
+            </div>
+
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1.5">
-                <Clock className="h-3.5 w-3.5 text-slate-400" />
-                <span>End Window</span>
+              <label className="mb-1.5 flex items-center gap-1.5 text-xs font-bold text-slate-700">
+                <MessageSquare className="h-3.5 w-3.5 text-brand-600" />
+                <span>Consultation Topic &amp; Focus Questions</span>
               </label>
-              <input
-                type="time"
-                value={endTime}
-                onChange={(e) => setEndTime(e.target.value)}
+              <textarea
+                rows={3}
+                value={topic}
+                onChange={(e) => setTopic(e.target.value)}
                 required
-                className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm shadow-xs focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500/20"
+                className={fieldClass}
               />
             </div>
           </div>
 
-          <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1.5">
-              <MessageSquare className="h-3.5 w-3.5 text-violet-600" />
-              <span>Consultation Topic &amp; Focus Questions</span>
-            </label>
-            <textarea
-              rows={3}
-              value={topic}
-              onChange={(e) => setTopic(e.target.value)}
-              required
-              className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 shadow-xs focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500/20"
-            />
-          </div>
-
-          <div className="flex items-center justify-end gap-2.5 pt-1">
+          {/* Fixed footer */}
+          <div className="flex shrink-0 items-center justify-end gap-2.5 border-t border-slate-100 bg-slate-50 px-6 py-4 sm:px-7">
             <button
               type="button"
               onClick={onClose}
               disabled={loading}
-              className="rounded-xl border border-slate-300 px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
+              className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold text-slate-700 shadow-xs transition-colors hover:bg-slate-50"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="inline-flex items-center gap-2 rounded-xl bg-amber-500 px-5 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-amber-400 disabled:opacity-50 transition-colors"
+              className="btn-gradient-primary !py-2.5 !px-5 !text-xs disabled:cursor-not-allowed disabled:opacity-60"
             >
               {loading ? (
                 <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
