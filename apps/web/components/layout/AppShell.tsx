@@ -30,7 +30,7 @@ export default function AppShell({ children, role }: AppShellProps) {
   const user = hydrated ? getStoredUser() : null;
   const userRole = user?.role;
   const isAuthorized = Boolean(
-    token && userRole && (userRole === role || userRole === "admin")
+    token && userRole && userRole === role
   );
 
   // Auth + role guard
@@ -45,7 +45,7 @@ export default function AppShell({ children, role }: AppShellProps) {
 
     // 2. Role-based route guard
     // Admins can inspect any portal. Students and mentors can only access their designated portal.
-    if (userRole !== role && userRole !== "admin") {
+    if (userRole !== role) {
       if (userRole === "student") {
         router.replace("/student");
       } else if (userRole === "mentor") {

@@ -25,8 +25,29 @@ const journey = [
     description: "Turn proof of work into opportunity.",
   },
 ];
+type PortalRole = "student" | "mentor" | "admin";
+
+const portalRole =
+  (process.env.NEXT_PUBLIC_PORTAL_ROLE || "student") as PortalRole;
+
+const portalConfig = {
+  student: {
+    label: "Enter student portal",
+    icon: UsersRound,
+  },
+  mentor: {
+    label: "Enter mentor portal",
+    icon: UserRound,
+  },
+  admin: {
+    label: "Enter admin portal",
+    icon: ShieldCheck,
+  },
+}[portalRole];
 
 export default function Home() {
+  const PortalIcon = portalConfig.icon;
+
   return (
     <main className="relative min-h-screen overflow-hidden bg-slate-50">
       <div className="pointer-events-none absolute -left-32 top-16 h-96 w-96 rounded-full bg-brand-300/20 blur-3xl" />
@@ -70,31 +91,14 @@ export default function Home() {
 
           <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
             <Link
-              href="/login?role=student"
+              href="/login"
               className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-500 to-brand-600 px-5 py-3.5 text-sm font-bold text-white shadow-xl shadow-violet-500/20 hover:-translate-y-0.5"
             >
-              <UsersRound className="h-4 w-4" />
-              Enter student portal
+              <PortalIcon className="h-4 w-4" />
+              {portalConfig.label}
               <ArrowRight className="h-4 w-4" />
             </Link>
-
-            <Link
-              href="/login?role=mentor"
-              className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3.5 text-sm font-bold text-slate-700 shadow-sm hover:-translate-y-0.5 hover:border-brand-200 hover:text-brand-700"
-            >
-              <UserRound className="h-4 w-4" />
-              Mentor portal
-            </Link>
-
-            <Link
-              href="/login?role=admin"
-              className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3.5 text-sm font-bold text-slate-700 shadow-sm hover:-translate-y-0.5 hover:border-brand-200 hover:text-brand-700"
-            >
-              <ShieldCheck className="h-4 w-4" />
-              Admin portal
-            </Link>
           </div>
-
           <div className="mt-9 flex flex-wrap gap-x-6 gap-y-3 text-sm font-medium text-slate-500">
             <span className="inline-flex items-center gap-2">
               <CheckCircle2 className="h-4 w-4 text-emerald-500" />

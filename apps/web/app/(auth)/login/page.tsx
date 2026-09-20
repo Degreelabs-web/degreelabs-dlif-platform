@@ -25,14 +25,20 @@ import { DegreeLabsLogo } from "@/components/brand/DegreeLabsLogo";
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const initialRole = searchParams.get("role") || "student";
   const redirectUrl = searchParams.get("redirect");
 
+  const portalRole =
+    (process.env.NEXT_PUBLIC_PORTAL_ROLE || "student") as
+    | "student"
+    | "mentor"
+    | "admin";
+
   // Step state
-  const [step, setStep] = useState<"credentials" | "two_factor">("credentials");
+  const [step, setStep] =
+    useState<"credentials" | "two_factor">("credentials");
 
   // Credentials state
-  const [activeTab, setActiveTab] = useState<string>(initialRole);
+  const activeTab = portalRole;
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -244,56 +250,6 @@ function LoginForm() {
           </>
         )}
       </div>
-
-      {/* Role Selection Tabs (Only shown in credentials step) */}
-      {step === "credentials" && (
-        <div className="grid grid-cols-3 gap-1.5 rounded-2xl border border-brand-100/70 bg-brand-100/60 p-1.5 text-xs font-semibold shadow-inner">
-          <button
-            type="button"
-            onClick={() => {
-              setActiveTab("student");
-              setError(null);
-            }}
-            className={`flex items-center justify-center gap-1.5 rounded-lg py-2 transition ${activeTab === "student"
-              ? "bg-white text-brand-700 shadow-sm ring-1 ring-brand-100"
-              : "text-slate-600 hover:bg-white/50 hover:text-brand-700"
-              }`}
-          >
-            <UsersRound className="h-3.5 w-3.5" />
-            Student
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              setActiveTab("mentor");
-              setError(null);
-            }}
-            className={`flex items-center justify-center gap-1.5 rounded-lg py-2 transition ${activeTab === "mentor"
-              ? "bg-white text-brand-700 shadow-sm ring-1 ring-brand-100"
-              : "text-slate-600 hover:bg-white/50 hover:text-brand-700"
-              }`}
-          >
-            <UserRound className="h-3.5 w-3.5" />
-            Mentor
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              setActiveTab("admin");
-              setError(null);
-            }}
-            className={`flex items-center justify-center gap-1.5 rounded-lg py-2 transition ${activeTab === "admin"
-              ? "bg-white text-brand-700 shadow-sm ring-1 ring-brand-100"
-              : "text-slate-600 hover:bg-white/50 hover:text-brand-700"
-              }`}
-          >
-            <ShieldCheck className="h-3.5 w-3.5" />
-            Admin
-          </button>
-        </div>
-      )}
 
       {/* Error Alert */}
       {error && (
