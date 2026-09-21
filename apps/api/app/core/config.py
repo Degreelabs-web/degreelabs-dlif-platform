@@ -8,7 +8,7 @@ class Settings(BaseSettings):
     app_version: str = "0.1.0"
     environment: str = "development"
 
-    cors_origins: str = "http://localhost:3000"
+    cors_origins: str = "http://localhost:3000","http://localhost:3001","http://localhost:3002"
 
     database_url: str = ""
 

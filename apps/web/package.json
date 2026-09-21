@@ -6,7 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "dev:student": "cross-env NEXT_PUBLIC_PORTAL_ROLE=student NEXT_DIST_DIR=.next-student next dev -p 3000",
+    "dev:admin": "cross-env NEXT_PUBLIC_PORTAL_ROLE=admin NEXT_DIST_DIR=.next-admin next dev -p 3001",
+    "dev:mentor": "cross-env NEXT_PUBLIC_PORTAL_ROLE=mentor NEXT_DIST_DIR=.next-mentor next dev -p 3002",
+    "dev:all": "concurrently -n student,admin,mentor -c blue,magenta,green \"npm:dev:student\" \"npm:dev:admin\" \"npm:dev:mentor\""
   },
   "dependencies": {
     "lucide-react": "^1.43.0",
@@ -19,6 +23,8 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "concurrently": "^10.0.5",
+    "cross-env": "^10.1.0",
     "eslint": "^9",
     "eslint-config-next": "16.3.4",
     "tailwindcss": "^4",
