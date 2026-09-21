@@ -97,6 +97,178 @@ class EmailDeliveryService:
         except (OSError, ValueError, smtplib.SMTPException) as exc:
             raise EmailDeliveryError("The password setup email could not be delivered.") from exc
 
+    def send_student_password_setup_link(
+        self,
+        recipient_email: str,
+        full_name: str,
+        setup_link: str,
+    ) -> None:
+        self._validate_configuration()
+
+        try:
+            message = EmailMessage()
+
+            message["Subject"] = "Activate your DegreeLabs student account"
+            message["From"] = (
+                f"{self.config.smtp_from_name} "
+                f"<{self.config.smtp_from_email}>"
+            )
+            message["To"] = recipient_email
+
+            message.set_content(
+                "\n".join(
+                    [
+                        f"Hello {full_name},",
+                        "",
+                        "Your DegreeLabs student account has been created.",
+                        "",
+                        f"Username: {recipient_email}",
+                        "",
+                        "Use the secure link below to set your password:",
+                        setup_link,
+                        "",
+                        "After setting your password, sign in to the Student Portal.",
+                        "You will be asked to complete two-factor authentication.",
+                        "",
+                        "If you did not expect this email, you can safely ignore it.",
+                    ]
+                )
+            )
+
+            safe_name = escape(full_name)
+            safe_email = escape(recipient_email)
+            safe_link = escape(setup_link, quote=True)
+
+            message.add_alternative(
+                f"""
+                <!doctype html>
+                <html>
+                <body style="
+                    margin:0;
+                    background:#f5f9ff;
+                    font-family:Arial,sans-serif;
+                    color:#10233f;
+                ">
+                    <div style="
+                    max-width:520px;
+                    margin:0 auto;
+                    padding:40px 20px;
+                    ">
+                    <div style="
+                        background:#ffffff;
+                        border:1px solid #d8e5f5;
+                        border-radius:20px;
+                        padding:32px;
+                    ">
+
+                        <div style="
+                        font-size:24px;
+                        font-weight:800;
+                        ">
+                        Degree<span style="color:#3978f6">Labs</span>
+                        </div>
+
+                        <p style="
+                        margin:24px 0 8px;
+                        font-size:18px;
+                        font-weight:700;
+                        ">
+                        Activate your student account
+                        </p>
+
+                        <p>
+                        Hello {safe_name},
+                        </p>
+
+                        <p>
+                        Your DegreeLabs student account has been created.
+                        </p>
+
+                        <p>
+                        <strong>Username</strong><br>
+                        {safe_email}
+                        </p>
+
+                        <p>
+                        Create your password using the secure link below.
+                        </p>
+
+                        <p style="margin:28px 0">
+                        <a
+                            href="{safe_link}"
+                            style="
+                            display:inline-block;
+                            background:#2563eb;
+                            color:#ffffff;
+                            padding:14px 22px;
+                            border-radius:10px;
+                            text-decoration:none;
+                            font-weight:700;
+                            "
+                        >
+                            Set Your Password
+                        </a>
+                        </p>
+
+                        <p style="
+                        color:#58708e;
+                        font-size:14px;
+                        line-height:1.6;
+                        ">
+                        After setting your password, sign in to the Student
+                        Portal. You will complete two-factor authentication
+                        during sign in.
+                        </p>
+
+                        <p style="
+                        color:#58708e;
+                        font-size:14px;
+                        line-height:1.6;
+                        ">
+                        This is a secure single-use password setup link.
+                        DegreeLabs will never email you your password.
+                        </p>
+
+                    </div>
+                    </div>
+                </body>
+                </html>
+                """,
+                subtype="html",
+            )
+
+            if self.config.smtp_use_ssl:
+                client = smtplib.SMTP_SSL(
+                    self.config.smtp_host,
+                    self.config.smtp_port,
+                    timeout=self.config.smtp_timeout_seconds,
+                    context=ssl.create_default_context(),
+                )
+
+                self._send_and_close(
+                    client,
+                    message,
+                    use_tls=False,
+                )
+
+            else:
+                client = smtplib.SMTP(
+                    self.config.smtp_host,
+                    self.config.smtp_port,
+                    timeout=self.config.smtp_timeout_seconds,
+                )
+
+                self._send_and_close(
+                    client,
+                    message,
+                    use_tls=self.config.smtp_use_tls,
+                )
+
+        except (OSError, ValueError, smtplib.SMTPException) as exc:
+            raise EmailDeliveryError(
+                "The student account setup email could not be delivered."
+            ) from exc
+
     def _deliver_message(self, message: EmailMessage) -> None:
         self._validate_configuration()
         if self.config.smtp_use_ssl:

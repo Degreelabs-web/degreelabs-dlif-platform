@@ -166,17 +166,17 @@ class SupabaseAdminService:
         """Ask Supabase Auth to mint a short-lived, single-use recovery URL."""
         if not redirect_to:
             raise SupabaseAdminError(
-                "MENTOR_PASSWORD_SETUP_REDIRECT_URL is not configured."
+                "Password setup redirect URL is not configured."
             )
         try:
             response = httpx.post(
                 f"{self.base_url}/auth/v1/admin/generate_link",
                 headers=self.headers,
-                json={
-                    "type": "recovery",
-                    "email": email.strip().lower(),
-                    "options": {"redirect_to": redirect_to},
-                },
+            json={
+                "type": "recovery",
+                "email": email.strip().lower(),
+                "redirect_to": redirect_to,
+            },
                 timeout=15,
             )
         except httpx.HTTPError as exc:
