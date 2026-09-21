@@ -92,11 +92,11 @@ export default function AdminSessionsPage() {
   const [sessionData, setSessionData] = useState({
     cohort_id: "",
     week_number: 1,
-    session_number: 1,
-    title: "",
+    session_number: 100,
+    title: "Induction on DLIF",
     description: "",
     agenda: "",
-    session_type: "workshop",
+    session_type: "induction",
     facilitator_name: "",
     scheduled_at: "",
     duration_minutes: 90,
@@ -104,7 +104,7 @@ export default function AdminSessionsPage() {
     join_available_from: "",
     join_available_until: "",
     recording_url: "",
-    status: "draft",
+    status: "scheduled",
   });
 
   // Discover Curriculum Modal
@@ -248,7 +248,10 @@ export default function AdminSessionsPage() {
     setSessionFormError(null);
     setSessionData((prev) => ({
       ...prev,
-      title: "",
+      week_number: 1,
+      session_number: 100,
+      session_type: "induction",
+      title: "Induction on DLIF",
       description: "",
       agenda: "",
       facilitator_name: "",
@@ -257,7 +260,7 @@ export default function AdminSessionsPage() {
       join_available_from: "",
       join_available_until: "",
       recording_url: "",
-      status: "draft",
+      status: "scheduled",
     }));
     setIsCreateModalOpen(true);
   }
@@ -453,11 +456,10 @@ export default function AdminSessionsPage() {
         <button
           type="button"
           onClick={() => setActiveTab("sessions")}
-          className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${
-            activeTab === "sessions"
-              ? "bg-white text-slate-900 shadow-sm border border-slate-200"
-              : "text-slate-500 hover:text-slate-700"
-          }`}
+          className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${activeTab === "sessions"
+            ? "bg-white text-slate-900 shadow-sm border border-slate-200"
+            : "text-slate-500 hover:text-slate-700"
+            }`}
         >
           <CalendarDays className="h-4 w-4" />
           Cohort Sessions
@@ -465,11 +467,10 @@ export default function AdminSessionsPage() {
         <button
           type="button"
           onClick={() => setActiveTab("slot-requests")}
-          className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${
-            activeTab === "slot-requests"
-              ? "bg-white text-slate-900 shadow-sm border border-slate-200"
-              : "text-slate-500 hover:text-slate-700"
-          }`}
+          className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${activeTab === "slot-requests"
+            ? "bg-white text-slate-900 shadow-sm border border-slate-200"
+            : "text-slate-500 hover:text-slate-700"
+            }`}
         >
           <Video className="h-4 w-4" />
           Mentor Slot Requests
@@ -484,186 +485,186 @@ export default function AdminSessionsPage() {
       {/* ══ TAB: Cohort Sessions ══ */}
       {activeTab === "sessions" && (
         <>
-      {/* Cohort Filter */}
-      <div className="flex flex-col gap-2 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:gap-3">
-        <label className="text-sm font-semibold text-slate-700">
-          Cohort Schedule:
-        </label>
-        <select
-          value={selectedCohort}
-          onChange={(e) => setSelectedCohort(e.target.value)}
-          className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none sm:w-auto"
-        >
-          <option value="">All Cohorts</option>
-          {cohorts.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name} ({c.academic_year})
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {/* Sessions Timeline List */}
-      {loading ? (
-        <div className="flex min-h-[300px] items-center justify-center rounded-2xl border border-slate-200 bg-white">
-          <div className="flex items-center gap-3 text-slate-500">
-            <Loader2 className="h-6 w-6 animate-spin text-slate-900" />
-            <span className="text-sm font-medium">Loading session timeline...</span>
-          </div>
-        </div>
-      ) : sessions.length === 0 ? (
-        <div className="rounded-2xl border border-slate-200 bg-white py-12 text-center">
-          <CalendarDays className="mx-auto h-10 w-10 text-slate-300" />
-          <h3 className="mt-3 text-base font-semibold text-slate-900">
-            No scheduled sessions
-          </h3>
-          <p className="mt-1 text-sm text-slate-500">
-            Generate the standard 4-week Discover track or schedule a standalone session.
-          </p>
-          <div className="mt-4 flex justify-center gap-3">
-            <button
-              onClick={() => setIsDiscoverModalOpen(true)}
-              className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700"
+          {/* Cohort Filter */}
+          <div className="flex flex-col gap-2 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:gap-3">
+            <label className="text-sm font-semibold text-slate-700">
+              Cohort Schedule:
+            </label>
+            <select
+              value={selectedCohort}
+              onChange={(e) => setSelectedCohort(e.target.value)}
+              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none sm:w-auto"
             >
-              <Sparkles className="h-4 w-4" />
-              Generate Discover Track
-            </button>
-            <button
-              onClick={openCreateModal}
-              className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
-            >
-              <PlusCircle className="h-4 w-4" />
-              Create Session
-            </button>
+              <option value="">All Cohorts</option>
+              {cohorts.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name} ({c.academic_year})
+                </option>
+              ))}
+            </select>
           </div>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {sessions.map((sess) => {
-            const cohort = cohorts.find((c) => c.id === sess.cohort_id);
-            return (
-              <div
-                key={sess.id}
-                className="flex flex-col justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:border-slate-300 sm:flex-row sm:items-center"
-              >
-                <div className="space-y-2">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="inline-flex items-center rounded-md bg-slate-900 px-2.5 py-0.5 text-xs font-bold text-white">
-                      Week {sess.week_number}
-                    </span>
-                    <span className="inline-flex items-center rounded-md bg-slate-100 px-2 py-0.5 text-xs font-medium capitalize text-slate-700">
-                      {sess.status}
-                    </span>
-                    <span className="text-xs text-slate-400">
-                      {cohort ? cohort.name : "Cohort"}
-                    </span>
-                  </div>
 
-                  <h3 className="text-lg font-bold text-slate-900">
-                    {sess.title}
-                  </h3>
-
-                  <p className="max-w-2xl text-xs text-slate-600 leading-relaxed">
-                    {sess.description}
-                  </p>
-
-                  <div className="flex flex-wrap items-center gap-4 pt-1 text-xs text-slate-500">
-                    <div className="flex items-center gap-1.5">
-                      <CalendarDays className="h-3.5 w-3.5" />
-                      <span>
-                        {sess.scheduled_at
-                          ? new Date(sess.scheduled_at).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })
-                          : "Schedule to be confirmed"}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-1.5">
-                      <Clock className="h-3.5 w-3.5" />
-                      <span>{sess.duration_minutes} mins</span>
-                    </div>
-
-                    {sess.tasks && (
-                      <div className="flex items-center gap-1.5">
-                        <ListTodo className="h-3.5 w-3.5 text-indigo-600" />
-                        <span>{sess.tasks.length} task(s)</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  {/* Meet Status Chip */}
-                  {sess.meet_status === "scheduled" && sess.meet_link ? (
-                    <div className="flex items-center gap-1">
-                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 border border-emerald-200">
-                        <CheckCircle2 className="h-3 w-3" />
-                        Meet: Scheduled
-                      </span>
-                      <button
-                        onClick={() => handleCopyMeetLink(sess)}
-                        title="Copy Meet link"
-                        className="rounded p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100"
-                      >
-                        {copiedMeetId === sess.id ? (
-                          <Check className="h-3.5 w-3.5 text-emerald-600" />
-                        ) : (
-                          <Copy className="h-3.5 w-3.5" />
-                        )}
-                      </button>
-                    </div>
-                  ) : sess.meet_status === "failed" ? (
-                    <button
-                      onClick={() => handleRetryMeet(sess)}
-                      disabled={retryingMeetId === sess.id}
-                      className="inline-flex items-center gap-1.5 rounded-full bg-rose-50 px-2.5 py-0.5 text-xs font-semibold text-rose-700 border border-rose-200 hover:bg-rose-100 disabled:opacity-60"
-                    >
-                      {retryingMeetId === sess.id ? (
-                        <Loader2 className="h-3 w-3 animate-spin" />
-                      ) : (
-                        <RefreshCw className="h-3 w-3" />
-                      )}
-                      Meet: Failed — Retry
-                    </button>
-                  ) : sess.scheduled_at && sess.meet_status === "not_scheduled" ? (
-                    <button
-                      onClick={() => handleRetryMeet(sess)}
-                      disabled={retryingMeetId === sess.id}
-                      className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-500 border border-slate-200 hover:bg-slate-200 disabled:opacity-60"
-                    >
-                      {retryingMeetId === sess.id ? (
-                        <Loader2 className="h-3 w-3 animate-spin" />
-                      ) : (
-                        <Video className="h-3 w-3" />
-                      )}
-                      Generate Meet
-                    </button>
-                  ) : null}
-
-                  {sess.meet_link && (
-                    <a
-                      href={sess.meet_link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
-                    >
-                      <Video className="h-3.5 w-3.5 text-emerald-600" />
-                      Join Call
-                      <ExternalLink className="h-3 w-3 text-slate-400" />
-                    </a>
-                  )}
-                  <EntityActionsMenu
-                    label={sess.title}
-                    onEdit={() => openEditModal(sess)}
-                    onDelete={() => handleDeleteSession(sess)}
-                    deleteLabel={deletingId === sess.id ? "Deleting..." : "Delete"}
-                  />
-                </div>
+          {/* Sessions Timeline List */}
+          {loading ? (
+            <div className="flex min-h-[300px] items-center justify-center rounded-2xl border border-slate-200 bg-white">
+              <div className="flex items-center gap-3 text-slate-500">
+                <Loader2 className="h-6 w-6 animate-spin text-slate-900" />
+                <span className="text-sm font-medium">Loading session timeline...</span>
               </div>
-            );
-          })}
-        </div>
-      )}
-      </>
+            </div>
+          ) : sessions.length === 0 ? (
+            <div className="rounded-2xl border border-slate-200 bg-white py-12 text-center">
+              <CalendarDays className="mx-auto h-10 w-10 text-slate-300" />
+              <h3 className="mt-3 text-base font-semibold text-slate-900">
+                No scheduled sessions
+              </h3>
+              <p className="mt-1 text-sm text-slate-500">
+                Generate the standard 4-week Discover track or schedule a standalone session.
+              </p>
+              <div className="mt-4 flex justify-center gap-3">
+                <button
+                  onClick={() => setIsDiscoverModalOpen(true)}
+                  className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700"
+                >
+                  <Sparkles className="h-4 w-4" />
+                  Generate Discover Track
+                </button>
+                <button
+                  onClick={openCreateModal}
+                  className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+                >
+                  <PlusCircle className="h-4 w-4" />
+                  Create Session
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {sessions.map((sess) => {
+                const cohort = cohorts.find((c) => c.id === sess.cohort_id);
+                return (
+                  <div
+                    key={sess.id}
+                    className="flex flex-col justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:border-slate-300 sm:flex-row sm:items-center"
+                  >
+                    <div className="space-y-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="inline-flex items-center rounded-md bg-slate-900 px-2.5 py-0.5 text-xs font-bold text-white">
+                          Week {sess.week_number}
+                        </span>
+                        <span className="inline-flex items-center rounded-md bg-slate-100 px-2 py-0.5 text-xs font-medium capitalize text-slate-700">
+                          {sess.status}
+                        </span>
+                        <span className="text-xs text-slate-400">
+                          {cohort ? cohort.name : "Cohort"}
+                        </span>
+                      </div>
+
+                      <h3 className="text-lg font-bold text-slate-900">
+                        {sess.title}
+                      </h3>
+
+                      <p className="max-w-2xl text-xs text-slate-600 leading-relaxed">
+                        {sess.description}
+                      </p>
+
+                      <div className="flex flex-wrap items-center gap-4 pt-1 text-xs text-slate-500">
+                        <div className="flex items-center gap-1.5">
+                          <CalendarDays className="h-3.5 w-3.5" />
+                          <span>
+                            {sess.scheduled_at
+                              ? new Date(sess.scheduled_at).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })
+                              : "Schedule to be confirmed"}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-1.5">
+                          <Clock className="h-3.5 w-3.5" />
+                          <span>{sess.duration_minutes} mins</span>
+                        </div>
+
+                        {sess.tasks && (
+                          <div className="flex items-center gap-1.5">
+                            <ListTodo className="h-3.5 w-3.5 text-indigo-600" />
+                            <span>{sess.tasks.length} task(s)</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      {/* Meet Status Chip */}
+                      {sess.meet_status === "scheduled" && sess.meet_link ? (
+                        <div className="flex items-center gap-1">
+                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 border border-emerald-200">
+                            <CheckCircle2 className="h-3 w-3" />
+                            Meet: Scheduled
+                          </span>
+                          <button
+                            onClick={() => handleCopyMeetLink(sess)}
+                            title="Copy Meet link"
+                            className="rounded p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100"
+                          >
+                            {copiedMeetId === sess.id ? (
+                              <Check className="h-3.5 w-3.5 text-emerald-600" />
+                            ) : (
+                              <Copy className="h-3.5 w-3.5" />
+                            )}
+                          </button>
+                        </div>
+                      ) : sess.meet_status === "failed" ? (
+                        <button
+                          onClick={() => handleRetryMeet(sess)}
+                          disabled={retryingMeetId === sess.id}
+                          className="inline-flex items-center gap-1.5 rounded-full bg-rose-50 px-2.5 py-0.5 text-xs font-semibold text-rose-700 border border-rose-200 hover:bg-rose-100 disabled:opacity-60"
+                        >
+                          {retryingMeetId === sess.id ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <RefreshCw className="h-3 w-3" />
+                          )}
+                          Meet: Failed — Retry
+                        </button>
+                      ) : sess.scheduled_at && sess.meet_status === "not_scheduled" ? (
+                        <button
+                          onClick={() => handleRetryMeet(sess)}
+                          disabled={retryingMeetId === sess.id}
+                          className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-500 border border-slate-200 hover:bg-slate-200 disabled:opacity-60"
+                        >
+                          {retryingMeetId === sess.id ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <Video className="h-3 w-3" />
+                          )}
+                          Generate Meet
+                        </button>
+                      ) : null}
+
+                      {sess.meet_link && (
+                        <a
+                          href={sess.meet_link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
+                        >
+                          <Video className="h-3.5 w-3.5 text-emerald-600" />
+                          Join Call
+                          <ExternalLink className="h-3 w-3 text-slate-400" />
+                        </a>
+                      )}
+                      <EntityActionsMenu
+                        label={sess.title}
+                        onEdit={() => openEditModal(sess)}
+                        onDelete={() => handleDeleteSession(sess)}
+                        deleteLabel={deletingId === sess.id ? "Deleting..." : "Delete"}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </>
       )}
 
       {/* ══ TAB: Mentor Slot Requests ══ */}
@@ -695,11 +696,10 @@ export default function AdminSessionsPage() {
                   key={f}
                   type="button"
                   onClick={() => setSlotFilter(f)}
-                  className={`rounded-lg px-3 py-1.5 capitalize transition-colors ${
-                    slotFilter === f
-                      ? "bg-white text-slate-900 shadow-sm border border-slate-200"
-                      : "text-slate-500 hover:text-slate-700"
-                  }`}
+                  className={`rounded-lg px-3 py-1.5 capitalize transition-colors ${slotFilter === f
+                    ? "bg-white text-slate-900 shadow-sm border border-slate-200"
+                    : "text-slate-500 hover:text-slate-700"
+                    }`}
                 >
                   {f}
                 </button>
@@ -734,11 +734,10 @@ export default function AdminSessionsPage() {
                         <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600">{req.cohort_name}</span>
                       )}
                       {/* Status badge */}
-                      <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-bold capitalize ${
-                        req.status === "approved" ? "bg-emerald-100 text-emerald-800 border-emerald-200"
+                      <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-bold capitalize ${req.status === "approved" ? "bg-emerald-100 text-emerald-800 border-emerald-200"
                         : req.status === "declined" ? "bg-red-100 text-red-700 border-red-200"
-                        : "bg-amber-100 text-amber-800 border-amber-200"
-                      }`}>{req.status}</span>
+                          : "bg-amber-100 text-amber-800 border-amber-200"
+                        }`}>{req.status}</span>
                     </div>
                     <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
                       <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{req.preferred_date}</span>
@@ -885,7 +884,7 @@ export default function AdminSessionsPage() {
             {/* Requested info */}
             <div className="mx-6 mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
               <p className="font-semibold mb-1">Team's Requested Slot</p>
-              <p>Date: {schedulingRequest.preferred_date} &nbsp; Time: {schedulingRequest.preferred_time_start?.slice(0,5)} – {schedulingRequest.preferred_time_end?.slice(0,5)}</p>
+              <p>Date: {schedulingRequest.preferred_date} &nbsp; Time: {schedulingRequest.preferred_time_start?.slice(0, 5)} – {schedulingRequest.preferred_time_end?.slice(0, 5)}</p>
               <p className="mt-1 italic">"{schedulingRequest.topic}"</p>
             </div>
             <form onSubmit={handleApproveSlot} className="p-6 space-y-4">
@@ -1030,43 +1029,88 @@ export default function AdminSessionsPage() {
                   </select>
                 </div>
 
-                <div>
+                <div className="sm:col-span-2">
                   <label className="block text-xs font-semibold text-slate-700">
-                    Week # *
+                    Session Slot *
                   </label>
-                  <input
-                    type="number"
-                    min={1}
-                    max={52}
+
+                  <select
                     required
-                    value={sessionData.week_number}
-                    onChange={(e) =>
+                    value={
+                      sessionData.session_type === "induction"
+                        ? "induction"
+                        : `${sessionData.week_number}-${((sessionData.session_number - 1) % 3) + 1}`
+                    }
+                    onChange={(e) => {
+                      const value = e.target.value;
+
+                      if (value === "induction") {
+                        setSessionData({
+                          ...sessionData,
+                          week_number: 1,
+                          session_number: 100,
+                          session_type: "induction",
+                          title: "Induction on DLIF",
+                        });
+
+                        return;
+                      }
+
+                      const [weekValue, sessionValue] =
+                        value.split("-").map(Number);
+
+                      const globalSessionNumber =
+                        (weekValue - 1) * 3 + sessionValue;
+
                       setSessionData({
                         ...sessionData,
-                        week_number: Number(e.target.value),
-                      })
-                    }
+                        week_number: weekValue,
+                        session_number: globalSessionNumber,
+
+                        // Session 1 & 2 = Learn + Work
+                        // Session 3 = Output + Review
+                        session_type:
+                          sessionValue === 3
+                            ? "output_review_gate"
+                            : "learn_work",
+
+                        // Clear induction title when switching away.
+                        title:
+                          sessionData.session_type === "induction"
+                            ? ""
+                            : sessionData.title,
+                      });
+                    }}
                     className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700">
-                    Session # *
-                  </label>
-                  <input
-                    type="number"
-                    min={1}
-                    max={100}
-                    required
-                    value={sessionData.session_number}
-                    onChange={(e) =>
-                      setSessionData({
-                        ...sessionData,
-                        session_number: Number(e.target.value),
-                      })
-                    }
-                    className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900"
-                  />
+                  >
+                    <option value="induction">
+                      Induction on DLIF
+                    </option>
+
+                    <optgroup label="Week 1">
+                      <option value="1-1">Session 1</option>
+                      <option value="1-2">Session 2</option>
+                      <option value="1-3">Session 3</option>
+                    </optgroup>
+
+                    <optgroup label="Week 2">
+                      <option value="2-1">Session 1</option>
+                      <option value="2-2">Session 2</option>
+                      <option value="2-3">Session 3</option>
+                    </optgroup>
+
+                    <optgroup label="Week 3">
+                      <option value="3-1">Session 1</option>
+                      <option value="3-2">Session 2</option>
+                      <option value="3-3">Session 3</option>
+                    </optgroup>
+
+                    <optgroup label="Week 4">
+                      <option value="4-1">Session 1</option>
+                      <option value="4-2">Session 2</option>
+                      <option value="4-3">Session 3</option>
+                    </optgroup>
+                  </select>
                 </div>
               </div>
 
@@ -1170,39 +1214,24 @@ export default function AdminSessionsPage() {
                 />
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700">
-                    Session Type
-                  </label>
-                  <select
-                    value={sessionData.session_type}
-                    onChange={(e) =>
-                      setSessionData({ ...sessionData, session_type: e.target.value })
-                    }
-                    className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm capitalize text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900"
-                  >
-                    <option value="workshop">Workshop</option>
-                    <option value="masterclass">Masterclass</option>
-                    <option value="review">Review</option>
-                    <option value="office_hours">Office hours</option>
-                    <option value="demo">Demo</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700">
-                    Facilitator
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Name of the session lead"
-                    value={sessionData.facilitator_name}
-                    onChange={(e) =>
-                      setSessionData({ ...sessionData, facilitator_name: e.target.value })
-                    }
-                    className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900"
-                  />
-                </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700">
+                  Facilitator
+                </label>
+
+                <input
+                  type="text"
+                  placeholder="Name of the session lead"
+                  value={sessionData.facilitator_name}
+                  onChange={(e) =>
+                    setSessionData({
+                      ...sessionData,
+                      facilitator_name: e.target.value,
+                    })
+                  }
+                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900"
+                />
               </div>
 
               <div className="grid gap-3 sm:grid-cols-2">

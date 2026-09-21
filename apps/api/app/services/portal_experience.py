@@ -547,21 +547,6 @@ class PortalExperienceService:
                             "logo_url": company.logo_url if company else None,
                         }
 
-        # If still no challenge assigned, provide default enterprise challenge spec
-        if not assigned_challenge:
-            assigned_challenge = {
-                "id": "dlif-challenge-default",
-                "title": "Scalable Supply Chain Operational Intelligence",
-                "company_name": "Apex Logistics Global",
-                "challenge_owner": "Director of Supply Chain Architecture",
-                "industry": "Enterprise Logistics & Mobility",
-                "description": "Cross-border supply chain visibility, telemetry fragmentation, and freight SLA reliability challenges.",
-                "problem_statement": "Apex Logistics operates multi-modal freight corridors across 14 hubs. Disjointed telematics systems and latency in exception handling cause costly SLA penalties and blindspots in multi-carrier handoffs. The team must discover the core root cause, frame the strategic choices, and architect an actionable solution blueprint.",
-                "expected_outcome": "Defensible Problem Framing Pack, WWHTBT Strategic Choice Matrix, and Execution Roadmap.",
-                "difficulty": "Enterprise Strategic",
-                "logo_url": None,
-            }
-
         # 5. Sessions completed count
         attendance_count = (
             self.db.scalar(
@@ -636,47 +621,102 @@ class PortalExperienceService:
             all_sessions[0] if all_sessions else {}
         )
 
-        # 8. Upcoming sessions schedule (next 3 sessions)
+        
+        # 8. Upcoming sessions
+        # Only show sessions that were actually scheduled in the DB by Admin.
+        # Never generate fallback dates for students.
         upcoming_sessions = []
         now = datetime.now(timezone.utc)
 
-        # Pre-fetch live DB sessions for the student's cohort so we can
-        # attach real scheduled_at times and Google Meet links.
-        db_sessions_by_number: dict[int, SessionModel] = {}
         if cohort:
-            db_sess_rows = self.db.scalars(
-                select(SessionModel).where(
+            db_sessions = self.db.scalars(
+                select(SessionModel)
+                .where(
                     SessionModel.cohort_id == cohort.id,
-                    SessionModel.status.in_(["published", "scheduled", "completed"]),
-                )
-            ).all()
-            db_sessions_by_number = {s.session_number: s for s in db_sess_rows}
-
-        for idx, s in enumerate(all_sessions):
-            if s["session_number"] >= current_session_number and len(upcoming_sessions) < 3:
-                offset_days = (idx * 2) + 1
-                session_time = now + timedelta(days=offset_days, hours=4)
-                # Use the real DB scheduled_at and meet_link when available.
-                db_s = db_sessions_by_number.get(s["session_number"])
-                real_time = db_s.scheduled_at if db_s and db_s.scheduled_at else session_time
-                real_meet_link = (db_s.meet_link if db_s else None) or None
-                upcoming_sessions.append({
-                    "session_number": s["session_number"],
-                    "week_number": s.get("week_number"),
-                    "title": s["title"],
-                    "session_type": s.get("session_type", "learn_work"),
-                    "type_label": s.get("type_label", "Learn & Work Session"),
-                    "focus": s.get("focus", ""),
-                    "required_working_evidence": s.get("required_working_evidence", ""),
-                    "duration_minutes": s.get("duration_minutes", 90),
-                    "scheduled_at": real_time.isoformat() if hasattr(real_time, "isoformat") else real_time,
-                    "formatted_date": (
-                        real_time.astimezone(timezone(timedelta(hours=5, minutes=30))).strftime("%A, %d %b, %I:%M %p IST")
-                        if hasattr(real_time, "astimezone")
-                        else (real_time.strftime("%A, %d %b, %I:%M %p UTC") if hasattr(real_time, "strftime") else str(real_time))
+                    SessionModel.status.in_(
+                        ["published", "scheduled", "completed"]
                     ),
-                    "meeting_link": real_meet_link,
-                })
+                    SessionModel.scheduled_at.is_not(None),
+                    SessionModel.scheduled_at >= (
+                        now - timedelta(hours=2)
+                    ),
+                )
+                .order_by(SessionModel.scheduled_at.asc())
+                .limit(3)
+            ).all()
+
+            for db_s in db_sessions:
+                curriculum_session = next(
+                    (
+                        item
+                        for item in all_sessions
+                        if item["session_number"]
+                        == db_s.session_number
+                    ),
+                    {},
+                )
+
+                session_type = (
+                    db_s.session_type
+                    or curriculum_session.get(
+                        "session_type",
+                        "workshop",
+                    )
+                )
+
+                if session_type == "output_review_gate":
+                    type_label = "Quality Gate & Review Session"
+                elif session_type == "mentor_session":
+                    type_label = "Mentor Session"
+                elif session_type == "output_review":
+                    type_label = "Output Review"
+                else:
+                    type_label = "Learn & Work Session"
+
+                upcoming_sessions.append(
+                    {
+                        "session_number": db_s.session_number,
+                        "week_number": db_s.week_number,
+                        "title": db_s.title,
+                        "session_type": session_type,
+                        "type_label": type_label,
+                        "focus": (
+                            db_s.description
+                            or db_s.agenda
+                            or ""
+                        ),
+                        "required_working_evidence": (
+                            curriculum_session.get(
+                                "required_working_evidence",
+                                "",
+                            )
+                        ),
+                        "duration_minutes": (
+                            db_s.duration_minutes or 90
+                        ),
+                        "scheduled_at": (
+                            db_s.scheduled_at.isoformat()
+                        ),
+                        "formatted_date": (
+                            db_s.scheduled_at
+                            .astimezone(
+                                timezone(
+                                    timedelta(
+                                        hours=5,
+                                        minutes=30,
+                                    )
+                                )
+                            )
+                            .strftime(
+                                "%A, %d %b, %I:%M %p IST"
+                            )
+                        ),
+                        "meeting_link": (
+                            db_s.meet_link
+                            or db_s.meeting_url
+                        ),
+                    }
+                )
 
         # Prepend active approved mentor slot consultations for this team
         if team:
@@ -755,27 +795,35 @@ class PortalExperienceService:
                 "full_name": user.full_name,
                 "email": user.email,
                 "student_id": student.student_id,
-                "institution_name": institution.name if institution else "DegreeLabs Impact Network",
+                "institution_name": (
+                    institution.name
+                    if institution
+                    else None
+                ),
                 "status": user.status,
             },
-            "team": {
-                "id": str(team.id) if team else "unassigned",
-                "name": team.name if team else "Discover Fellow Squad",
-                "current_week": current_week_number,
-                "current_session": current_session_number,
-                "members_count": len(team_members_list) if team_members_list else 5,
-                "members": team_members_list,
-            },
-            "cohort": {
-                "name": cohort.name if cohort else "Discover Cohort 2026",
-                "status": cohort.status if cohort else "active",
-            },
-            "mentor": mentor_data or {
-                "full_name": "Senior Enterprise Advisor",
-                "designation": "Dedicated Strategy Mentor",
-                "company_name": "DegreeLabs Mentor Council",
-                "headshot_url": None,
-            },
+            "team": (
+                {
+                    "id": str(team.id),
+                    "name": team.name,
+                    "current_week": current_week_number,
+                    "current_session": current_session_number,
+                    "members_count": len(team_members_list),
+                    "members": team_members_list,
+                }
+                if team
+                else None
+            ),
+            "cohort": (
+                {
+                    "id": str(cohort.id),
+                    "name": cohort.name,
+                    "status": cohort.status,
+                }
+                if cohort
+                else None
+            ),
+            "mentor": mentor_data,
             "assigned_challenge": assigned_challenge,
             "current_week": current_week_obj,
             "current_session": current_session_obj,
@@ -790,7 +838,11 @@ class PortalExperienceService:
                 "total_sessions": 12,
                 "completed_outputs": sum(1 for w in enriched_weeks if w.get("gate_status") == "passed"),
                 "total_outputs": 4,
-                "assigned_mentor": mentor_data["full_name"] if mentor_data else "Assigned Dedicated Mentor",
+                "assigned_mentor": (
+                    mentor_data["full_name"]
+                    if mentor_data
+                    else None
+                ),
             },
         }
 

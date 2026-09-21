@@ -112,35 +112,40 @@ export default function Sidebar({
         className={`fixed inset-y-0 left-0 z-50 flex flex-col overflow-hidden bg-gradient-to-b from-[#150c2e] via-[#1e1042] to-[#2a1454] text-white shadow-2xl border-r border-white/10 transition-[transform,width] duration-300 lg:sticky lg:top-0 lg:h-screen lg:translate-x-0 lg:shadow-none ${open ? "translate-x-0" : "-translate-x-full"
           } ${desktopCollapsed ? "lg:w-20" : "lg:w-[270px]"}`}
       >
-        {/* Brand Header */}
+        {/* Brand Header — 80px tall so its bottom edge lines up with the top bar */}
         <div
-          className={`relative flex h-24 items-center border-b border-white/10 ${desktopCollapsed ? "justify-center px-3" : "px-4"
+          className={`relative flex h-20 shrink-0 items-center border-b border-white/10 bg-gradient-to-b from-white/[0.06] to-transparent px-3 ${desktopCollapsed ? "justify-center" : "justify-between gap-3"
             }`}
         >
+          {/* Soft brand glow */}
+          <div className="pointer-events-none absolute -left-10 -top-14 h-32 w-32 rounded-full bg-violet-500/25 blur-3xl" />
+
           {desktopCollapsed ? (
             <Link
               href="/student"
               onClick={onClose}
-              className="flex h-12 w-12 items-center justify-center rounded-xl bg-white p-1.5 shadow-md shadow-violet-950/20"
+              className="relative flex h-11 w-11 shrink-0 rounded-xl bg-gradient-to-br from-orange-300 via-fuchsia-300 to-violet-400 p-[1.5px] shadow-[0_10px_28px_-10px_rgba(240,101,61,0.6)] transition hover:brightness-110"
               aria-label="DegreeLabs Discover"
             >
-              <Image
-                src="/icon.png"
-                alt="DegreeLabs"
-                width={420}
-                height={372}
-                className="h-full w-full object-contain"
-                priority
-              />
+              <span className="flex h-full w-full items-center justify-center rounded-[10px] bg-gradient-to-br from-orange-50 via-white to-violet-100 p-1.5">
+                <Image
+                  src="/icon.png"
+                  alt="DegreeLabs"
+                  width={420}
+                  height={372}
+                  className="h-full w-full object-contain"
+                  priority
+                />
+              </span>
             </Link>
           ) : (
             <Link
               href="/student"
               onClick={onClose}
-              className="flex min-w-0 flex-1 items-center gap-2 pr-10 group"
+              className="relative flex h-11 w-[156px] shrink-0 rounded-xl bg-gradient-to-br from-orange-300 via-fuchsia-300 to-violet-400 p-[1.5px] shadow-[0_10px_28px_-10px_rgba(240,101,61,0.6)] transition hover:brightness-110"
               aria-label="DegreeLabs Discover"
             >
-              <div className="flex h-12 w-[120px] shrink-0 items-center justify-center rounded-xl bg-white px-3 shadow-md shadow-violet-950/20">
+              <span className="flex h-full w-full items-center justify-center rounded-[10px] bg-gradient-to-br from-orange-50 via-white to-violet-100 px-3">
                 <Image
                   src="/degreelabs-logo.png"
                   alt="DegreeLabs"
@@ -149,44 +154,69 @@ export default function Sidebar({
                   className="max-h-7 w-auto max-w-full object-contain"
                   priority
                 />
-              </div>
-              <div className="w-16 shrink-0 leading-tight">
-                <div className="flex w-full items-center justify-center whitespace-nowrap rounded-md px-1.5 py-0.5 text-[10px] font-black uppercase tracking-[0.08em] text-white" style={{ background: "linear-gradient(135deg, #7c3aed, #f0653d)" }}>
-                  Discover
-                </div>
-                <div className="mt-1 text-center text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-400">
-                  Capability Engine
-                </div>
-              </div>
+              </span>
             </Link>
           )}
 
-          <button
-            type="button"
-            onClick={onToggleDesktop}
-            className="absolute right-3 top-1/2 z-10 hidden h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-slate-400 transition hover:bg-white/10 hover:text-white lg:inline-flex"
-            aria-label={desktopCollapsed ? "Expand navigation" : "Collapse navigation"}
-          >
-            {desktopCollapsed ? (
-              <ChevronRight className="h-4 w-4" />
-            ) : (
-              <ChevronLeft className="h-4 w-4" />
-            )}
-          </button>
-
-          <button
-            type="button"
-            onClick={onClose}
-            className="absolute right-3 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-slate-400 hover:bg-white/10 hover:text-white lg:hidden"
-            aria-label="Close navigation"
-          >
-            <X className="h-5 w-5" />
-          </button>
+          {!desktopCollapsed && (
+            <>
+              <button
+                type="button"
+                onClick={onToggleDesktop}
+                className="hidden h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/5 text-slate-300 ring-1 ring-white/10 transition hover:bg-white/10 hover:text-white lg:inline-flex"
+                aria-label="Collapse navigation"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                onClick={onClose}
+                className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/5 text-slate-300 ring-1 ring-white/10 transition hover:bg-white/10 hover:text-white lg:hidden"
+                aria-label="Close navigation"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </>
+          )}
         </div>
+
+        {/* Sub-header: product descriptor (expanded) / expand control (collapsed) */}
+        {desktopCollapsed ? (
+          <div className="flex shrink-0 items-center justify-center gap-2 pt-3">
+            <button
+              type="button"
+              onClick={onToggleDesktop}
+              className="hidden h-8 w-8 items-center justify-center rounded-lg bg-white/5 text-slate-300 ring-1 ring-white/10 transition hover:bg-white/10 hover:text-white lg:inline-flex"
+              aria-label="Expand navigation"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-white/5 text-slate-300 ring-1 ring-white/10 transition hover:bg-white/10 hover:text-white lg:hidden"
+              aria-label="Close navigation"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+        ) : (
+          <div className="flex shrink-0 items-center gap-2.5 px-3 pt-3.5">
+            <span
+              className="inline-flex items-center rounded-md px-2 py-1 text-[10px] font-black uppercase leading-none tracking-[0.08em] text-white"
+              style={{ background: "linear-gradient(135deg, #7c3aed, #f0653d)" }}
+            >
+              Discover
+            </span>
+            <span className="whitespace-nowrap text-[9px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+              Capability Engine
+            </span>
+          </div>
+        )}
 
         {/* Section title */}
         {!desktopCollapsed && (
-          <div className="px-5 pt-4 pb-1 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+          <div className="px-[26px] pt-6 pb-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-500">
             Discover Program (Active)
           </div>
         )}

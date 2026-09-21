@@ -249,23 +249,37 @@ export default function StudentTeamWorkspacePage() {
   }
 
   const team = dashboardData?.team || context?.team;
-  const teamName = team?.name || "Discover Fellow Squad";
+  if (!team) {
+    return (
+      <div className="page-container">
+        <div className="card-custom flex min-h-[320px] flex-col items-center justify-center text-center">
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-50 text-brand-600">
+            <Users className="h-7 w-7" />
+          </div>
+
+          <h2 className="mt-5 text-xl font-bold text-slate-900">
+            Team assignment pending
+          </h2>
+
+          <p className="mt-2 max-w-md text-sm leading-6 text-slate-500">
+            You have not been assigned to a fellowship team yet.
+            Your team workspace will appear here once the administrator
+            assigns you to a team.
+          </p>
+        </div>
+      </div>
+    );
+  }
+  const teamName = team.name;
   const cohortName = dashboardData?.cohort?.name || context?.cohort?.name || "Discover Cohort 2026";
   const currentWeek = dashboardData?.team?.current_week || 1;
   const mentor = dashboardData?.mentor || context?.mentor;
 
   // Prepare 5-member roster
-  const rawMembers = (context?.team?.members && context.team.members.length > 0)
-    ? context.team.members
-    : (dashboardData?.team?.members && dashboardData.team.members.length > 0)
-      ? dashboardData.team.members
-      : [
-        { name: "Midhun Krishna", role: "Fellow Lead" },
-        { name: "Pranav Madan Shekhar", role: "Member" },
-        { name: "Samatha Test Student", role: "Member" },
-        { name: "Sara Farhath", role: "Member" },
-        { name: "Shrihari Chikkodikar", role: "Member" },
-      ];
+  const rawMembers =
+    context?.team?.members?.length
+      ? context.team.members
+      : dashboardData?.team?.members ?? [];
 
   // Guarantee 5 items for the 5-member multidisciplinary grid with full profile fields
   const members: TeamMemberProfile[] = rawMembers.slice(0, 5).map((m, idx) => ({

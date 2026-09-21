@@ -15,7 +15,7 @@ import { UpcomingSessionsCard } from "@/components/student/UpcomingSessionsCard"
 import { CapabilitiesSnapshotCard } from "@/components/student/CapabilitiesSnapshotCard";
 
 
-import { UserRound, ChevronDown, ChevronUp, ShieldCheck, GraduationCap, Mail, Building2, BookOpen } from "lucide-react";
+import { UserRound, ChevronDown, ChevronUp, ShieldCheck, GraduationCap, Mail, Building2, BookOpen, UsersRound } from "lucide-react";
 
 export default function StudentDashboardPage() {
   const [dashboardData, setDashboardData] = useState<StudentDashboardData | null>(null);
@@ -96,14 +96,39 @@ export default function StudentDashboardPage() {
     { icon: UserRound, label: "Fellow Name", value: student.full_name },
     { icon: Mail, label: "Email Address", value: student.email },
     { icon: Building2, label: "Assigned Institution", value: student.institution_name },
-    { icon: BookOpen, label: "Fellowship Cohort", value: cohort.name },
+    {
+      icon: BookOpen,
+      label: "Fellowship Cohort",
+      value: cohort?.name || "Not assigned yet",
+    },
   ];
 
   return (
     <div className="space-y-6 pb-12">
 
       {/* 1. Header */}
-      <StudentDashboardHeader data={dashboardData} />
+      {team ? (
+        <StudentDashboardHeader data={dashboardData} />
+      ) : (
+        <div className="card-custom">
+          <div className="flex items-start gap-4">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-600">
+              <UsersRound className="h-6 w-6" />
+            </div>
+
+            <div>
+              <h1 className="text-xl font-bold text-slate-900">
+                Welcome, {student.full_name}
+              </h1>
+
+              <p className="mt-1 text-sm text-slate-600">
+                Your student account is active. Your fellowship assignments
+                will appear here as they are configured by the program team.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 2. Next Action Banner */}
       {dashboardData.next_action && (
@@ -111,19 +136,34 @@ export default function StudentDashboardPage() {
       )}
 
       {/* 3. 4-Week Milestone Progress Bar */}
-      <FourWeekMilestoneProgressBar
-        weeks={dashboardData.weeks}
-        cohortName={cohort?.name}
-      />
+      {cohort && (
+        <FourWeekMilestoneProgressBar
+          weeks={dashboardData.weeks}
+          cohortName={cohort.name}
+        />
+      )}
 
       {/* 4. Main Two-Column Row */}
       <div className="grid gap-6 lg:grid-cols-12">
         <div className="lg:col-span-7">
-          <AssignedChallengeCard
-            challenge={dashboardData.assigned_challenge}
-            metrics={dashboardData.metrics}
-            mentor={dashboardData.mentor}
-          />
+          {dashboardData.assigned_challenge ? (
+            <AssignedChallengeCard
+              challenge={dashboardData.assigned_challenge}
+              metrics={dashboardData.metrics}
+              mentor={dashboardData.mentor}
+            />
+          ) : (
+            <div className="card-custom h-full">
+              <h3 className="text-base font-bold text-slate-900">
+                Project assignment pending
+              </h3>
+
+              <p className="mt-2 text-sm text-slate-500">
+                Your assigned company challenge will appear here once your
+                team and project are configured by the administrator.
+              </p>
+            </div>
+          )}
         </div>
         <div className="lg:col-span-5">
           <UpcomingSessionsCard sessions={dashboardData.upcoming_sessions} />

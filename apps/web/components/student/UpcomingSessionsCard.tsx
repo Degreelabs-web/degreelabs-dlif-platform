@@ -25,7 +25,11 @@ function formatLocalDate(iso: string): string {
 
 export function UpcomingSessionsCard({ sessions }: Props) {
   // Countdown to next session
-  const nextSession = sessions[0];
+  const nextSession = sessions.find(
+    (session) =>
+      session.scheduled_at &&
+      new Date(session.scheduled_at).getTime() > Date.now()
+  );
   const [timeLeft, setTimeLeft] = useState<{
     days: number;
     hours: number;
@@ -34,26 +38,47 @@ export function UpcomingSessionsCard({ sessions }: Props) {
   }>({ days: 0, hours: 0, minutes: 0, seconds: 0 });
 
   useEffect(() => {
-    if (!nextSession?.scheduled_at) return;
+    const scheduledAt = nextSession?.scheduled_at;
+
+    if (!scheduledAt) {
+      setTimeLeft({
+        days: 0,
+        hours: 0,
+        minutes: 0,
+        seconds: 0,
+      });
+      return;
+    }
+
+    const target = new Date(scheduledAt).getTime();
 
     function calculateTime() {
-      const target = new Date(nextSession.scheduled_at!).getTime();
       const now = Date.now();
       const diff = Math.max(0, target - now);
 
       setTimeLeft({
         days: Math.floor(diff / (1000 * 60 * 60 * 24)),
-        hours: Math.floor((diff / (1000 * 60 * 60)) % 24),
-        minutes: Math.floor((diff / (1000 * 60)) % 60),
-        seconds: Math.floor((diff / 1000) % 60),
+        hours: Math.floor(
+          (diff / (1000 * 60 * 60)) % 24
+        ),
+        minutes: Math.floor(
+          (diff / (1000 * 60)) % 60
+        ),
+        seconds: Math.floor(
+          (diff / 1000) % 60
+        ),
       });
     }
 
     calculateTime();
-    const interval = setInterval(calculateTime, 1000);
+
+    const interval = setInterval(
+      calculateTime,
+      1000
+    );
+
     return () => clearInterval(interval);
   }, [nextSession?.scheduled_at]);
-
   return (
     <div className="card-custom flex flex-col justify-between h-full space-y-4">
       <div>
@@ -125,12 +150,12 @@ export function UpcomingSessionsCard({ sessions }: Props) {
                   <div className="flex items-center justify-between gap-2">
                     <span
                       className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold ${isGate
-                          ? "bg-amber-100 text-amber-900 border border-amber-300"
-                          : s.session_type === "mentor_session"
-                            ? "bg-purple-100 text-purple-900 border border-purple-300"
-                            : s.session_type === "output_review"
-                              ? "bg-fuchsia-100 text-fuchsia-900 border border-fuchsia-300"
-                              : "bg-violet-100 text-violet-900 border border-violet-200"
+                        ? "bg-amber-100 text-amber-900 border border-amber-300"
+                        : s.session_type === "mentor_session"
+                          ? "bg-purple-100 text-purple-900 border border-purple-300"
+                          : s.session_type === "output_review"
+                            ? "bg-fuchsia-100 text-fuchsia-900 border border-fuchsia-300"
+                            : "bg-violet-100 text-violet-900 border border-violet-200"
                         }`}
                     >
                       {isGate && <ShieldAlert className="h-3 w-3" />}
@@ -175,7 +200,13 @@ export function UpcomingSessionsCard({ sessions }: Props) {
           ) : (
             <div className="text-center py-8 text-slate-400 text-sm">
               <Calendar className="h-8 w-8 mx-auto mb-2 opacity-50" />
-              <p>All scheduled sessions completed for this phase.</p>
+              <p className="font-semibold text-slate-600">
+                No upcoming sessions scheduled yet
+              </p>
+
+              <p className="mt-1 text-xs text-slate-400">
+                Sessions will appear here once they are scheduled by the program team.
+              </p>
             </div>
           )}
         </div>
