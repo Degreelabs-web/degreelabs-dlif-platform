@@ -8,7 +8,7 @@ class Settings(BaseSettings):
     app_version: str = "0.1.0"
     environment: str = "development"
 
-    cors_origins: str = "http://localhost:3000","http://localhost:3001","http://localhost:3002"
+    cors_origins: str = "http://localhost:3000,http://localhost:3001,http://localhost:3002"
 
     database_url: str = ""
 
@@ -48,6 +48,7 @@ class Settings(BaseSettings):
     # Exact URL allowed in Supabase Auth redirect URLs. Password setup links
     # are generated server-side and sent by the configured email provider.
     mentor_password_setup_redirect_url: str = ""
+    student_password_setup_redirect_url: str = ""
     enrollment_upload_max_mb: int = 10
 
     material_storage_bucket: str = "dlif-student-materials"

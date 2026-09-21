@@ -12,6 +12,13 @@ from app.services.supabase_admin import (
     SupabaseAdminError,
     SupabaseAdminService,
 )
+from datetime import datetime, timezone
+
+from app.core.config import settings
+from app.services.email_delivery import (
+    EmailDeliveryError,
+    EmailDeliveryService,
+)
 
 
 class StudentProvisioningError(Exception):
@@ -157,14 +164,16 @@ class StudentProvisioningService:
                 ) from exc
 
         supabase_user: dict | None = None
+        created_auth = False
 
         try:
-            # 3. Create Supabase Auth identity.
-            supabase_user = self.supabase.create_user(
-                email=email,
-                password=password,
-                full_name=full_name,
-                email_confirm=True,
+            # 3. Create pending Supabase Auth identity.
+            # Student will choose their own password from activation email.
+            supabase_user, created_auth = (
+                self.supabase.create_pending_student_user(
+                    email=email,
+                    full_name=full_name,
+                )
             )
 
             auth_user_id = supabase_user.get("id")
@@ -176,21 +185,19 @@ class StudentProvisioningService:
 
             user_id = UUID(auth_user_id)
 
-            # 4. Create application user using Auth UUID.
+            # 4. Create pending DLIF user.
             user = User(
                 id=user_id,
                 email=email,
                 full_name=full_name,
                 role="student",
-                status="active",
+                status="pending",
             )
 
             self.db.add(user)
-
-            # Make sure User constraints are checked before profile creation.
             self.db.flush()
 
-            # 5. Create student profile using the SAME UUID.
+            # 5. Create student profile.
             profile = StudentProfile(
                 user_id=user_id,
                 institution_id=institution_id,
@@ -205,15 +212,66 @@ class StudentProvisioningService:
                 pan_number=pan_number,
                 photo_url=photo_url,
                 document_url=document_url,
+                password_setup_status="pending",
             )
 
             self.db.add(profile)
 
-            # 6. Atomically commit application records.
+            # Commit student first.
             self.db.commit()
 
             self.db.refresh(user)
             self.db.refresh(profile)
+
+            # 6. Generate secure password setup link.
+            try:
+                setup_link = (
+                    self.supabase.generate_password_setup_link(
+                        email=email,
+                        redirect_to=(
+                            settings.student_password_setup_redirect_url
+                        ),
+                    )
+                )
+
+                # 7. Send activation email.
+                EmailDeliveryService(
+                    settings
+                ).send_student_password_setup_link(
+                    email,
+                    full_name,
+                    setup_link,
+                )
+
+                profile.password_setup_status = "sent"
+                profile.password_setup_sent_at = datetime.now(
+                    timezone.utc
+                )
+
+                self.db.commit()
+                self.db.refresh(profile)
+
+            except (
+                SupabaseAdminError,
+                EmailDeliveryError,
+                ValueError,
+            ):
+                # Email failure should NOT delete student.
+                # Keep account pending so activation can be resent later.
+                self.db.rollback()
+
+                profile = (
+                    self.db.query(StudentProfile)
+                    .filter(
+                        StudentProfile.user_id == user_id
+                    )
+                    .first()
+                )
+
+                if profile is not None:
+                    profile.password_setup_status = "failed"
+                    self.db.commit()
+                    self.db.refresh(profile)
 
             return user, profile
 
@@ -226,7 +284,11 @@ class StudentProvisioningService:
 
             # Compensating action:
             # Auth succeeded but application DB provisioning failed.
-            if supabase_user and supabase_user.get("id"):
+            if (
+                created_auth
+                and supabase_user
+                and supabase_user.get("id")
+            ):
                 try:
                     self.supabase.delete_user(
                         supabase_user["id"]

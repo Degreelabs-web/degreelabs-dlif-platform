@@ -36,7 +36,11 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts",
     ".next-student/types/**/*.ts",
-    ".next-student/dev/types/**/*.ts"
+    ".next-student/dev/types/**/*.ts",
+    ".next-mentor/types/**/*.ts",
+    ".next-mentor/dev/types/**/*.ts",
+    ".next-admin/types/**/*.ts",
+    ".next-admin/dev/types/**/*.ts"
   ],
   "exclude": [
     "node_modules"

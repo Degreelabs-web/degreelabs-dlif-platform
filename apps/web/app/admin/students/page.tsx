@@ -96,7 +96,6 @@ export default function AdminStudentsPage() {
     full_name: "",
     email: "",
     student_id: "",
-    password: "",
     phone: "",
     gender: "",
     current_year_semester: "",
@@ -164,19 +163,18 @@ export default function AdminStudentsPage() {
 
       const savedStudent = editingStudent
         ? await updateStudent(editingStudent.id, {
-            full_name: formData.full_name,
-            status: formData.status,
-            student_id: formData.student_id,
-            ...profileFields,
-          })
+          full_name: formData.full_name,
+          status: formData.status,
+          student_id: formData.student_id,
+          ...profileFields,
+        })
         : await provisionStudent({
-            institution_id: formData.institution_id,
-            full_name: formData.full_name,
-            email: formData.email,
-            student_id: formData.student_id,
-            password: formData.password || undefined,
-            ...profileFields,
-          });
+          institution_id: formData.institution_id,
+          full_name: formData.full_name,
+          email: formData.email,
+          student_id: formData.student_id,
+          ...profileFields,
+        });
 
       if (photoFile) {
         try {
@@ -184,8 +182,7 @@ export default function AdminStudentsPage() {
         } catch (photoError) {
           console.error("Failed to upload student profile photo", photoError);
           setFormError(
-            `Student details were saved, but the profile photo failed to upload: ${
-              photoError instanceof Error ? photoError.message : "Upload error"
+            `Student details were saved, but the profile photo failed to upload: ${photoError instanceof Error ? photoError.message : "Upload error"
             }`
           );
           setSubmitting(false);
@@ -230,7 +227,6 @@ export default function AdminStudentsPage() {
       full_name: "",
       email: "",
       student_id: "",
-      password: "",
       phone: "",
       gender: "",
       current_year_semester: "",
@@ -255,7 +251,6 @@ export default function AdminStudentsPage() {
       full_name: student.full_name,
       email: student.email,
       student_id: student.profile?.student_id || "",
-      password: "",
       phone: student.profile?.phone || "",
       gender: student.profile?.gender || "",
       current_year_semester: student.profile?.current_year_semester || "",
@@ -314,8 +309,7 @@ export default function AdminStudentsPage() {
       await loadData();
     } catch (err) {
       alert(
-        `Failed to update ${student.full_name}'s status: ${
-          err instanceof Error ? err.message : "Please try again."
+        `Failed to update ${student.full_name}'s status: ${err instanceof Error ? err.message : "Please try again."
         }`
       );
     } finally {
@@ -398,6 +392,7 @@ export default function AdminStudentsPage() {
             className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none"
           >
             <option value="">All Statuses</option>
+            <option value="pending">Pending Activation</option>
             <option value="active">Active</option>
             <option value="inactive">Inactive</option>
           </select>
@@ -515,11 +510,10 @@ export default function AdminStudentsPage() {
                               event.target.value as "active" | "inactive"
                             )
                           }
-                          className={`rounded-full border px-2.5 py-1 text-xs font-semibold capitalize outline-none transition disabled:cursor-wait disabled:opacity-60 ${
-                            student.status === "active"
-                              ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                              : "border-slate-200 bg-slate-100 text-slate-700"
-                          }`}
+                          className={`rounded-full border px-2.5 py-1 text-xs font-semibold capitalize outline-none transition disabled:cursor-wait disabled:opacity-60 ${student.status === "active"
+                            ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                            : "border-slate-200 bg-slate-100 text-slate-700"
+                            }`}
                         >
                           <option value="active">Active</option>
                           <option value="inactive">Inactive</option>
@@ -601,11 +595,10 @@ export default function AdminStudentsPage() {
                       {selectedStudent.full_name}
                     </h2>
                     <span
-                      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ring-1 ring-inset ${
-                        selectedStudent.status === "active"
-                          ? "bg-emerald-50 text-emerald-700 ring-emerald-600/20"
-                          : "bg-slate-100 text-slate-700 ring-slate-600/20"
-                      }`}
+                      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ring-1 ring-inset ${selectedStudent.status === "active"
+                        ? "bg-emerald-50 text-emerald-700 ring-emerald-600/20"
+                        : "bg-slate-100 text-slate-700 ring-slate-600/20"
+                        }`}
                     >
                       <span className="h-1.5 w-1.5 rounded-full bg-current" />
                       {selectedStudent.status}
@@ -979,21 +972,6 @@ export default function AdminStudentsPage() {
                   />
                 </div>
 
-                {!editingStudent && <div>
-                  <label className="block text-xs font-semibold text-slate-700">
-                    Temporary Password *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Set temporary password (min 8 chars)"
-                    value={formData.password}
-                    onChange={(e) =>
-                      setFormData({ ...formData, password: e.target.value })
-                    }
-                    className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900"
-                  />
-                </div>}
               </div>
 
               <div className="grid gap-3 sm:grid-cols-2">

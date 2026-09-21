@@ -85,6 +85,10 @@ class MentorOnboardingCompleteRequest(BaseModel):
             raise ValueError("Password must include a symbol.")
         return value
 
+class StudentOnboardingCompleteRequest(
+    MentorOnboardingCompleteRequest
+):
+    pass
 
 class UserLoginResponse(BaseModel):
     access_token: str | None = None

@@ -90,6 +90,17 @@ export async function completeMentorOnboarding(
   });
 }
 
+export async function completeStudentOnboarding(
+  password: string,
+  recoveryToken: string
+): Promise<UserSession> {
+  return apiClient<UserSession>("/auth/student-onboarding/complete", {
+    method: "POST",
+    token: recoveryToken,
+    body: JSON.stringify({ password }),
+  });
+}
+
 /**
  * Update the authenticated user's profile (name + student fields).
  * All fields are optional — only supply what changed.

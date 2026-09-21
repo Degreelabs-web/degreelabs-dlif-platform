@@ -404,7 +404,6 @@ export interface StudentProvisionRequest {
   student_id: string;
   email: string;
   full_name: string;
-  password?: string;
   phone?: string;
   course?: string;
   branch?: string;

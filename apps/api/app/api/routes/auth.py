@@ -23,6 +23,7 @@ from app.schemas.user import (
     TwoFactorVerifyRequest,
     UserLoginRequest,
     MentorOnboardingCompleteRequest,
+    StudentOnboardingCompleteRequest,
     UserLoginResponse,
     UserProfileUpdateRequest,
     UserProvisionRequest,
@@ -226,6 +227,88 @@ def login(
     "/mentor-onboarding/complete",
     response_model=UserProvisionResponse,
 )
+@router.post(
+    "/student-onboarding/complete",
+    response_model=UserProvisionResponse,
+)
+def complete_student_onboarding(
+    data: StudentOnboardingCompleteRequest,
+    token: dict = Depends(get_current_user_token),
+    db: Session = Depends(get_db),
+):
+    """
+    Activate a pending student after Supabase has verified
+    the secure password setup / recovery link.
+    """
+
+    user_id = _challenge_user_id(token)
+
+    user = db.get(User, user_id)
+
+    if user is None or user.role != "student":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=(
+                "This password setup link is not valid "
+                "for a student account."
+            ),
+        )
+
+    if user.status != "pending":
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                "This student account has already completed "
+                "onboarding or is unavailable."
+            ),
+        )
+
+    profile = (
+        db.query(StudentProfile)
+        .filter(StudentProfile.user_id == user.id)
+        .first()
+    )
+
+    if profile is None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                "The student profile is unavailable. "
+                "Please contact DegreeLabs support."
+            ),
+        )
+
+    try:
+        SupabaseAdminService().update_user(
+            str(user.id),
+            password=data.password,
+        )
+
+    except (RuntimeError, SupabaseAdminError) as exc:
+        logger.exception(
+            "Unable to complete student onboarding for user %s",
+            user.id,
+        )
+
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=(
+                "We could not save your password securely. "
+                "Please try again shortly."
+            ),
+        ) from exc
+
+    now = datetime.now(timezone.utc)
+
+    user.status = "active"
+
+    profile.password_setup_status = "completed"
+    profile.password_setup_completed_at = now
+
+    db.commit()
+    db.refresh(user)
+
+    return _build_user_response(user, db)
 def complete_mentor_onboarding(
     data: MentorOnboardingCompleteRequest,
     token: dict = Depends(get_current_user_token),

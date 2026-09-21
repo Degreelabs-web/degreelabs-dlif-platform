@@ -134,6 +134,28 @@ class SupabaseAdminService:
             ),
             True,
         )
+    
+    def create_pending_student_user(
+        self,
+        *,
+        email: str,
+        full_name: str,
+    ) -> tuple[dict, bool]:
+        normalized_email = email.strip().lower()
+
+        existing = self.get_user_by_email(normalized_email)
+
+        if existing:
+            return existing, False
+
+        return (
+            self.create_user(
+                email=normalized_email,
+                full_name=full_name,
+                email_confirm=True,
+            ),
+            True,
+        )
 
     def generate_password_setup_link(
         self,
