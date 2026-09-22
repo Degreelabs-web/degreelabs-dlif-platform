@@ -1,165 +1,204 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import {
   ArrowRight,
-  BriefcaseBusiness,
-  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
   LogIn,
-  ShieldCheck,
   Sparkles,
-  UserRound,
-  UsersRound,
 } from "lucide-react";
-import { DegreeLabsLogo } from "@/components/brand/DegreeLabsLogo";
 
-const journey = [
+const phases = [
   {
-    label: "Discover",
+    label: "Phase 1",
+    title: "Discover",
+    tagline: "Learn & explore",
     description: "Learn through real industry challenges.",
   },
   {
-    label: "Validate",
-    description: "Build and refine with expert mentors.",
+    label: "Phase 2",
+    title: "Validate",
+    tagline: "Build & test",
+    description: "Build and refine your solution with expert mentors.",
   },
   {
-    label: "Grow",
-    description: "Turn proof of work into opportunity.",
+    label: "Phase 3",
+    title: "Grow",
+    tagline: "Deliver & grow",
+    description: "Turn your proof of work into real opportunity.",
   },
 ];
-type PortalRole = "student" | "mentor" | "admin";
 
-const portalRole =
-  (process.env.NEXT_PUBLIC_PORTAL_ROLE || "student") as PortalRole;
-
-const portalConfig = {
-  student: {
-    label: "Enter student portal",
-    icon: UsersRound,
-  },
-  mentor: {
-    label: "Enter mentor portal",
-    icon: UserRound,
-  },
-  admin: {
-    label: "Enter admin portal",
-    icon: ShieldCheck,
-  },
-}[portalRole];
+const AUTO_ADVANCE_MS = 4000;
 
 export default function Home() {
-  const PortalIcon = portalConfig.icon;
+  const [activePhase, setActivePhase] = useState(phases.length - 1);
+
+  const goToPhase = (index: number) => {
+    setActivePhase((index + phases.length) % phases.length);
+  };
+
+  // Auto-advance the carousel; restarts whenever activePhase changes,
+  // so a manual click resets the timer instead of fighting it.
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setActivePhase((prev) => (prev + 1) % phases.length);
+    }, AUTO_ADVANCE_MS);
+    return () => clearTimeout(timer);
+  }, [activePhase]);
+
+  const phase = phases[activePhase];
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-slate-50">
-      <div className="pointer-events-none absolute -left-32 top-16 h-96 w-96 rounded-full bg-brand-300/20 blur-3xl" />
-      <div className="pointer-events-none absolute -right-32 top-1/3 h-[28rem] w-[28rem] rounded-full bg-brand-500/15 blur-3xl" />
-
-      <header className="relative z-20 border-b border-white/80 bg-white/80 backdrop-blur-xl">
-        <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-          <Link href="/" className="flex items-center rounded-xl">
-            <DegreeLabsLogo priority />
+    <main className="min-h-screen bg-slate-950">
+      {/* Header */}
+      <header className="border-b border-slate-800/60 bg-slate-950">
+        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6 lg:px-8">
+          <Link href="/" className="flex items-center">
+            <Image
+              src="/brand/degreelabs-logo.png"
+              alt="DegreeLabs — Learn. Solve. Grow."
+              width={220}
+              height={64}
+              priority
+              className="h-11 w-auto"
+            />
           </Link>
 
           <Link
             href="/login"
-            className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-violet-950/10 hover:-translate-y-0.5 hover:bg-brand-600"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-white px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-200"
           >
-            <LogIn className="h-4 w-4" />
+            <LogIn className="h-3.5 w-3.5" />
             Sign in
           </Link>
         </div>
       </header>
 
-      <section className="relative z-10 mx-auto grid min-h-[calc(100vh-5rem)] max-w-7xl items-center gap-14 px-4 py-16 sm:px-6 lg:grid-cols-[1.08fr_0.92fr] lg:px-8 lg:py-20">
-        <div>
-          <div className="inline-flex items-center gap-2 rounded-full border border-brand-200 bg-white/80 px-3.5 py-1.5 text-xs font-bold text-brand-700 shadow-sm backdrop-blur">
-            <Sparkles className="h-3.5 w-3.5 text-brand-500" />
-            Build real capability before graduation
-          </div>
-
-          <h1 className="mt-6 max-w-3xl text-5xl font-extrabold leading-[1.02] tracking-[-0.045em] text-slate-900 sm:text-6xl lg:text-7xl">
-            Learn by solving
-            <span className="block bg-gradient-to-r from-brand-600 via-brand-500 to-brand-400 bg-clip-text text-transparent">
-              what matters.
-            </span>
-          </h1>
-
-          <p className="mt-6 max-w-2xl text-base leading-7 text-slate-600 sm:text-lg sm:leading-8">
-            One connected workspace for students, mentors, institutions, and
-            industry partners to move from real-world challenges to credible
-            proof of work.
-          </p>
-
-          <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-            <Link
-              href="/login"
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-500 to-brand-600 px-5 py-3.5 text-sm font-bold text-white shadow-xl shadow-violet-500/20 hover:-translate-y-0.5"
-            >
-              <PortalIcon className="h-4 w-4" />
-              {portalConfig.label}
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-          </div>
-          <div className="mt-9 flex flex-wrap gap-x-6 gap-y-3 text-sm font-medium text-slate-500">
-            <span className="inline-flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-              Mentor guided
-            </span>
-            <span className="inline-flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-              Industry validated
-            </span>
-            <span className="inline-flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-              Portfolio ready
-            </span>
-          </div>
+      {/* Hero */}
+      <section className="mx-auto max-w-3xl px-4 pb-20 pt-20 text-center sm:px-6 lg:px-8">
+        <div className="inline-flex items-center gap-2 rounded-full border border-indigo-400/30 bg-indigo-500/10 px-3.5 py-1.5 text-xs font-semibold text-indigo-300">
+          <Sparkles className="h-3.5 w-3.5" />
+          DegreeLabs Impact Fellowship
         </div>
 
-        <div className="relative mx-auto w-full max-w-lg">
-          <div className="absolute -inset-5 rounded-[2.25rem] bg-gradient-to-br from-brand-300/30 to-brand-600/20 blur-2xl" />
-          <div className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-slate-900 p-6 shadow-2xl shadow-violet-950/25 sm:p-8">
-            <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-brand-400/20 blur-3xl" />
-            <div className="relative flex items-center justify-between">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-[0.16em] text-brand-300">
-                  Your growth pathway
-                </p>
-                <h2 className="mt-1 text-2xl font-bold text-white">
-                  Discover → Validate → Grow
-                </h2>
-              </div>
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/10 text-brand-300 ring-1 ring-white/10">
-                <BriefcaseBusiness className="h-5 w-5" />
-              </div>
-            </div>
+        <h1 className="mx-auto mt-6 max-w-2xl text-4xl font-bold leading-tight tracking-tight text-white sm:text-5xl">
+          Learn by solving{" "}
+          <span className="bg-gradient-to-r from-indigo-400 to-violet-400 bg-clip-text text-transparent">
+            what matters.
+          </span>
+        </h1>
 
-            <div className="relative mt-8 space-y-3">
-              {journey.map((stage, index) => (
-                <div
-                  key={stage.label}
-                  className="group flex items-center gap-4 rounded-2xl border border-white/10 bg-white/[0.06] p-4 hover:-translate-y-0.5 hover:bg-white/[0.1]"
-                >
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 text-sm font-extrabold text-white shadow-lg shadow-violet-950/20">
-                    {index + 1}
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-white">{stage.label}</h3>
-                    <p className="mt-0.5 text-sm text-violet-100/65">
-                      {stage.description}
-                    </p>
-                  </div>
-                </div>
+        <p className="mx-auto mt-5 max-w-xl text-base leading-7 text-slate-400">
+          A fellowship where students take on real company challenges, build
+          solutions with mentor guidance, and turn proof of work into
+          opportunity.
+        </p>
+
+        <Link
+          href="/login"
+          className="mt-8 inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-500 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-500/20 hover:-translate-y-0.5"
+        >
+          Sign in
+          <ArrowRight className="h-4 w-4" />
+        </Link>
+      </section>
+
+      {/* About */}
+      <section className="mx-auto max-w-3xl px-4 pb-20 text-center sm:px-6 lg:px-8">
+        <p className="text-xs font-semibold text-indigo-400">
+          About DegreeLabs
+        </p>
+        <h2 className="mt-2 text-2xl font-bold text-white sm:text-3xl">
+          What DegreeLabs is
+        </h2>
+
+        <div className="mt-6 rounded-2xl border border-slate-800 bg-slate-900/60 p-6 sm:p-8">
+          <p className="text-sm leading-7 text-slate-300 sm:text-base sm:leading-8">
+            DegreeLabs connects students with real companies and real
+            problems to solve. Instead of theory alone, you work in a small
+            team, guided by an industry mentor, to understand a business
+            challenge and build something a company can actually use —
+            turning what you learn into proof you can show.
+          </p>
+        </div>
+      </section>
+
+      {/* How it works */}
+      <section className="mx-auto max-w-3xl px-4 pb-24 text-center sm:px-6 lg:px-8">
+        <p className="text-xs font-semibold text-indigo-400">How it works</p>
+        <h2 className="mt-2 text-2xl font-bold text-white sm:text-3xl">
+          Three simple phases
+        </h2>
+
+        <div className="relative mt-6 overflow-hidden rounded-2xl border border-slate-800 bg-gradient-to-br from-slate-900 via-emerald-950 to-slate-900 p-8 sm:p-10">
+          <p className="text-xs font-semibold uppercase tracking-wide text-indigo-300">
+            {phase.label}
+          </p>
+          <h3 className="mt-2 text-2xl font-bold text-white sm:text-3xl">
+            {phase.title}
+          </h3>
+          <p className="mt-1 text-sm font-medium text-indigo-200/80">
+            {phase.tagline}
+          </p>
+          <p className="mx-auto mt-4 max-w-md text-sm leading-7 text-slate-400">
+            {phase.description}
+          </p>
+
+          <div className="mt-8 flex items-center justify-between border-t border-white/10 pt-5">
+            <div className="flex gap-2">
+              {phases.map((p, index) => (
+                <button
+                  key={p.title}
+                  onClick={() => goToPhase(index)}
+                  aria-label={`Go to ${p.title}`}
+                  aria-current={index === activePhase}
+                  className={`h-1.5 rounded-full transition-all ${index === activePhase
+                    ? "w-6 bg-indigo-400"
+                    : "w-3 bg-white/15 hover:bg-white/25"
+                    }`}
+                />
               ))}
             </div>
 
-            <div className="relative mt-6 rounded-2xl bg-gradient-to-r from-brand-500 to-brand-400 p-[1px]">
-              <div className="rounded-[15px] bg-slate-900/90 px-4 py-3 text-center text-sm font-semibold text-violet-50">
-                Capability that can be seen, reviewed, and trusted.
-              </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => goToPhase(activePhase - 1)}
+                aria-label="Previous phase"
+                className="flex h-8 w-8 items-center justify-center rounded-full border border-white/15 text-white/70 hover:bg-white/10 hover:text-white"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => goToPhase(activePhase + 1)}
+                aria-label="Next phase"
+                className="flex h-8 w-8 items-center justify-center rounded-full border border-white/15 text-white/70 hover:bg-white/10 hover:text-white"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
             </div>
           </div>
         </div>
       </section>
+
+      {/* Footer */}
+      <footer className="border-t border-slate-800/60 bg-slate-950 py-10">
+        <div className="mx-auto flex max-w-6xl flex-col items-center gap-3 px-4 sm:px-6 lg:px-8">
+          <Image
+            src="/brand/degreelabs-logo.png"
+            alt="DegreeLabs — Learn. Solve. Grow."
+            width={150}
+            height={38}
+            className="h-8 w-auto opacity-90"
+          />
+          <p className="text-xs text-slate-500">
+            © 2026 DegreeLabs. All rights reserved.
+          </p>
+        </div>
+      </footer>
     </main>
   );
 }
