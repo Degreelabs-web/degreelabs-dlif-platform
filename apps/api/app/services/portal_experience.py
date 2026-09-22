@@ -64,9 +64,16 @@ class PortalExperienceService:
                 except Exception:
                     photo_url = sp.photo_url
 
+            raw_role = (m.role or "").strip().lower()
+
             is_lead = bool(
                 getattr(m, "is_team_lead", False)
-                or (m.role and m.role.lower() in ["fellow lead", "lead", "team_lead"])
+                or raw_role in [
+                    "leader",
+                    "lead",
+                    "team_lead",
+                    "fellow lead",
+                ]
             )
             team_members_list.append({
                 "student_id": str(m.student_id),

@@ -107,6 +107,7 @@ class TeamService:
             TeamMember(
                 student_id=s_id,
                 role="leader" if s_id == data.leader_student_id else "member",
+                is_team_lead=(s_id == data.leader_student_id),
             )
             for s_id in all_students
         ]
@@ -207,10 +208,17 @@ class TeamService:
                 "Student is already in an active team in this cohort."
             )
 
+        normalized_role = (
+            "leader"
+            if data.role.strip().lower() == "leader"
+            else "member"
+        )
+
         member = TeamMember(
             team_id=team_id,
             student_id=data.student_id,
-            role=data.role,
+            role=normalized_role,
+            is_team_lead=(normalized_role == "leader"),
         )
 
         try:
@@ -233,7 +241,14 @@ class TeamService:
             return None
 
         if data.role is not None:
-            member.role = data.role
+            normalized_role = (
+                "leader"
+                if data.role.strip().lower() == "leader"
+                else "member"
+            )
+
+            member.role = normalized_role
+            member.is_team_lead = normalized_role == "leader"
 
         try:
             member = self.team_repo.update_member(member)

@@ -531,7 +531,7 @@ export default function StudentTeamWorkspacePage() {
                   <p className="mt-3 line-clamp-2 text-[11px] leading-snug text-slate-500">
                     {member.discipline}
                   </p>
-                  <span className="mt-2 text-[10px] font-semibold text-brand-600 opacity-0 transition-opacity group-hover:opacity-100">
+                  <span className="mt-2 text-[10px] font-semibold text-brand-600 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100">
                     View Profile &rarr;
                   </span>
                 </button>

@@ -80,7 +80,7 @@ export interface StudentDashboardMetrics {
   total_sessions: number;
   completed_outputs: number;
   total_outputs: number;
-  assigned_mentor: string;
+  assigned_mentor: string | null;
 }
 
 export interface StudentDashboardData {
@@ -115,19 +115,20 @@ export interface StudentDashboardData {
       photo_url?: string | null;
       batch_name?: string | null;
     }>;
-  };
+  } | null;
   cohort: {
+    id?: string;
     name: string;
     status: string;
-  };
+  } | null;
   mentor: {
     id?: string;
     full_name: string;
     designation: string;
     company_name: string;
     headshot_url?: string | null;
-  };
-  assigned_challenge: StudentDashboardChallenge;
+  } | null;
+  assigned_challenge: StudentDashboardChallenge | null;
   current_week: StudentDashboardWeek;
   current_session: StudentDashboardSession;
   weeks: StudentDashboardWeek[];

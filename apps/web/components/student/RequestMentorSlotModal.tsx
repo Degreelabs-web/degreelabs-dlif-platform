@@ -95,9 +95,9 @@ export function RequestMentorSlotModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-950/60 p-2 backdrop-blur-xs animate-in fade-in duration-200 sm:items-center sm:p-4">
       <div
-        className="relative w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 sm:p-7 shadow-2xl transition-all"
+        className="relative my-2 w-full max-w-lg max-h-[calc(100dvh-1rem)] overflow-y-auto rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl transition-all sm:my-4 sm:max-h-[calc(100dvh-2rem)] sm:p-7"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close Button */}
@@ -167,7 +167,7 @@ export function RequestMentorSlotModal({
             </div>
 
             {/* Preferred Time Window */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1.5">
                   <Clock className="h-3.5 w-3.5 text-violet-600" />
@@ -222,19 +222,19 @@ export function RequestMentorSlotModal({
             </div>
 
             {/* Action buttons */}
-            <div className="flex items-center justify-end gap-2.5 pt-2">
+            <div className="flex flex-col-reverse gap-2.5 pt-2 sm:flex-row sm:items-center sm:justify-end">
               <button
                 type="button"
                 onClick={onClose}
                 disabled={loading}
-                className="rounded-xl border border-slate-300 px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
+                className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50 sm:w-auto"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={loading}
-                className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-5 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-violet-500 disabled:opacity-50 transition-colors"
+                className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-violet-600 px-5 py-2.5 text-xs font-bold text-white shadow-xs transition-colors hover:bg-violet-500 disabled:opacity-50 sm:w-auto"
               >
                 {loading ? (
                   <>

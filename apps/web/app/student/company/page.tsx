@@ -160,7 +160,7 @@ export default function StudentCompanyPage() {
         </div>
 
         {/* Logo + identity */}
-        <div className="px-6 pb-7 sm:px-8">
+        <div className="px-4 pb-7 sm:px-8">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:gap-8">
             {/* Logo tile */}
             <div className="relative z-10 -mt-20 shrink-0 sm:-mt-24">
@@ -190,7 +190,7 @@ export default function StudentCompanyPage() {
                   </p>
                 )}
                 <div className="flex flex-wrap items-center gap-3">
-                  <h2 className="text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl lg:text-5xl">
+                  <h2 className="break-words text-2xl font-extrabold tracking-tight text-slate-900 sm:text-4xl lg:text-5xl">
                     {companyName}
                   </h2>
                   <StatusBadge variant="success">Active Partner</StatusBadge>
@@ -310,16 +310,19 @@ export default function StudentCompanyPage() {
               title="Your Assigned Challenge"
               icon={<Briefcase className="h-5 w-5" />}
               footerAction={
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-xs font-medium text-slate-400">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <span className="break-all text-xs font-medium text-slate-400 sm:break-normal">
                     Code: {project.code || "DISCOVER"}
                   </span>
+
                   <Link
                     href="/student/project"
-                    className="inline-flex items-center gap-1 text-xs font-bold text-brand-600 hover:text-brand-800 hover:underline"
+                    className="inline-flex items-start gap-1 text-xs font-bold leading-5 text-brand-600 hover:text-brand-800 hover:underline sm:items-center"
                   >
-                    <span>Inspect Problem Spec, Metrics &amp; Boundaries</span>
-                    <ArrowRight className="h-3.5 w-3.5" />
+                    <span className="min-w-0 break-words">
+                      Inspect Problem Spec, Metrics &amp; Boundaries
+                    </span>
+                    <ArrowRight className="mt-0.5 h-3.5 w-3.5 shrink-0 sm:mt-0" />
                   </Link>
                 </div>
               }

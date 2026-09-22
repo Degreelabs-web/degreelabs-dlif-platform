@@ -78,17 +78,19 @@ export default function StudentChallengePage() {
                 </StatusBadge>
               }
               headerAction={
-                <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
-                  <Building2 className="h-3.5 w-3.5" />
-                  <span className="font-semibold text-slate-700">{c.company_name}</span>
+                <div className="flex max-w-[140px] items-center gap-1.5 text-xs font-medium text-slate-500 sm:max-w-none">
+                  <Building2 className="h-3.5 w-3.5 shrink-0" />
+                  <span className="truncate font-semibold text-slate-700">
+                    {c.company_name}
+                  </span>
                 </div>
               }
               footerAction={
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <span className="text-xs text-slate-400">Sprint Track</span>
                   <Link
                     href="/student/submissions"
-                    className="btn-gradient-primary !py-2 !px-3.5 !text-xs"
+                    className="btn-gradient-primary w-full justify-center !px-3.5 !py-2 !text-xs sm:w-auto"
                   >
                     <FileCheck2 className="h-3.5 w-3.5" />
                     <span>Turn in Solution</span>
@@ -97,14 +99,14 @@ export default function StudentChallengePage() {
                 </div>
               }
             >
-              <h3 className="text-lg font-bold text-slate-900">{c.title}</h3>
-              <p className="mt-2 text-xs leading-relaxed text-slate-600 line-clamp-2">
+              <h3 className="break-words text-base font-bold text-slate-900 sm:text-lg">{c.title}</h3>
+              <p className="mt-2 line-clamp-3 text-xs leading-relaxed text-slate-600 sm:line-clamp-2">
                 {c.description}
               </p>
 
               <div className="mt-4 rounded-xl bg-slate-50 p-3.5 border border-slate-100">
                 <h4 className="text-xs font-semibold text-slate-900">Problem Statement</h4>
-                <p className="mt-1 text-xs leading-relaxed text-slate-600 line-clamp-3">
+                <p className="mt-1 line-clamp-4 text-xs leading-relaxed text-slate-600 sm:line-clamp-3">
                   {c.problem_statement}
                 </p>
               </div>

@@ -96,7 +96,7 @@ export function AssignedChallengeCard({ challenge, metrics, mentor }: Props) {
                 {parts.map((part, i) => {
                   const colonIdx = part.indexOf(":");
                   const label = colonIdx !== -1 ? part.slice(0, colonIdx).trim() : `Week ${i + 1}`;
-                  const desc  = colonIdx !== -1 ? part.slice(colonIdx + 1).trim() : part;
+                  const desc = colonIdx !== -1 ? part.slice(colonIdx + 1).trim() : part;
                   return (
                     <div key={i} className="flex items-start gap-2">
                       <span className="mt-0.5 shrink-0 inline-flex items-center rounded-md bg-brand-50 border border-brand-200 px-1.5 py-0.5 text-[10px] font-bold text-brand-700 whitespace-nowrap">
@@ -129,21 +129,39 @@ export function AssignedChallengeCard({ challenge, metrics, mentor }: Props) {
         </div>
 
         <div className="rounded-xl border border-slate-200 bg-white p-3 text-center shadow-xs">
-          <p className="text-[11px] font-medium text-slate-500">Assigned Mentor</p>
-          <div className="flex items-center justify-center gap-1.5 mt-1">
-            {mentor.headshot_url ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={mentor.headshot_url}
-                alt={mentor.full_name}
-                className="h-5 w-5 shrink-0 rounded-full object-cover border border-slate-200"
-              />
-            ) : null}
-            <p className="text-sm font-bold text-violet-800 truncate" title={mentor.full_name}>
-              {mentor.full_name}
+          <p className="text-[11px] font-medium text-slate-500">
+            Assigned Mentor
+          </p>
+
+          {mentor ? (
+            <>
+              <div className="mt-1 flex items-center justify-center gap-1.5">
+                {mentor.headshot_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={mentor.headshot_url}
+                    alt={mentor.full_name}
+                    className="h-5 w-5 shrink-0 rounded-full border border-slate-200 object-cover"
+                  />
+                ) : null}
+
+                <p
+                  className="truncate text-sm font-bold text-violet-800"
+                  title={mentor.full_name}
+                >
+                  {mentor.full_name}
+                </p>
+              </div>
+
+              <p className="truncate text-[10px] text-slate-400">
+                {mentor.company_name}
+              </p>
+            </>
+          ) : (
+            <p className="mt-1 text-xs font-medium text-slate-400">
+              Not assigned yet
             </p>
-          </div>
-          <p className="text-[10px] text-slate-400 truncate">{mentor.company_name}</p>
+          )}
         </div>
       </div>
     </div>

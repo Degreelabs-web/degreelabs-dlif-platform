@@ -17,25 +17,34 @@ const phases = [
     title: "Discover",
     tagline: "Learn & explore",
     description: "Learn through real industry challenges.",
+    background:
+      "linear-gradient(135deg, #0f172a 0%, #0c4a6e 50%, #1d4ed8 100%)",
+    indicator: "bg-blue-400",
   },
   {
     label: "Phase 2",
     title: "Validate",
     tagline: "Build & test",
     description: "Build and refine your solution with expert mentors.",
+    background:
+      "linear-gradient(135deg, #0f172a 0%, #064e3b 50%, #059669 100%)",
+    indicator: "bg-emerald-400",
   },
   {
     label: "Phase 3",
     title: "Grow",
     tagline: "Deliver & grow",
     description: "Turn your proof of work into real opportunity.",
+    background:
+      "linear-gradient(135deg, #0f172a 0%, #4c1d95 50%, #7c3aed 100%)",
+    indicator: "bg-violet-400",
   },
 ];
 
 const AUTO_ADVANCE_MS = 4000;
 
 export default function Home() {
-  const [activePhase, setActivePhase] = useState(phases.length - 1);
+  const [activePhase, setActivePhase] = useState(0);
 
   const goToPhase = (index: number) => {
     setActivePhase((index + phases.length) % phases.length);
@@ -134,7 +143,10 @@ export default function Home() {
           Three simple phases
         </h2>
 
-        <div className="relative mt-6 overflow-hidden rounded-2xl border border-slate-800 bg-gradient-to-br from-slate-900 via-emerald-950 to-slate-900 p-8 sm:p-10">
+        <div
+          className="relative mt-6 overflow-hidden rounded-2xl border border-white/20 p-8 shadow-xl transition-all duration-700 sm:p-10"
+          style={{ background: phase.background }}
+        >
           <p className="text-xs font-semibold uppercase tracking-wide text-indigo-300">
             {phase.label}
           </p>
@@ -149,16 +161,16 @@ export default function Home() {
           </p>
 
           <div className="mt-8 flex items-center justify-between border-t border-white/10 pt-5">
-            <div className="flex gap-2">
+            <div className="flex items-center gap-2">
               {phases.map((p, index) => (
                 <button
                   key={p.title}
                   onClick={() => goToPhase(index)}
                   aria-label={`Go to ${p.title}`}
                   aria-current={index === activePhase}
-                  className={`h-1.5 rounded-full transition-all ${index === activePhase
-                    ? "w-6 bg-indigo-400"
-                    : "w-3 bg-white/15 hover:bg-white/25"
+                  className={`h-1.5 rounded-full transition-all duration-500 ${index === activePhase
+                      ? `w-8 ${p.indicator}`
+                      : `w-3 ${p.indicator} opacity-30 hover:opacity-60`
                     }`}
                 />
               ))}
